@@ -3,7 +3,15 @@ package com.datn.TheCasualWear.entity;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "OrderDetail")
 public class OrderDetail {

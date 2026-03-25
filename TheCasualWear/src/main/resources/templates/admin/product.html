@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin</title>
+</head>
+<body>
+  <h2>Danh sách sản phẩm</h2>
+  <table>
+    <thead>
+    <tr>
+      <th>ID</th><th>Name</th><th>Price</th><th>Action</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="p : ${products}">
+      <td th:text="${p.id}"></td>
+      <td th:text="${p.name}"></td>
+      <td th:text="${p.price}"></td>
+      <td>
+        <a th:href="@{/admin/products/{id}(id=${p.id})}">Xem</a>
+        <a th:href="@{/admin/products/{id}/delete(id=${p.id})}">Xóa</a>
+      </td>
+    </tr>
+    </tbody>
+  </table>
+</body>
+</html>
