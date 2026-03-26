@@ -3,6 +3,7 @@ package com.datn.TheCasualWear.service;
 import com.datn.TheCasualWear.config.ResourceNotFoundException;
 import com.datn.TheCasualWear.entity.Product;
 import com.datn.TheCasualWear.repository.ProductRepository;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,39 +16,84 @@ public class ProductService {
         this.productRepository = productRepository;
     }
 
-    // Lấy tất cả sản phẩm
-    public List<Product> getAllProducts() {
-        return productRepository.findAll();
-    }
+    // ==================== DÙNG CHUNG ====================
 
-    // Lấy sản phẩm theo ID
     public Product getProductById(Integer id) {
-        return productRepository.findById(id)
+        return productRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + id));
     }
 
-    // Tìm sản phẩm theo tên
-    public List<Product> searchProducts(String keyword) {
-        return productRepository.findByNameContainingIgnoreCase(keyword);
+    // ==================== PHÍA USER ====================
+
+    // Trang shop: search + sort
+    public List<Product> getShopProducts(String keyword, String sort) {
+        Sort sortObj = switch (sort != null ? sort : "newest") {
+            case "price_asc"  -> Sort.by("price").ascending();
+            case "price_desc" -> Sort.by("price").descending();
+            default           -> Sort.by("createdAt").descending(); // newest + popular
+        };
+        String kw = (keyword == null || keyword.isBlank()) ? null : keyword;
+        return productRepository.searchProducts(kw, sortObj);
     }
 
-    // Thêm sản phẩm
+    // Trang chủ: 8 sản phẩm mới nhất
+    public List<Product> getNewestProducts() {
+        return productRepository.findTop8ByIsDeletedFalseAndStockGreaterThanOrderByCreatedAtDesc(0);
+    }
+
+    // ==================== PHÍA ADMIN ====================
+
+    public List<Product> getAdminProducts() {
+        return productRepository.findByIsDeletedFalse();
+    }
+
+    public List<Product> getAdminProducts(String keyword) {
+        String kw = (keyword == null || keyword.isBlank()) ? null : keyword;
+        return productRepository.searchProductsForAdmin(kw);
+    }
+
+    public List<Product> getDeletedProducts() {
+        return productRepository.findByIsDeletedTrue();
+    }
+
     public Product createProduct(Product product) {
+        if (product.getSku() != null && productRepository.existsBySku(product.getSku())) {
+            throw new IllegalArgumentException("SKU đã tồn tại: " + product.getSku());
+        }
+        product.setIsDeleted(false);
         return productRepository.save(product);
     }
 
-    // Cập nhật sản phẩm
     public Product updateProduct(Integer id, Product productDetails) {
         Product product = getProductById(id);
+
+        if (productDetails.getSku() != null
+                && productRepository.existsBySkuAndIdNot(productDetails.getSku(), id)) {
+            throw new IllegalArgumentException("SKU đã tồn tại: " + productDetails.getSku());
+        }
+
         product.setName(productDetails.getName());
         product.setPrice(productDetails.getPrice());
         product.setDescription(productDetails.getDescription());
+        product.setSku(productDetails.getSku());
+        product.setStock(productDetails.getStock());
+        product.setCostPrice(productDetails.getCostPrice());
+        product.setCategory(productDetails.getCategory());
+        product.setSize(productDetails.getSize());
+        product.setColor(productDetails.getColor());
         return productRepository.save(product);
     }
 
-    // Xóa sản phẩm
     public void deleteProduct(Integer id) {
         Product product = getProductById(id);
-        productRepository.delete(product);
+        product.setIsDeleted(true);
+        productRepository.save(product);
+    }
+
+    public void restoreProduct(Integer id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + id));
+        product.setIsDeleted(false);
+        productRepository.save(product);
     }
 }

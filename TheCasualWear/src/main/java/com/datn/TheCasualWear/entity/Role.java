@@ -1,8 +1,10 @@
 package com.datn.TheCasualWear.entity;
 
-import jakarta.persistence.Entity;
 import jakarta.persistence.*;
-import jakarta.persistence.Table;
+import jakarta.validation.constraints.*;
+
+import java.util.HashSet;
+import java.util.Set;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -13,13 +15,15 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "Role")
+@Table(name = "role")
 public class Role {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(unique = true, nullable = false)
+    @Column(name = "name", nullable = false, unique = true, length = 50)
     private String name;
-}
 
+    @ManyToMany(mappedBy = "roles")
+    private Set<AppUser> users = new HashSet<>();
+}

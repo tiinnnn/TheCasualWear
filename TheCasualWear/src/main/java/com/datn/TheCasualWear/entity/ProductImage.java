@@ -11,16 +11,16 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "ProductImage")
+@Table(name = "product_image")
 public class ProductImage {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    private String imageUrl;
+    @Column(name = "image_url", nullable = false, length = 500)
+    private String imageUrl;                   // imageUrl → image_url tự động
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
     private Product product;
 }
-
