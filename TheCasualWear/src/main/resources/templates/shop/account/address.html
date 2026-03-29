@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Địa chỉ</title></head>
+<body>
+<div class="container">
+<div class="row">
+    <div class="col-md-3">
+        <div th:replace="~{fragments/account-menu :: account-menu}"></div>
+    </div>
+    <div class="col-md-9 mt-3">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5>Địa chỉ của tôi</h5>
+            <a th:href="@{/account/address/add}" class="btn btn-dark btn-sm">
+                + Thêm địa chỉ mới
+            </a>
+        </div>
+        <div th:if="${#lists.isEmpty(addresses)}" class="text-center py-4">
+            <p class="text-muted">Bạn chưa có địa chỉ nào!</p>
+        </div>
+        <div th:each="addr : ${addresses}" class="card mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <strong th:text="${addr.fullName}"></strong>
+                        <span th:if="${addr.isDefault}" class="badge bg-dark ms-2">Mặc định</span>
+                        <p class="mb-1 text-muted" th:text="${addr.phone}"></p>
+                        <p class="mb-0 small"
+                           th:text="${addr.street + ', ' + addr.district + ', ' + addr.city}"></p>
+                    </div>
+                    <div class="d-flex gap-2 align-items-start">
+                        <a th:href="@{'/account/address/edit/' + ${addr.id}}"
+                           class="btn btn-sm btn-outline-secondary">Sửa</a>
+                        <a th:unless="${addr.isDefault}"
+                           th:href="@{'/account/address/set-default/' + ${addr.id}}"
+                           class="btn btn-sm btn-outline-dark">Đặt mặc định</a>
+                        <a th:unless="${addr.isDefault}"
+                           th:href="@{'/account/address/delete/' + ${addr.id}}"
+                           class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('Xóa địa chỉ này?')">Xóa</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>

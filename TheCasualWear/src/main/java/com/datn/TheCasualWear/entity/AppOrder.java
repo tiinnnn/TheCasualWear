@@ -1,5 +1,6 @@
 package com.datn.TheCasualWear.entity;
 
+import com.datn.TheCasualWear.enums.OrderStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 
@@ -30,8 +31,10 @@ public class AppOrder {
     @Column(name = "order_date", updatable = false)
     private LocalDateTime orderDate = LocalDateTime.now();
 
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
-    private String status = "PENDING";
+    private OrderStatus status = OrderStatus.PENDING;
 
     @Column(name = "total_price", precision = 18, scale = 2)
     private BigDecimal totalPrice;

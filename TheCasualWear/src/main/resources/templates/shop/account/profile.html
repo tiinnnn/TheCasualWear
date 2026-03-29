@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Tài khoản</title></head>
+<body>
+<div class="container">
+<div class="row">
+    <div class="col-md-3">
+        <div th:replace="~{fragments/account-menu :: account-menu}"></div>
+    </div>
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="mb-4">Thông tin tài khoản</h5>
+                <form th:action="@{/account/update}" method="post">
+                    <div class="mb-3">
+                        <label class="form-label">Tên đăng nhập</label>
+                        <input type="text" th:value="${user.username}"
+                               class="form-control" disabled/>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email"
+                               th:value="${user.email}" class="form-control"/>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Số điện thoại</label>
+                        <input type="text" name="phone"
+                               th:value="${user.phone}" class="form-control"/>
+                    </div>
+                    <button type="submit" class="btn btn-dark">Cập nhật</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>

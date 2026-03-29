@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Đơn hàng</title></head>
+<body>
+<div class="container">
+<div class="row">
+    <div class="col-md-3">
+        <div th:replace="~{fragments/account-menu :: account-menu}"></div>
+    </div>
+    <div class="col-md-9 mt-3">
+        <h5 class="mb-4">Đơn hàng của tôi</h5>
+        <div th:if="${#lists.isEmpty(orders)}" class="text-center py-4">
+            <p class="text-muted">Bạn chưa có đơn hàng nào!</p>
+            <a th:href="@{/shop}" class="btn btn-dark">Mua sắm ngay</a>
+        </div>
+        <div th:each="order : ${orders}" class="card mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">Đơn hàng <strong th:text="'#' + ${order.id}"></strong></h6>
+                        <small class="text-muted"
+                               th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy HH:mm')}"></small>
+                    </div>
+                    <div class="text-end">
+                        <span th:switch="${order.status.name()}">
+                            <span th:case="'PENDING'"   class="badge bg-warning text-dark">Chờ xác nhận</span>
+                            <span th:case="'CONFIRMED'" class="badge bg-info">Đã xác nhận</span>
+                            <span th:case="'SHIPPING'"  class="badge bg-primary">Đang giao</span>
+                            <span th:case="'DELIVERED'" class="badge bg-success">Đã giao</span>
+                            <span th:case="'COMPLETED'" class="badge bg-success">Hoàn thành</span>
+                            <span th:case="'CANCELLED'" class="badge bg-danger">Đã hủy</span>
+                        </span>
+                        <p class="text-danger fw-bold mt-1 mb-0"
+                           th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></p>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 mt-3">
+                    <a th:href="@{'/order/detail/' + ${order.id}}"
+                       class="btn btn-sm btn-outline-dark">Xem chi tiết</a>
+                    <a th:if="${order.status.name() == 'PENDING'}"
+                       th:href="@{'/order/cancel/' + ${order.id}}"
+                       class="btn btn-sm btn-outline-danger"
+                       onclick="return confirm('Bạn có chắc muốn hủy?')">Hủy đơn</a>
+                    <a th:if="${order.status.name() == 'DELIVERED'}"
+                       th:href="@{'/order/confirm/' + ${order.id}}"
+                       class="btn btn-sm btn-success"
+                       onclick="return confirm('Xác nhận đã nhận hàng?')">Đã nhận hàng</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>

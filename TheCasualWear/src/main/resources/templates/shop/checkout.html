@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Thanh toán</title></head>
+<body>
+<div class="container">
+<h3 class="mb-4">Thanh toán</h3>
+
+<form th:action="@{/order/checkout}" method="post" id="checkout-form">
+    <div class="row">
+        <!-- Cột trái -->
+        <div class="col-md-7">
+
+            <!-- Chọn địa chỉ -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>Địa chỉ giao hàng</h5>
+                    <div th:if="${#lists.isEmpty(addresses)}" class="alert alert-warning">
+                        Bạn chưa có địa chỉ!
+                        <a th:href="@{/account/address/add}">Thêm địa chỉ ngay</a>
+                    </div>
+                    <div th:each="addr : ${addresses}" class="form-check mb-2">
+                        <input class="form-check-input" type="radio"
+                               name="shippingAddressId" th:value="${addr.id}"
+                               th:checked="${addr.isDefault}"/>
+                        <label class="form-check-label">
+                            <strong th:text="${addr.fullName}"></strong> —
+                            <span th:text="${addr.phone}"></span><br/>
+                            <small th:text="${addr.street + ', ' + addr.district + ', ' + addr.city}"></small>
+                        </label>
+                    </div>
+                    <a th:href="@{/account/address/add}" class="btn btn-outline-secondary btn-sm mt-2">
+                        + Thêm địa chỉ mới
+                    </a>
+                </div>
+            </div>
+
+            <!-- Voucher -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>Mã giảm giá</h5>
+                    <div class="input-group">
+                        <input type="text" name="voucherCode" id="voucherCode"
+                               class="form-control" placeholder="Nhập mã giảm giá..."/>
+                        <button type="button" class="btn btn-outline-secondary"
+                                onclick="applyVoucher()">Áp dụng</button>
+                    </div>
+
+                    <!-- Kết quả voucher -->
+                    <div id="voucher-result" class="mt-2"></div>
+
+                    <!-- Danh sách voucher khả dụng -->
+                    <div th:if="${!#lists.isEmpty(activeVouchers)}" class="mt-2">
+                        <small class="text-muted">Voucher khả dụng:</small><br/>
+                        <span th:each="v : ${activeVouchers}"
+                              class="badge bg-light text-dark border me-1 mt-1"
+                              style="cursor:pointer"
+                              th:text="${v.code + ' - Giảm ' + v.discountPercent + '%'}"
+                              th:attr="data-code=${v.code}"
+                              onclick="document.getElementById('voucherCode').value=this.dataset.code; applyVoucher()">
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phương thức thanh toán -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>Phương thức thanh toán</h5>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio"
+                               name="paymentMethod" value="COD" checked/>
+                        <label class="form-check-label">
+                            <i class="bi bi-cash-coin me-2"></i>Thanh toán khi nhận hàng (COD)
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio"
+                               name="paymentMethod" value="VNPAY"/>
+                        <label class="form-check-label">
+                            <i class="bi bi-credit-card me-2"></i>Thanh toán qua VNPay
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cột phải - Tổng đơn -->
+        <div class="col-md-5">
+            <div class="card">
+                <div class="card-body">
+                    <h5>Đơn hàng của bạn</h5>
+                    <hr/>
+                    <div th:each="item : ${cartItems}" class="d-flex justify-content-between mb-2">
+                        <span>
+                            <span th:text="${item.product.name}"></span>
+                            <small class="text-muted" th:text="' x' + ${item.quantity}"></small>
+                        </span>
+                        <span th:text="${#numbers.formatInteger(item.product.price.doubleValue() * item.quantity, 0, 'COMMA') + ' đ'}"></span>
+                    </div>
+                    <hr/>
+
+                    <!-- Tổng gốc -->
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Tạm tính:</span>
+                        <span id="original-price"
+                              th:text="${#numbers.formatInteger(totalPrice, 0, 'COMMA') + ' đ'}"></span>
+                    </div>
+
+                    <!-- Giảm giá (ẩn nếu chưa áp voucher) -->
+                    <div class="d-flex justify-content-between mb-2 text-success d-none" id="discount-row">
+                        <span>Giảm giá:</span>
+                        <span id="discount-amount"></span>
+                    </div>
+
+                    <!-- Tổng sau giảm -->
+                    <div class="d-flex justify-content-between fw-bold">
+                        <span>Tổng cộng:</span>
+                        <span class="text-danger" id="final-price"
+                              th:text="${#numbers.formatInteger(totalPrice, 0, 'COMMA') + ' đ'}"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-dark w-100 mt-3"
+                            th:disabled="${#lists.isEmpty(addresses)}">
+                        Đặt hàng
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+</div>
+
+<script th:inline="javascript">
+    const originalTotal = /*[[${totalPrice}]]*/ 0;
+
+    function applyVoucher() {
+        const code = document.getElementById('voucherCode').value.trim();
+        const resultDiv = document.getElementById('voucher-result');
+
+        if (!code) {
+            resultDiv.innerHTML = '<span class="text-danger">Vui lòng nhập mã giảm giá!</span>';
+            return;
+        }
+
+        fetch('/order/apply-voucher?code=' + encodeURIComponent(code) + '&total=' + originalTotal)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    resultDiv.innerHTML =
+                        '<span class="text-success">' +
+                        '<i class="bi bi-check-circle me-1"></i>' +
+                        'Giảm ' + data.discountPercent + '%' +
+                        '</span>';
+
+                    // Hiện dòng giảm giá
+                    document.getElementById('discount-row').classList.remove('d-none');
+                    document.getElementById('discount-amount').textContent =
+                        '-' + (originalTotal - parseFloat(data.finalPriceRaw)).toLocaleString('vi-VN') + ' đ';
+
+                    // Cập nhật tổng cuối
+                    document.getElementById('final-price').textContent = data.finalPrice + ' đ';
+                } else {
+                    resultDiv.innerHTML =
+                        '<span class="text-danger">' +
+                        '<i class="bi bi-x-circle me-1"></i>' +
+                        data.message +
+                        '</span>';
+
+                    // Reset về giá gốc
+                    document.getElementById('discount-row').classList.add('d-none');
+                    document.getElementById('final-price').textContent =
+                        originalTotal.toLocaleString('vi-VN') + ' đ';
+                }
+            })
+            .catch(() => {
+                resultDiv.innerHTML = '<span class="text-danger">Có lỗi xảy ra, vui lòng thử lại!</span>';
+            });
+    }
+</script>
+</body>
+</html>

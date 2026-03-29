@@ -10,4 +10,5 @@ public interface OrderVoucherRepository  extends JpaRepository<OrderVoucher, Int
     boolean existsByCustomerIdAndVoucherId(Integer customerId, Integer voucherId);
 
     Optional<OrderVoucher> findByOrderId(Integer orderId);
+    boolean existsByVoucherId(Integer voucherId);
 }

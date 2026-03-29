@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Giỏ hàng</title></head>
+<body>
+<div class="container">
+<div th:if="${#lists.isEmpty(cartItems)}" class="text-center py-5">
+    <i class="bi bi-cart-x fs-1 text-muted"></i>
+    <p class="text-muted mt-3">Giỏ hàng trống!</p>
+    <a th:href="@{/shop}" class="btn btn-dark">Tiếp tục mua sắm</a>
+</div>
+
+<div th:unless="${#lists.isEmpty(cartItems)}">
+    <h3 class="mb-4">Giỏ hàng</h3>
+    <div class="row">
+        <!-- Danh sách sản phẩm -->
+        <div class="col-md-8">
+            <table class="table align-middle">
+                <thead class="table-dark">
+                <tr>
+                    <th>Sản phẩm</th>
+                    <th>Giá</th>
+                    <th>Số lượng</th>
+                    <th>Thành tiền</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="item : ${cartItems}">
+                    <!-- Ảnh + tên -->
+                    <td>
+                        <div class="d-flex align-items-center gap-3">
+                            <img th:if="${item.product.images != null and !item.product.images.isEmpty()}"
+                                 th:src="${item.product.images[0].imageUrl}"
+                                 style="width:70px;height:70px;object-fit:cover" class="rounded"/>
+                            <img th:unless="${item.product.images != null and !item.product.images.isEmpty()}"
+                                 src="/images/no-image.png"
+                                 style="width:70px;height:70px;object-fit:cover" class="rounded"/>
+                            <div>
+                                <p class="mb-0 fw-bold" th:text="${item.product.name}"></p>
+                                <small class="text-muted"
+                                       th:text="${item.product.size != null ? 'Size: ' + item.product.size.name : ''}"></small>
+                            </div>
+                        </div>
+                    </td>
+                    <!-- Giá -->
+                    <td th:text="${#numbers.formatInteger(item.product.price, 0, 'COMMA') + ' đ'}"></td>
+                    <!-- Số lượng -->
+                    <td>
+                        <form th:action="@{/cart/update}" method="post" class="d-flex align-items-center gap-1">
+                            <input type="hidden" name="cartItemId" th:value="${item.id}"/>
+                            <input type="number" name="quantity" th:value="${item.quantity}"
+                                   min="1" th:max="${item.product.stock}"
+                                   class="form-control form-control-sm" style="width:70px"
+                                   onchange="this.form.submit()"/>
+                        </form>
+                    </td>
+                    <td class="text-danger fw-bold"
+                        th:text="${#numbers.formatInteger(item.product.price.doubleValue() * item.quantity, 0, 'COMMA') + ' đ'}">
+                    </td>
+                    <td>
+                        <a th:href="@{'/cart/remove/' + ${item.id}}"
+                           class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('Xóa sản phẩm này?')">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div class="d-flex justify-content-between">
+                <a th:href="@{/shop}" class="btn btn-outline-dark">← Tiếp tục mua sắm</a>
+                <a th:href="@{/cart/clear}" class="btn btn-outline-danger"
+                   onclick="return confirm('Xóa toàn bộ giỏ hàng?')">Xóa tất cả</a>
+            </div>
+        </div>
+
+        <!-- Tổng tiền -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Tổng đơn hàng</h5>
+                    <hr/>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span>Tạm tính:</span>
+                        <span class="fw-bold text-danger"
+                              th:text="${#numbers.formatInteger(totalPrice, 0, 'COMMA') + ' đ'}"></span>
+                    </div>
+                    <a th:href="@{/order/checkout}" class="btn btn-dark w-100">
+                        Tiến hành đặt hàng
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>
