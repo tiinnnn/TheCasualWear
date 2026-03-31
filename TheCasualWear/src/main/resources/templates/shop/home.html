@@ -21,25 +21,29 @@
 <!-- Sản phẩm mới nhất -->
 <div class="container">
 <h2 class="mb-4">Sản phẩm mới nhất</h2>
-<div class="row row-cols-2 row-cols-md-4 g-4">
-    <div class="col" th:each="p : ${newestProducts}">
-        <div class="card h-100">
-            <img th:if="${p.images != null and !p.images.isEmpty()}"
-                 th:src="${p.images[0].imageUrl}"
-                 class="card-img-top" style="height:250px;object-fit:cover"/>
-            <img th:unless="${p.images != null and !p.images.isEmpty()}"
-                 src="/images/no-image.png"
-                 class="card-img-top" style="height:250px;object-fit:cover"/>
-            <div class="card-body">
-                <h6 class="card-title" th:text="${p.name}"></h6>
-                <p class="text-danger fw-bold"
-                   th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></p>
-                <a th:href="@{'/product/' + ${p.id}}"
-                   class="btn btn-dark btn-sm w-100">Xem chi tiết</a>
-            </div>
+    <div class="row row-cols-2 row-cols-md-4 g-4">
+        <div class="col" th:each="p : ${newestProducts}">
+            <a th:href="@{'/product/' + ${p.id}}" class="text-decoration-none text-dark">
+                <div class="card h-100 border-0 shadow-sm" style="cursor:pointer;transition:transform 0.2s"
+                     onmouseover="this.style.transform='translateY(-4px)'"
+                     onmouseout="this.style.transform='translateY(0)'">
+                    <img th:if="${p.images != null and !p.images.isEmpty()}"
+                         th:src="${p.images[0].imageUrl}"
+                         class="card-img-top" style="height:280px;object-fit:cover"/>
+                    <img th:unless="${p.images != null and !p.images.isEmpty()}"
+                         src="/images/no-image.png"
+                         class="card-img-top" style="height:280px;object-fit:cover"/>
+                    <div class="card-body">
+                        <h6 class="card-title" th:text="${p.name}"></h6>
+                        <p class="text-muted small mb-1"
+                           th:text="${p.category != null ? p.category.name : ''}"></p>
+                        <p class="text-danger fw-bold mb-0"
+                           th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></p>
+                    </div>
+                </div>
+            </a>
         </div>
     </div>
-</div>
 
 <div class="text-center mt-4">
     <a th:href="@{/shop}" class="btn btn-outline-dark">Xem tất cả</a>

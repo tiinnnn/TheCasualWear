@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Quản lý user</title></head>
+<body>
+<h4 class="fw-bold mb-4">Quản lý người dùng</h4>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+            <tr>
+                <th>#</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Role</th>
+                <th>Trạng thái</th>
+                <th>Hành động</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="u : ${users}">
+                <td th:text="${u.id}"></td>
+                <td th:text="${u.username}"></td>
+                <td th:text="${u.email}"></td>
+                <td th:text="${u.phone}"></td>
+                <td>
+                        <span th:each="r : ${u.roles}"
+                              class="badge bg-secondary me-1"
+                              th:text="${r.name.replace('ROLE_', '')}"></span>
+                </td>
+                <td>
+                    <span th:if="${u.enabled}" class="badge bg-success">Hoạt động</span>
+                    <span th:unless="${u.enabled}" class="badge bg-danger">Đã khóa</span>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center gap-1 flex-wrap">
+                        <!-- Khóa / Mở khóa -->
+                        <a th:if="${u.enabled}"
+                           th:href="@{'/admin/users/' + ${u.id} + '/lock'}"
+                           class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('Khóa tài khoản này?')"
+                           title="Khóa">
+                            <i class="bi bi-lock"></i>
+                        </a>
+                        <a th:unless="${u.enabled}"
+                           th:href="@{'/admin/users/' + ${u.id} + '/unlock'}"
+                           class="btn btn-sm btn-outline-success"
+                           onclick="return confirm('Mở khóa tài khoản này?')"
+                           title="Mở khóa">
+                            <i class="bi bi-unlock"></i>
+                        </a>
+
+                        <!-- Thêm role -->
+                        <form th:action="@{'/admin/users/' + ${u.id} + '/role/add'}"
+                              method="post" class="d-flex align-items-center gap-1">
+                            <select name="roleName" class="form-select form-select-sm" style="width:110px">
+                                <option value="ROLE_ADMIN">ADMIN</option>
+                                <option value="ROLE_CUSTOMER">CUSTOMER</option>
+                                <option value="ROLE_DELIVERY">DELIVERY</option>
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-outline-primary" title="Thêm role">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </form>
+
+                        <!-- Xóa role -->
+                        <form th:if="${!u.roles.isEmpty()}"
+                              th:action="@{'/admin/users/' + ${u.id} + '/role/remove'}"
+                              method="post" class="d-flex align-items-center gap-1">
+                            <select name="roleName" class="form-select form-select-sm" style="width:110px">
+                                <option th:each="r : ${u.roles}"
+                                        th:value="${r.name}"
+                                        th:text="${r.name.replace('ROLE_', '')}"></option>
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-outline-warning"
+                                    onclick="return confirm('Xóa role này?')" title="Xóa role">
+                                <i class="bi bi-dash-lg"></i>
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>

@@ -3,6 +3,8 @@ package com.datn.TheCasualWear.service;
 import com.datn.TheCasualWear.config.ResourceNotFoundException;
 import com.datn.TheCasualWear.entity.Product;
 import com.datn.TheCasualWear.repository.ProductRepository;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -36,9 +38,16 @@ public class ProductService {
         return productRepository.searchProducts(kw, sortObj);
     }
 
+    public List<Product> getProductVariants(Integer id) {
+        Product product = getProductById(id);
+        Integer colorId = product.getColor() != null ? product.getColor().getId() : null;
+        return productRepository.findVariantsByNameAndColor(product.getName(), colorId);
+    }
+
     // Trang chủ: 8 sản phẩm mới nhất
     public List<Product> getNewestProducts() {
-        return productRepository.findTop8ByIsDeletedFalseAndStockGreaterThanOrderByCreatedAtDesc(0);
+        Pageable top8 = PageRequest.of(0, 8);
+        return productRepository.findTop8Newest(top8);
     }
 
     // ==================== PHÍA ADMIN ====================

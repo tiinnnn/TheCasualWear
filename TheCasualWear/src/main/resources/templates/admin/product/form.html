@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Sản phẩm</title></head>
+<body>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold"
+        th:text="${product.id == null ? 'Thêm sản phẩm mới' : 'Cập nhật sản phẩm'}"></h4>
+    <a th:href="@{/admin/products}" class="btn btn-outline-secondary btn-sm">← Quay lại</a>
+</div>
+
+<form th:action="@{/admin/products/save}" method="post"
+      enctype="multipart/form-data">
+    <input type="hidden" th:if="${product.id != null}"
+           name="id" th:value="${product.id}"/>
+
+    <div class="row g-4">
+        <!-- Cột trái -->
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">Thông tin cơ bản</h6>
+                    <div class="mb-3">
+                        <label class="form-label">Tên sản phẩm <span class="text-danger">*</span></label>
+                        <input type="text" name="name" th:value="${product.name}"
+                               class="form-control" required/>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mô tả</label>
+                        <textarea name="description" class="form-control" rows="4"
+                                  th:text="${product.description}"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">SKU</label>
+                            <input type="text" name="sku" th:value="${product.sku}"
+                                   class="form-control"/>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Giá bán <span class="text-danger">*</span></label>
+                            <input type="number" name="price" th:value="${product.price}"
+                                   class="form-control" required/>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Giá vốn</label>
+                            <input type="number" name="costPrice" th:value="${product.costPrice}"
+                                   class="form-control"/>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tồn kho <span class="text-danger">*</span></label>
+                        <input type="number" name="stock" th:value="${product.stock}"
+                               class="form-control" required min="0"/>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload ảnh -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">Hình ảnh sản phẩm</h6>
+
+                    <!-- Ảnh hiện có -->
+                    <div th:if="${product.id != null and product.images != null and !product.images.isEmpty()}"
+                         class="d-flex gap-2 flex-wrap mb-3">
+                        <div th:each="img : ${product.images}" class="position-relative">
+                            <img th:src="${img.imageUrl}"
+                                 style="width:80px;height:80px;object-fit:cover" class="rounded"/>
+                            <a th:href="@{'/admin/products/image/delete/' + ${img.id} + '?productId=' + ${product.id}}"
+                               class="position-absolute top-0 end-0 btn btn-danger btn-sm p-0"
+                               style="width:20px;height:20px;font-size:10px;line-height:20px"
+                               onclick="return confirm('Xóa ảnh này?')">×</a>
+                        </div>
+                    </div>
+
+                    <label class="form-label">Thêm ảnh mới</label>
+                    <input type="file" name="imageFiles" class="form-control" multiple accept="image/*"/>
+                    <small class="text-muted">Có thể chọn nhiều ảnh cùng lúc</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cột phải -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">Phân loại</h6>
+                    <div class="mb-3">
+                        <label class="form-label">Danh mục</label>
+                        <select name="category.id" class="form-select">
+                            <option value="">-- Chọn danh mục --</option>
+                            <option th:each="c : ${categories}"
+                                    th:value="${c.id}"
+                                    th:text="${c.name}"
+                                    th:selected="${product.category != null and product.category.id == c.id}">
+                            </option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Size</label>
+                        <select name="size.id" class="form-select">
+                            <option value="">-- Chọn size --</option>
+                            <option th:each="s : ${sizes}"
+                                    th:value="${s.id}"
+                                    th:text="${s.name}"
+                                    th:selected="${product.size != null and product.size.id == s.id}">
+                            </option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Màu sắc</label>
+                        <select name="color.id" class="form-select">
+                            <option value="">-- Chọn màu --</option>
+                            <option th:each="cl : ${colors}"
+                                    th:value="${cl.id}"
+                                    th:text="${cl.name}"
+                                    th:selected="${product.color != null and product.color.id == cl.id}">
+                            </option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-dark">
+                    <i class="bi bi-save me-2"></i>Lưu sản phẩm
+                </button>
+                <a th:href="@{/admin/products}" class="btn btn-outline-secondary">Hủy</a>
+            </div>
+        </div>
+    </div>
+</form>
+</body>
+</html>

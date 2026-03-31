@@ -161,7 +161,7 @@ public class OrderService {
     }
 
     public List<AppOrder> getOrdersByStatus(OrderStatus status) {
-        return orderRepository.findByStatus(status.name());
+        return orderRepository.findByStatus(status);
     }
 
     // PENDING → CONFIRMED
@@ -210,7 +210,7 @@ public class OrderService {
 
     // Lấy đơn hàng đang giao
     public List<AppOrder> getShippingOrders() {
-        return orderRepository.findByStatus(OrderStatus.SHIPPING.name());
+        return orderRepository.findByStatus(OrderStatus.SHIPPING);
     }
 
     // SHIPPING → DELIVERED

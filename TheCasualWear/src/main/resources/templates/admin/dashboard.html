@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Dashboard</title></head>
+<body>
+<h4 class="fw-bold mb-4">Dashboard</h4>
+
+<!-- Thống kê tổng quan -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <i class="bi bi-box-seam text-primary" style="font-size:2rem"></i>
+            <h3 class="fw-bold mt-2" th:text="${totalProducts}"></h3>
+            <p class="text-muted mb-0">Sản phẩm</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <i class="bi bi-people text-success" style="font-size:2rem"></i>
+            <h3 class="fw-bold mt-2" th:text="${totalUsers}"></h3>
+            <p class="text-muted mb-0">Người dùng</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <i class="bi bi-cart-check text-warning" style="font-size:2rem"></i>
+            <h3 class="fw-bold mt-2" th:text="${totalOrders}"></h3>
+            <p class="text-muted mb-0">Đơn hàng</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <i class="bi bi-cash-stack text-danger" style="font-size:2rem"></i>
+            <h3 class="fw-bold mt-2"
+                th:text="${#numbers.formatInteger(totalRevenue, 0, 'COMMA') + ' đ'}"></h3>
+            <p class="text-muted mb-0">Doanh thu</p>
+        </div>
+    </div>
+</div>
+
+<!-- Thống kê đơn hàng theo trạng thái -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm p-3 border-start border-warning border-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted mb-1">Chờ xác nhận</p>
+                    <h4 class="fw-bold mb-0" th:text="${pendingOrders}"></h4>
+                </div>
+                <i class="bi bi-clock text-warning" style="font-size:2rem"></i>
+            </div>
+            <a th:href="@{/admin/orders(status='PENDING')}"
+               class="btn btn-outline-warning btn-sm mt-2">Xem ngay</a>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm p-3 border-start border-primary border-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted mb-1">Đang giao</p>
+                    <h4 class="fw-bold mb-0" th:text="${shippingOrders}"></h4>
+                </div>
+                <i class="bi bi-truck text-primary" style="font-size:2rem"></i>
+            </div>
+            <a th:href="@{/admin/orders(status='SHIPPING')}"
+               class="btn btn-outline-primary btn-sm mt-2">Xem ngay</a>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm p-3 border-start border-success border-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted mb-1">Hoàn thành</p>
+                    <h4 class="fw-bold mb-0" th:text="${completedOrders}"></h4>
+                </div>
+                <i class="bi bi-check-circle text-success" style="font-size:2rem"></i>
+            </div>
+            <a th:href="@{/admin/orders(status='COMPLETED')}"
+               class="btn btn-outline-success btn-sm mt-2">Xem ngay</a>
+        </div>
+    </div>
+</div>
+
+<!-- Đơn hàng mới nhất -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <h6 class="fw-bold mb-3">Đơn hàng mới nhất</h6>
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+            <tr>
+                <th>#</th>
+                <th>Khách hàng</th>
+                <th>Ngày đặt</th>
+                <th>Tổng tiền</th>
+                <th>Trạng thái</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="order : ${recentOrders}">
+                <td th:text="${order.id}"></td>
+                <td th:text="${order.customer.username}"></td>
+                <td th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy HH:mm')}"></td>
+                <td class="text-danger fw-bold"
+                    th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></td>
+                <td>
+                        <span th:switch="${order.status.name()}">
+                            <span th:case="'PENDING'"   class="badge bg-warning text-dark">Chờ xác nhận</span>
+                            <span th:case="'CONFIRMED'" class="badge bg-info">Đã xác nhận</span>
+                            <span th:case="'SHIPPING'"  class="badge bg-primary">Đang giao</span>
+                            <span th:case="'DELIVERED'" class="badge bg-success">Đã giao</span>
+                            <span th:case="'COMPLETED'" class="badge bg-success">Hoàn thành</span>
+                            <span th:case="'CANCELLED'" class="badge bg-danger">Đã hủy</span>
+                        </span>
+                </td>
+                <td>
+                    <a th:href="@{'/admin/orders/' + ${order.id}}"
+                       class="btn btn-sm btn-outline-dark">Chi tiết</a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <a th:href="@{/admin/orders}" class="btn btn-dark btn-sm">Xem tất cả đơn hàng</a>
+    </div>
+</div>
+</body>
+</html>

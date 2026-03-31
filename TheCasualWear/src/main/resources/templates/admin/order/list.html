@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Quản lý đơn hàng</title></head>
+<body>
+<h4 class="fw-bold mb-4">Quản lý đơn hàng</h4>
+
+<!-- Filter theo trạng thái -->
+<div class="d-flex gap-2 mb-3 flex-wrap">
+    <a th:href="@{/admin/orders}"
+       th:classappend="${selectedStatus == null} ? 'btn-dark' : 'btn-outline-dark'"
+       class="btn btn-sm">Tất cả</a>
+    <a th:href="@{/admin/orders(status='PENDING')}"
+       th:classappend="${selectedStatus == 'PENDING'} ? 'btn-warning' : 'btn-outline-warning'"
+       class="btn btn-sm">Chờ xác nhận</a>
+    <a th:href="@{/admin/orders(status='CONFIRMED')}"
+       th:classappend="${selectedStatus == 'CONFIRMED'} ? 'btn-info' : 'btn-outline-info'"
+       class="btn btn-sm">Đã xác nhận</a>
+    <a th:href="@{/admin/orders(status='SHIPPING')}"
+       th:classappend="${selectedStatus == 'SHIPPING'} ? 'btn-primary' : 'btn-outline-primary'"
+       class="btn btn-sm">Đang giao</a>
+    <a th:href="@{/admin/orders(status='DELIVERED')}"
+       th:classappend="${selectedStatus == 'DELIVERED'} ? 'btn-success' : 'btn-outline-success'"
+       class="btn btn-sm">Đã giao</a>
+    <a th:href="@{/admin/orders(status='COMPLETED')}"
+       th:classappend="${selectedStatus == 'COMPLETED'} ? 'btn-success' : 'btn-outline-success'"
+       class="btn btn-sm">Hoàn thành</a>
+    <a th:href="@{/admin/orders(status='CANCELLED')}"
+       th:classappend="${selectedStatus == 'CANCELLED'} ? 'btn-danger' : 'btn-outline-danger'"
+       class="btn btn-sm">Đã hủy</a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+            <tr>
+                <th>#</th>
+                <th>Khách hàng</th>
+                <th>Ngày đặt</th>
+                <th>Tổng tiền</th>
+                <th>Trạng thái</th>
+                <th>Hành động</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="order : ${orders}">
+                <td th:text="${order.id}"></td>
+                <td>
+                    <p class="mb-0 fw-bold" th:text="${order.customer.username}"></p>
+                    <small class="text-muted"
+                           th:text="${order.shippingAddress != null ? order.shippingAddress.phone : ''}"></small>
+                </td>
+                <td th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy HH:mm')}"></td>
+                <td class="text-danger fw-bold"
+                    th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></td>
+                <td>
+                        <span th:switch="${order.status.name()}">
+                            <span th:case="'PENDING'"   class="badge bg-warning text-dark">Chờ xác nhận</span>
+                            <span th:case="'CONFIRMED'" class="badge bg-info">Đã xác nhận</span>
+                            <span th:case="'SHIPPING'"  class="badge bg-primary">Đang giao</span>
+                            <span th:case="'DELIVERED'" class="badge bg-success">Đã giao</span>
+                            <span th:case="'COMPLETED'" class="badge bg-success">Hoàn thành</span>
+                            <span th:case="'CANCELLED'" class="badge bg-danger">Đã hủy</span>
+                        </span>
+                </td>
+                <td>
+                    <a th:href="@{'/admin/orders/' + ${order.id}}"
+                       class="btn btn-sm btn-outline-dark">Chi tiết</a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>

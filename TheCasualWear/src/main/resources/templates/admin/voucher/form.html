@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Voucher</title></head>
+<body>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold"
+        th:text="${voucher != null and voucher.id != null ? 'Cập nhật voucher' : 'Thêm voucher mới'}"></h4>
+    <a th:href="@{/admin/vouchers}" class="btn btn-outline-secondary btn-sm">← Quay lại</a>
+</div>
+
+<div class="card border-0 shadow-sm" style="max-width:600px">
+    <div class="card-body">
+        <form th:action="@{/admin/vouchers/save}" method="post">
+            <input type="hidden" name="id"
+                   th:if="${voucher != null}"
+                   th:value="${voucher.id}"/>
+
+            <div class="mb-3">
+                <label class="form-label">Mã voucher <span class="text-danger">*</span></label>
+                <input type="text" name="code" class="form-control"
+                       th:value="${voucher != null ? voucher.code : ''}"
+                       required style="text-transform:uppercase"/>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Mô tả</label>
+                <input type="text" name="description" class="form-control"
+                       th:value="${voucher != null ? voucher.description : ''}"/>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Phần trăm giảm (%)</label>
+                    <input type="number" name="discountPercent" class="form-control"
+                           th:value="${voucher != null ? voucher.discountPercent : ''}"
+                           min="1" max="100"/>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Giá trị đơn tối thiểu (đ)</label>
+                    <input type="number" name="minOrderValue" class="form-control"
+                           th:value="${voucher != null ? voucher.minOrderValue : 0}"
+                           min="0"/>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Ngày bắt đầu</label>
+                    <input type="datetime-local" name="startDate" class="form-control"
+                           th:value="${voucher != null and voucher.startDate != null ?
+                               #temporals.format(voucher.startDate, 'yyyy-MM-dd''T''HH:mm') : ''}"/>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Ngày kết thúc</label>
+                    <input type="datetime-local" name="endDate" class="form-control"
+                           th:value="${voucher != null and voucher.endDate != null ?
+                               #temporals.format(voucher.endDate, 'yyyy-MM-dd''T''HH:mm') : ''}"/>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-dark">Lưu voucher</button>
+                <a th:href="@{/admin/vouchers}" class="btn btn-outline-secondary">Hủy</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

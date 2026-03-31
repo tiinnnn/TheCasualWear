@@ -1,6 +1,7 @@
 package com.datn.TheCasualWear.repository;
 
 import com.datn.TheCasualWear.entity.AppOrder;
+import com.datn.TheCasualWear.enums.OrderStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -11,7 +12,7 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
     List<AppOrder> findByCustomerIdOrderByOrderDateDesc(Integer customerId);
 
     // Lọc theo trạng thái (admin quản lý)
-    List<AppOrder> findByStatus(String status);
+    List<AppOrder> findByStatus(OrderStatus status);
 
     // Tìm đơn hàng của user theo trạng thái
     List<AppOrder> findByCustomerIdAndStatus(Integer customerId, String status);

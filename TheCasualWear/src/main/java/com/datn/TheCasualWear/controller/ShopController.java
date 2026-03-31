@@ -30,9 +30,20 @@ public class ShopController {
     @GetMapping("/shop")
     public String shopPage(@RequestParam(required = false) String keyword,
                            @RequestParam(required = false) String sort,
+                           @RequestParam(required = false) Integer category,
                            Model model) {
-        model.addAttribute("products", productService.getShopProducts(keyword, sort));
-        model.addAttribute("categories", categoryService.getAllCategories());
+        var products = productService.getShopProducts(keyword, sort);
+
+        // Lọc theo category nếu có
+        if (category != null) {
+            products = products.stream()
+                    .filter(p -> p.getCategory() != null
+                            && p.getCategory().getId().equals(category))
+                    .toList();
+            model.addAttribute("selectedCategory", category);
+        }
+
+        model.addAttribute("products", products);
         model.addAttribute("keyword", keyword);
         model.addAttribute("sort", sort);
         model.addAttribute("view", "shop/shop");
@@ -43,6 +54,7 @@ public class ShopController {
     public String productDetail(@PathVariable Integer id, Model model) {
         Product product = productService.getProductById(id);
         model.addAttribute("product", product);
+        model.addAttribute("variants", productService.getProductVariants(id));
         if (product.getCategory() != null) {
             model.addAttribute("relatedProducts",
                     productService.getShopProducts(null, "newest")
@@ -54,6 +66,18 @@ public class ShopController {
                             .toList());
         }
         model.addAttribute("view", "shop/product-detail");
+        return "layouts/shop-layout";
+    }
+
+    @GetMapping("/lien-he")
+    public String lienHe(Model model) {
+        model.addAttribute("view", "shop/lien-he");
+        return "layouts/shop-layout";
+    }
+
+    @GetMapping("/chinh-sach-doi-tra")
+    public String chinhSachDoiTra(Model model) {
+        model.addAttribute("view", "shop/chinh-sach-doi-tra");
         return "layouts/shop-layout";
     }
 }

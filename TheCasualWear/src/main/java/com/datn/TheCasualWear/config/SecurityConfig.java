@@ -57,10 +57,9 @@ public class SecurityConfig {
                                 "/shop/**",
                                 "/product/**",
                                 "/auth/**",
-                                "/css/**",
-                                "/js/**",
-                                "/images/**",
-                                "/webjars/**"
+                                "/lien-he",
+                                "/chinh-sach-doi-tra",
+                                "/css/**", "/js/**", "/images/**", "/webjars/**"
                         ).permitAll()
 
                         // Chỉ ADMIN
@@ -74,7 +73,7 @@ public class SecurityConfig {
                                 "/cart/**",
                                 "/order/**",
                                 "/account/**"
-                        ).hasAnyRole("CUSTOMER", "ADMIN")
+                        ).hasAnyRole("CUSTOMER", "ADMIN","DELIVERY")
 
                         .anyRequest().authenticated()
                 )

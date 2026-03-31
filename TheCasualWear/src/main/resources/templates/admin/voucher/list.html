@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Quản lý voucher</title></head>
+<body>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold">Quản lý Voucher</h4>
+    <a th:href="@{/admin/vouchers/edit}" class="btn btn-dark btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Thêm voucher
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+            <tr>
+                <th>Code</th>
+                <th>Mô tả</th>
+                <th>Giảm</th>
+                <th>Đơn tối thiểu</th>
+                <th>Hết hạn</th>
+                <th>Trạng thái</th>
+                <th>Hành động</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="v : ${vouchers}">
+                <td><strong th:text="${v.code}"></strong></td>
+                <td th:text="${v.description}"></td>
+                <td th:text="${v.discountPercent + '%'}"></td>
+                <td th:text="${#numbers.formatInteger(v.minOrderValue, 0, 'COMMA') + ' đ'}"></td>
+                <td th:text="${v.endDate != null ? #temporals.format(v.endDate, 'dd/MM/yyyy') : '∞'}"></td>
+                <td>
+                    <span th:if="${v.isActive}" class="badge bg-success">Đang hoạt động</span>
+                    <span th:unless="${v.isActive}" class="badge bg-secondary">Tắt</span>
+                </td>
+                <td>
+                    <a th:href="@{'/admin/vouchers/edit/' + ${v.id}}"
+                       class="btn btn-sm btn-outline-primary me-1">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <a th:href="@{'/admin/vouchers/toggle/' + ${v.id}}"
+                       class="btn btn-sm btn-outline-warning me-1">
+                        <i class="bi bi-toggle-on"></i>
+                    </a>
+                    <a th:href="@{'/admin/vouchers/delete/' + ${v.id}}"
+                       class="btn btn-sm btn-outline-danger"
+                       onclick="return confirm('Xóa voucher này?')">
+                        <i class="bi bi-trash"></i>
+                    </a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>

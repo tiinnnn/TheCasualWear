@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Sản phẩm đã xóa</title></head>
+<body>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold">Sản phẩm đã xóa</h4>
+    <a th:href="@{/admin/products}" class="btn btn-outline-secondary btn-sm">← Quay lại</a>
+</div>
+
+<div th:if="${#lists.isEmpty(deletedProducts)}" class="text-center py-5">
+    <i class="bi bi-trash text-muted" style="font-size:3rem"></i>
+    <p class="text-muted mt-3">Không có sản phẩm nào đã xóa!</p>
+</div>
+
+<div class="card border-0 shadow-sm" th:unless="${#lists.isEmpty(deletedProducts)}">
+    <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Ảnh</th>
+                <th>Tên sản phẩm</th>
+                <th>Danh mục</th>
+                <th>Giá</th>
+                <th>Hành động</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="p : ${deletedProducts}">
+                <td th:text="${p.id}"></td>
+                <td>
+                    <img th:if="${p.images != null and !p.images.isEmpty()}"
+                         th:src="${p.images[0].imageUrl}"
+                         style="width:50px;height:50px;object-fit:cover" class="rounded opacity-50"/>
+                </td>
+                <td class="text-muted" th:text="${p.name}"></td>
+                <td th:text="${p.category != null ? p.category.name : '-'}"></td>
+                <td th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></td>
+                <td>
+                    <a th:href="@{'/admin/products/restore/' + ${p.id}}"
+                       class="btn btn-sm btn-success"
+                       onclick="return confirm('Khôi phục sản phẩm này?')">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>Khôi phục
+                    </a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>
