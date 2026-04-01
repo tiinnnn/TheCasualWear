@@ -80,10 +80,14 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
 
+                .rememberMe(remember -> remember
+                        .key("casualwear-secret-key")
+                        .tokenValiditySeconds(3 * 24 * 60 * 60) // tinh so ngay
+                )
                 .csrf(csrf -> csrf.disable())
 
                 .formLogin(form -> form
-                        .loginPage("/auth/login")           // trang login tự tạo
+                        .loginPage("/auth/login")           // trang login tự lam
                         .loginProcessingUrl("/auth/login")
                         .usernameParameter("username")
                         .passwordParameter("password")

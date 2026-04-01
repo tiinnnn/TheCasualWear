@@ -11,20 +11,26 @@
         <div class="card">
             <div class="card-body">
                 <h5 class="mb-4">Thông tin tài khoản</h5>
-                <form th:action="@{/account/update}" method="post">
+                <form th:action="@{/account/update}" method="post" id="profileForm">
                     <div class="mb-3">
                         <label class="form-label">Tên đăng nhập</label>
                         <input type="text" th:value="${user.username}"
                                class="form-control" disabled/>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Email</label>
-                        <input type="email" name="email"
+                        <label class="form-label">
+                            Email
+                            <span class="text-muted small">(* cần ít nhất Email hoặc SĐT)</span>
+                        </label>
+                        <input type="email" name="email" id="email"
                                th:value="${user.email}" class="form-control"/>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Số điện thoại</label>
-                        <input type="text" name="phone"
+                        <label class="form-label">
+                            Số điện thoại
+                            <span class="text-muted small">(* cần ít nhất Email hoặc SĐT)</span>
+                        </label>
+                        <input type="text" name="phone" id="phone"
                                th:value="${user.phone}" class="form-control"/>
                     </div>
                     <button type="submit" class="btn btn-dark">Cập nhật</button>
@@ -34,5 +40,15 @@
     </div>
 </div>
 </div>
+<script>
+    document.getElementById('profileForm').addEventListener('submit', function(e) {
+        const email = document.getElementById('email').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        if (!email && !phone) {
+            e.preventDefault();
+            alert('Vui lòng giữ ít nhất Email hoặc Số điện thoại!');
+        }
+    });
+</script>
 </body>
 </html>

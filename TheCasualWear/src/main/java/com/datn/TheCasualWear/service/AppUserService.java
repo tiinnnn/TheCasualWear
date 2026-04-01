@@ -21,7 +21,6 @@ public class AppUserService {
         this.roleRepository = roleRepository;
     }
 
-    // ==================== DÙNG CHUNG ====================
 
     public AppUser getUserById(Integer id) {
         return appUserRepository.findById(id)
@@ -33,25 +32,44 @@ public class AppUserService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy user: " + username));
     }
 
-    // ==================== ĐĂNG KÝ ====================
+    //  ĐĂNG KÝ
+
+    // Helper validate password
+    private boolean isValidPassword(String password) {
+        if (password == null || password.length() < 6) return false;
+        return password.chars().anyMatch(Character::isDigit);
+    }
 
     public void register(AppUser user) {
         if (appUserRepository.existsByUsername(user.getUsername())) {
             throw new IllegalArgumentException("Tên đăng nhập đã tồn tại!");
         }
-        if (appUserRepository.existsByEmail(user.getEmail())) {
+
+        // Validate password
+        if (!isValidPassword(user.getPassword())) {
+            throw new IllegalArgumentException("Mật khẩu phải có 6 ký tự và có ít nhất 1 chữ số!");
+        }
+
+        // Validate email hoặc phone phải có ít nhất 1
+        if ((user.getEmail() == null || user.getEmail().isBlank())
+                && (user.getPhone() == null || user.getPhone().isBlank())) {
+            throw new IllegalArgumentException("Vui lòng nhập ít nhất 1 Email hoặc Số điện thoại!");
+        }
+
+        if (user.getEmail() != null && !user.getEmail().isBlank()
+                && appUserRepository.existsByEmail(user.getEmail())) {
             throw new IllegalArgumentException("Email đã được sử dụng!");
         }
+
         user.setPassword("{noop}" + user.getPassword());
-        // Gán role CUSTOMER mặc định
+
         Role customerRole = roleRepository.findByName("ROLE_CUSTOMER")
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy role CUSTOMER"));
         user.getRoles().add(customerRole);
-
         appUserRepository.save(user);
     }
 
-    // ==================== PHÍA ADMIN ====================
+    // PHÍA ADMIN
 
     public List<AppUser> getAllUsers() {
         return appUserRepository.findAll();
@@ -104,29 +122,43 @@ public class AppUserService {
         return roleRepository.findAll(); // dùng để hiển thị dropdown chọn role trong admin
     }
 
-    // ==================== PHÍA CUSTOMER ====================
+    //  PHÍA CUSTOMER
+
 
     public void updateProfile(String username, AppUser details) {
         AppUser user = getUserByUsername(username);
 
-        if (!user.getEmail().equals(details.getEmail())
-                && appUserRepository.existsByEmail(details.getEmail())) {
+        String newEmail = details.getEmail();
+        String newPhone = details.getPhone();
+
+        if ((newEmail == null || newEmail.isBlank())
+                && (newPhone == null || newPhone.isBlank())) {
+            throw new IllegalArgumentException("Vui lòng giữ ít nhất Email hoặc Số điện thoại!");
+        }
+        if (newEmail != null && newEmail.isBlank()) {
+            newEmail = null;
+        }
+        if (newPhone != null && newPhone.isBlank()) {
+            newPhone = null;
+        }
+        if (newEmail != null && !newEmail.isBlank()
+                && !newEmail.equals(user.getEmail())
+                && appUserRepository.existsByEmail(newEmail)) {
             throw new IllegalArgumentException("Email đã được sử dụng!");
         }
-
-        user.setEmail(details.getEmail());
-        user.setPhone(details.getPhone());
+        user.setEmail(newEmail);
+        user.setPhone(newPhone);
         appUserRepository.save(user);
     }
 
     public void changePassword(String username, String oldPassword, String newPassword) {
         AppUser user = getUserByUsername(username);
-        oldPassword = "{noop}"+oldPassword;
-        // So sánh thẳng không encode
-        if (!oldPassword.equals(user.getPassword())) {
-            throw new IllegalArgumentException("Mật khẩu cũ không đúng!");
-        }
+
+        String stored = user.getPassword().replace("{noop}", "");
+        if (!oldPassword.equals(stored)) {throw new IllegalArgumentException("Mật khẩu cũ không đúng!");}
+        if (!isValidPassword(newPassword)) {throw new IllegalArgumentException("Mật khẩu mới phải trên 6 ký tự và có ít nhất 1 chữ số!");}
         user.setPassword("{noop}" + newPassword);
         appUserRepository.save(user);
     }
+
 }
