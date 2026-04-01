@@ -2,11 +2,21 @@ package com.datn.TheCasualWear.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 @Controller
+@RequestMapping("/demo")
 public class DemoController {
-    @GetMapping("/demo")
+    @GetMapping
     public String demo() {
         return "demo";
+    }
+    @GetMapping("/error/404")
+    public String error404() {
+        return "error/404";
+    }
+    @GetMapping("/error/500")
+    public String error500() {
+        return "error/500";
     }
 }

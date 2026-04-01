@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
 <head><title>Quản lý user</title></head>
 <body>
 <h4 class="fw-bold mb-4">Quản lý người dùng</h4>
@@ -53,15 +53,15 @@
 
                         <!-- Thêm role -->
                         <form th:action="@{'/admin/users/' + ${u.id} + '/role/add'}"
-                              method="post" class="d-flex align-items-center gap-1">
-                            <select name="roleName" class="form-select form-select-sm" style="width:110px">
-                                <option value="ROLE_ADMIN">ADMIN</option>
+                              method="post" class="d-inline">
+                            <select name="roleName" class="form-select form-select-sm d-inline"
+                                    style="width:120px">
                                 <option value="ROLE_CUSTOMER">CUSTOMER</option>
                                 <option value="ROLE_DELIVERY">DELIVERY</option>
+                                <option th:if="${isOwner}" value="ROLE_ADMIN">ADMIN</option>
+                                <option th:if="${isOwner}" value="ROLE_OWNER">OWNER</option>
                             </select>
-                            <button type="submit" class="btn btn-sm btn-outline-primary" title="Thêm role">
-                                <i class="bi bi-plus-lg"></i>
-                            </button>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">+</button>
                         </form>
 
                         <!-- Xóa role -->

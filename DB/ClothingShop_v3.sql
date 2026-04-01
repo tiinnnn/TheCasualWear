@@ -162,6 +162,11 @@ INSERT INTO user_role (user_id, role_id) VALUES
 (4, 2), -- jane      → ROLE_CUSTOMER
 (5, 2); -- minh      → ROLE_CUSTOMER
 GO
+INSERT INTO role (name) VALUES ('ROLE_OWNER');
+
+-- Gán ROLE_OWNER cho admin (user id=1)
+INSERT INTO user_role (user_id, role_id) 
+SELECT 1, id FROM role WHERE name = 'ROLE_OWNER';
 
 -- ========================================
 -- CATEGORIES

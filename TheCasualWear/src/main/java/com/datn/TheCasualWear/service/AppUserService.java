@@ -121,7 +121,7 @@ public class AppUserService {
 
     public void changePassword(String username, String oldPassword, String newPassword) {
         AppUser user = getUserByUsername(username);
-
+        oldPassword = "{noop}"+oldPassword;
         // So sánh thẳng không encode
         if (!oldPassword.equals(user.getPassword())) {
             throw new IllegalArgumentException("Mật khẩu cũ không đúng!");

@@ -63,11 +63,13 @@ public class SecurityConfig {
                         ).permitAll()
 
                         // Chỉ ADMIN
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/admin/**").hasAnyRole("ADMIN", "OWNER")
 
                         // Chỉ DELIVERY
                         .requestMatchers("/delivery/**").hasRole("DELIVERY")
 
+                        // Chỉ OWNER
+                        .requestMatchers("/admin/users/*/role/**").hasRole("OWNER")
                         // CUSTOMER + ADMIN (đã đăng nhập)
                         .requestMatchers(
                                 "/cart/**",
