@@ -130,6 +130,14 @@ CREATE TABLE order_voucher (
     customer_id INT FOREIGN KEY REFERENCES app_user(id)
 );
 
+CREATE TABLE password_reset_token (
+    id       INT IDENTITY(1,1) PRIMARY KEY,
+    token    VARCHAR(255) NOT NULL UNIQUE,
+    user_id  INT NOT NULL UNIQUE,
+    expires_at DATETIME2 NOT NULL,
+    CONSTRAINT fk_prt_user FOREIGN KEY (user_id) REFERENCES app_user(id)
+);
+
 ALTER TABLE order_voucher ADD CONSTRAINT UQ_order_voucher UNIQUE (order_id);
 ALTER TABLE order_voucher ADD CONSTRAINT UQ_user_voucher  UNIQUE (customer_id, voucher_id);
 GO

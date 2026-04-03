@@ -19,10 +19,17 @@
     <div class="mb-3">
         <label class="form-label">
             Email
-            <span class="text-muted small">(* cần ít nhất Email hoặc SĐT)</span>
+            <span class="text-muted small">(* lưu ý chỉ email mới reset được password)</span>
         </label>
-        <input type="email" th:field="*{email}" class="form-control"
-               placeholder="example@gmail.com"/>
+        <input type="email" name="email"
+               th:value="${user != null ? user.email : ''}"
+               class="form-control"
+               placeholder="example@gmail.com"
+               pattern="[a-zA-Z0-9._%+\-]+@gmail\.com"
+               title="Email phải có đuôi @gmail.com"/>
+        <div class="form-text text-muted">
+            <i class="bi bi-info-circle me-1"></i>Chỉ chấp nhận email @gmail.com
+        </div>
     </div>
 
     <div class="mb-3">
@@ -30,8 +37,16 @@
             Số điện thoại
             <span class="text-muted small">(* cần ít nhất Email hoặc SĐT)</span>
         </label>
-        <input type="text" th:field="*{phone}" class="form-control"
-               placeholder="0901234567"/>
+        <input type="text" name="phone"
+               th:value="${user != null ? user.phone : ''}"
+               class="form-control"
+               placeholder="0901234567"
+               pattern="\d{10}"
+               maxlength="10"
+               title="Số điện thoại phải đúng 10 chữ số"/>
+        <div class="form-text text-muted">
+            <i class="bi bi-info-circle me-1"></i>Nhập đúng 10 chữ số
+        </div>
     </div>
 
     <div class="mb-3">
@@ -98,6 +113,42 @@
         if (!email && !phone) {
             e.preventDefault();
             alert('Vui lòng nhập ít nhất Email hoặc Số điện thoại!');
+        }
+    });
+    document.querySelector('[name="email"]').addEventListener('input', function() {
+        const email = this.value.trim();
+        const feedback = this.nextElementSibling?.nextElementSibling;
+
+        if (!email) {
+            this.classList.remove('is-invalid', 'is-valid');
+            return;
+        }
+
+        if (email.toLowerCase().endsWith('@gmail.com')) {
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
+        } else {
+            this.classList.remove('is-valid');
+            this.classList.add('is-invalid');
+        }
+    });
+    document.querySelector('[name="phone"]').addEventListener('input', function() {
+        const phone = this.value.trim();
+
+        // Chỉ cho nhập số
+        this.value = phone.replace(/\D/g, '');
+
+        if (!phone) {
+            this.classList.remove('is-invalid', 'is-valid');
+            return;
+        }
+
+        if (/^\d{10}$/.test(phone)) {
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
+        } else {
+            this.classList.remove('is-valid');
+            this.classList.add('is-invalid');
         }
     });
 </script>

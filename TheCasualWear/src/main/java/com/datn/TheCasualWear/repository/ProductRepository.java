@@ -1,6 +1,7 @@
 package com.datn.TheCasualWear.repository;
 
 import com.datn.TheCasualWear.entity.Product;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -22,8 +23,11 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
             "  WHERE p2.isDeleted = false AND p2.stock > 0 " +
             "  GROUP BY p2.name, p2.color" +
             ") " +
-            "AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')))")
-    List<Product> searchProducts(@Param("keyword") String keyword, Sort sort);
+            "AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+            "AND (:categoryId IS NULL OR p.category.id = :categoryId)")
+    Page<Product> searchProducts(@Param("keyword") String keyword,
+                                 @Param("categoryId") Integer categoryId,
+                                 Pageable pageable);
 
     // Lấy tất cả size của 1 sản phẩm (cùng tên + màu)
     @Query("SELECT p FROM Product p WHERE p.name = :name " +

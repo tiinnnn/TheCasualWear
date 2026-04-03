@@ -20,7 +20,18 @@ public class AppUserService {
         this.appUserRepository = appUserRepository;
         this.roleRepository = roleRepository;
     }
-
+//validation
+    private boolean isValidEmail(String email) {
+        return email != null && email.toLowerCase().endsWith("@gmail.com");
+    }
+    private boolean isValidPhone(String phone) {
+        return phone != null && phone.matches("^\\d{10}$");
+    }
+    // validate password
+    private boolean isValidPassword(String password) {
+        if (password == null || password.length() < 6) return false;
+        return password.chars().anyMatch(Character::isDigit);
+    }
 
     public AppUser getUserById(Integer id) {
         return appUserRepository.findById(id)
@@ -34,18 +45,11 @@ public class AppUserService {
 
     //  ĐĂNG KÝ
 
-    // Helper validate password
-    private boolean isValidPassword(String password) {
-        if (password == null || password.length() < 6) return false;
-        return password.chars().anyMatch(Character::isDigit);
-    }
-
     public void register(AppUser user) {
         if (appUserRepository.existsByUsername(user.getUsername())) {
             throw new IllegalArgumentException("Tên đăng nhập đã tồn tại!");
         }
 
-        // Validate password
         if (!isValidPassword(user.getPassword())) {
             throw new IllegalArgumentException("Mật khẩu phải có 6 ký tự và có ít nhất 1 chữ số!");
         }
@@ -59,6 +63,14 @@ public class AppUserService {
         if (user.getEmail() != null && !user.getEmail().isBlank()
                 && appUserRepository.existsByEmail(user.getEmail())) {
             throw new IllegalArgumentException("Email đã được sử dụng!");
+        }
+        if (user.getEmail() != null && !user.getEmail().isBlank()
+                && !isValidEmail(user.getEmail())) {
+            throw new IllegalArgumentException("Email phải có đuôi @gmail.com!");
+        }
+        if (user.getPhone() != null && !user.getPhone().isBlank()
+                && !isValidPhone(user.getPhone())) {
+            throw new IllegalArgumentException("Số điện thoại phải đúng 10 chữ số!");
         }
 
         user.setPassword("{noop}" + user.getPassword());
@@ -145,6 +157,14 @@ public class AppUserService {
                 && !newEmail.equals(user.getEmail())
                 && appUserRepository.existsByEmail(newEmail)) {
             throw new IllegalArgumentException("Email đã được sử dụng!");
+        }
+        if (details.getEmail() != null && !details.getEmail().isBlank()
+                && !isValidEmail(details.getEmail())) {
+            throw new IllegalArgumentException("Email phải có đuôi @gmail.com!");
+        }
+        if (details.getPhone() != null && !details.getPhone().isBlank()
+                && !isValidPhone(details.getPhone())) {
+            throw new IllegalArgumentException("Số điện thoại phải đúng 10 chữ số!");
         }
         user.setEmail(newEmail);
         user.setPhone(newPhone);

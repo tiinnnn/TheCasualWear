@@ -88,8 +88,13 @@ public class AccountController {
     }
 
     @GetMapping("/address/add")
-    public String addAddressPage(Model model) {
-        model.addAttribute("address", new Address());
+    public String addAddressPage(Model model,Authentication auth) {
+        AppUser user = getCurrentUser(auth);
+        Address address = new Address();
+        address.setFullName(user.getUsername());
+        address.setPhone(user.getPhone());
+        model.addAttribute("address", address);
+        model.addAttribute("view", "shop/account/address-form");
         model.addAttribute("view", "shop/account/address-form");
         return "layouts/shop-layout";
     }

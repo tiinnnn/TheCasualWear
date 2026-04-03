@@ -80,7 +80,6 @@ public class OrderService {
         order.setStatus(OrderStatus.PENDING);
         orderRepository.save(order);
 
-        // Tạo order detail + trừ stock
         for (CartItem item : cartItems) {
             Product product = item.getProduct();
 
@@ -98,7 +97,6 @@ public class OrderService {
             detail.setPrice(product.getPrice()); // lưu giá tại thời điểm mua
             orderDetailRepository.save(detail);
 
-            // Trừ stock
             product.setStock(product.getStock() - item.getQuantity());
             productRepository.save(product);
         }
@@ -123,7 +121,6 @@ public class OrderService {
         return orderRepository.findByCustomerIdOrderByOrderDateDesc(user.getId());
     }
 
-    // Customer xác nhận đã nhận hàng DELIVERED → COMPLETED
     public void confirmReceived(Integer orderId, AppUser user) {
         AppOrder order = getOrderByIdAndUser(orderId, user);
 

@@ -3,36 +3,57 @@
 <head><title>Shop</title></head>
 <body>
 <div class="container">
-<h2 class="mb-4">Shop</h2>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="fw-bold">
+      Shop
+      <small class="text-muted fs-6"
+             th:text="'(' + ${totalItems} + ' sản phẩm)'"></small>
+    </h4>
+  </div>
 
-<!-- Search + Sort -->
-<form th:action="@{/shop}" method="get" class="d-flex gap-2 mb-4">
-  <input type="text" name="keyword" th:value="${keyword}"
-         class="form-control" placeholder="Tìm kiếm sản phẩm..."/>
-  <select name="sort" class="form-select w-auto" onchange="this.form.submit()">
-    <option value="newest"
-            th:selected="${sort == 'newest' or sort == null}">Mới nhất</option>
-    <option value="price_asc"
-            th:selected="${sort == 'price_asc'}">Giá: thấp đến cao</option>
-    <option value="price_desc"
-            th:selected="${sort == 'price_desc'}">Giá: cao đến thấp</option>
-  </select>
-  <button type="submit" class="btn btn-dark">Tìm</button>
-</form>
+  <!-- Search + Sort -->
+  <form th:action="@{/shop}" method="get" class="d-flex gap-2 mb-4">
+    <input type="hidden" name="category" th:value="${selectedCategory}"
+           th:if="${selectedCategory != null}"/>
+    <input type="text" name="keyword" th:value="${keyword}"
+           class="form-control" placeholder="Tìm kiếm sản phẩm..."/>
+    <select name="sort" class="form-select w-auto" onchange="this.form.submit()">
+      <option value="newest"
+              th:selected="${sort == 'newest' or sort == null}">Mới nhất</option>
+      <option value="price_asc"
+              th:selected="${sort == 'price_asc'}">Giá: thấp → cao</option>
+      <option value="price_desc"
+              th:selected="${sort == 'price_desc'}">Giá: cao → thấp</option>
+    </select>
+    <button type="submit" class="btn btn-dark">Tìm</button>
+    <!-- Reset filter -->
+    <a th:if="${keyword != null or selectedCategory != null}"
+       th:href="@{/shop}" class="btn btn-outline-secondary">✕</a>
+  </form>
 
-<!-- Danh sách sản phẩm -->
-  <div class="row row-cols-2 row-cols-md-4 g-4">
+  <!-- Danh sách sản phẩm -->
+  <div th:if="${#lists.isEmpty(products)}" class="text-center py-5">
+    <p class="text-muted">Không tìm thấy sản phẩm nào!</p>
+    <a th:href="@{/shop}" class="btn btn-outline-dark">Xem tất cả</a>
+  </div>
+
+  <div class="row row-cols-2 row-cols-md-4 g-4"
+       th:unless="${#lists.isEmpty(products)}">
     <div class="col" th:each="p : ${products}">
-      <a th:href="@{'/product/' + ${p.id}}" class="text-decoration-none text-dark">
-        <div class="card h-100 border-0 shadow-sm" style="cursor:pointer;transition:transform 0.2s"
+      <a th:href="@{'/product/' + ${p.id}}"
+         class="text-decoration-none text-dark">
+        <div class="card h-100 border-0 shadow-sm"
+             style="cursor:pointer;transition:transform 0.2s"
              onmouseover="this.style.transform='translateY(-4px)'"
              onmouseout="this.style.transform='translateY(0)'">
           <img th:if="${p.images != null and !p.images.isEmpty()}"
                th:src="${p.images[0].imageUrl}"
-               class="card-img-top" style="height:280px;object-fit:cover"/>
+               class="card-img-top"
+               style="height:280px;object-fit:cover"/>
           <img th:unless="${p.images != null and !p.images.isEmpty()}"
                src="/images/no-image.png"
-               class="card-img-top" style="height:280px;object-fit:cover"/>
+               class="card-img-top"
+               style="height:280px;object-fit:cover"/>
           <div class="card-body">
             <h6 class="card-title" th:text="${p.name}"></h6>
             <p class="text-muted small mb-1"
@@ -45,11 +66,40 @@
     </div>
   </div>
 
-<!-- Không có sản phẩm -->
-<div th:if="${#lists.isEmpty(products)}" class="text-center mt-5">
-  <p class="text-muted">Không tìm thấy sản phẩm nào!</p>
-  <a th:href="@{/shop}" class="btn btn-outline-dark">Xem tất cả</a>
-</div>
+  <!-- Pagination -->
+  <div th:if="${totalPages > 1}"
+       class="d-flex justify-content-center mt-4">
+    <nav>
+      <ul class="pagination">
+        <li class="page-item"
+            th:classappend="${currentPage == 0} ? 'disabled'">
+          <a class="page-link"
+             th:href="@{/shop(page=${currentPage-1},
+                                       keyword=${keyword},
+                                       sort=${sort},
+                                       category=${selectedCategory})}">←</a>
+        </li>
+        <li th:each="i : ${#numbers.sequence(0, totalPages-1)}"
+            class="page-item"
+            th:classappend="${i == currentPage} ? 'active'">
+          <a class="page-link"
+             th:href="@{/shop(page=${i},
+                                       keyword=${keyword},
+                                       sort=${sort},
+                                       category=${selectedCategory})}"
+             th:text="${i + 1}"></a>
+        </li>
+        <li class="page-item"
+            th:classappend="${currentPage == totalPages-1} ? 'disabled'">
+          <a class="page-link"
+             th:href="@{/shop(page=${currentPage+1},
+                                       keyword=${keyword},
+                                       sort=${sort},
+                                       category=${selectedCategory})}">→</a>
+        </li>
+      </ul>
+    </nav>
+  </div>
 </div>
 </body>
 </html>

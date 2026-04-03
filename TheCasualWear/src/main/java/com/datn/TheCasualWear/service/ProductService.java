@@ -3,6 +3,7 @@ package com.datn.TheCasualWear.service;
 import com.datn.TheCasualWear.config.ResourceNotFoundException;
 import com.datn.TheCasualWear.entity.Product;
 import com.datn.TheCasualWear.repository.ProductRepository;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -28,14 +29,18 @@ public class ProductService {
     // ==================== PHÍA USER ====================
 
     // Trang shop: search + sort
-    public List<Product> getShopProducts(String keyword, String sort) {
+    private static final int SHOP_PAGE_SIZE = 12;
+
+    public Page<Product> getShopProducts(String keyword, String sort,
+                                         Integer categoryId, int page) {
         Sort sortObj = switch (sort != null ? sort : "newest") {
             case "price_asc"  -> Sort.by("price").ascending();
             case "price_desc" -> Sort.by("price").descending();
-            default           -> Sort.by("createdAt").descending(); // newest + popular
+            default           -> Sort.by("createdAt").descending();
         };
         String kw = (keyword == null || keyword.isBlank()) ? null : keyword;
-        return productRepository.searchProducts(kw, sortObj);
+        Pageable pageable = PageRequest.of(page, SHOP_PAGE_SIZE, sortObj);
+        return productRepository.searchProducts(kw, categoryId, pageable);
     }
 
     public List<Product> getProductVariants(Integer id) {

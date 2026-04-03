@@ -16,6 +16,10 @@ public class AddressService {
     public AddressService(AddressRepository addressRepository) {
         this.addressRepository = addressRepository;
     }
+    //validation
+    private boolean isValidPhone(String phone) {
+        return phone != null && phone.matches("^\\d{10}$");
+    }
 
     // Lấy tất cả địa chỉ của user
     public List<Address> getAddressesByUser(AppUser user) {
@@ -41,7 +45,9 @@ public class AddressService {
     // Thêm địa chỉ mới
     public Address addAddress(AppUser user, Address address) {
         address.setUser(user);
-
+        if (!isValidPhone(address.getPhone())) {
+            throw new IllegalArgumentException("Số điện thoại phải đúng 10 chữ số!");
+        }
         // Nếu là địa chỉ đầu tiên → tự động set làm mặc định
         List<Address> existing = addressRepository.findByUserId(user.getId());
         if (existing.isEmpty()) {
@@ -56,13 +62,15 @@ public class AddressService {
     // Sửa địa chỉ
     public Address updateAddress(Integer id, AppUser user, Address details) {
         Address address = getAddressById(id, user);
-
         address.setFullName(details.getFullName());
         address.setPhone(details.getPhone());
         address.setStreet(details.getStreet());
         address.setCity(details.getCity());
         address.setDistrict(details.getDistrict());
         address.setCountry(details.getCountry());
+        if (!isValidPhone(address.getPhone())) {
+            throw new IllegalArgumentException("Số điện thoại phải đúng 10 chữ số!");
+        }
 
         return addressRepository.save(address);
     }

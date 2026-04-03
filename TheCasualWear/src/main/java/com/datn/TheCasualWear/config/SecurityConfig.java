@@ -58,7 +58,7 @@ public class SecurityConfig {
                                 "/product/**",
                                 "/auth/**",
                                 "/lien-he",
-                                "/chinh-sach-doi-tra",
+                                "/chinh-sach-doi-tra","/forgot-password", "/forgot-password/reset",
                                 "/css/**", "/js/**", "/images/**", "/webjars/**"
                         ).permitAll()
 

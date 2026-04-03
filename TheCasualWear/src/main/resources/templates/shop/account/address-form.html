@@ -20,7 +20,12 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Số điện thoại</label>
-                        <input type="text" th:field="*{phone}" class="form-control" required/>
+                        <input type="text" th:field="*{phone}" class="form-control"
+                               placeholder="0901234567"
+                               pattern="\d{10}"
+                               maxlength="10"
+                               title="Số điện thoại phải đúng 10 chữ số"
+                               required/>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Địa chỉ</label>
@@ -46,5 +51,30 @@
     </div>
 </div>
 </div>
+<script>
+    const phoneInput = document.querySelector('[name="phone"]');
+
+    function validatePhone() {
+        const phone = phoneInput.value.trim();
+        phoneInput.value = phone.replace(/\D/g, '');
+
+        if (!phone) {
+            phoneInput.classList.remove('is-invalid', 'is-valid');
+            return;
+        }
+
+        if (/^\d{10}$/.test(phone)) {
+            phoneInput.classList.remove('is-invalid');
+            phoneInput.classList.add('is-valid');
+        } else {
+            phoneInput.classList.remove('is-valid');
+            phoneInput.classList.add('is-invalid');
+        }
+    }
+
+    phoneInput.addEventListener('input', validatePhone);
+
+    if (phoneInput.value) validatePhone();
+</script>
 </body>
 </html>

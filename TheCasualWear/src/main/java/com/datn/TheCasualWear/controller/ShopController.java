@@ -3,6 +3,7 @@ package com.datn.TheCasualWear.controller;
 import com.datn.TheCasualWear.entity.Product;
 import com.datn.TheCasualWear.service.CategoryService;
 import com.datn.TheCasualWear.service.ProductService;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -31,40 +32,42 @@ public class ShopController {
     public String shopPage(@RequestParam(required = false) String keyword,
                            @RequestParam(required = false) String sort,
                            @RequestParam(required = false) Integer category,
+                           @RequestParam(defaultValue = "0") int page,
                            Model model) {
-        var products = productService.getShopProducts(keyword, sort);
+        Page<Product> productPage = productService.getShopProducts(
+                keyword, sort, category, page);
 
-        // Lọc theo category nếu có
-        if (category != null) {
-            products = products.stream()
-                    .filter(p -> p.getCategory() != null
-                            && p.getCategory().getId().equals(category))
-                    .toList();
-            model.addAttribute("selectedCategory", category);
-        }
-
-        model.addAttribute("products", products);
+        model.addAttribute("products", productPage.getContent());
         model.addAttribute("keyword", keyword);
         model.addAttribute("sort", sort);
+        model.addAttribute("selectedCategory", category);
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", productPage.getTotalPages());
+        model.addAttribute("totalItems", productPage.getTotalElements());
         model.addAttribute("view", "shop/shop");
         return "layouts/shop-layout";
     }
 
+    // Trang chủ - related products trong productDetail
     @GetMapping("/product/{id}")
     public String productDetail(@PathVariable Integer id, Model model) {
         Product product = productService.getProductById(id);
         model.addAttribute("product", product);
         model.addAttribute("variants", productService.getProductVariants(id));
+
+        // Sửa lại - thêm null và 0
         if (product.getCategory() != null) {
             model.addAttribute("relatedProducts",
-                    productService.getShopProducts(null, "newest")
+                    productService.getShopProducts(null, "newest",
+                                    product.getCategory().getId(), 0)
+                            .getContent()  // ← thêm getContent() vì giờ trả về Page
                             .stream()
-                            .filter(p -> p.getCategory() != null
-                                    && p.getCategory().getId().equals(product.getCategory().getId())
-                                    && !p.getId().equals(id))
+                            .filter(p -> !p.getId().equals(id))
                             .limit(4)
-                            .toList());
+                            .toList()
+            );
         }
+
         model.addAttribute("view", "shop/product-detail");
         return "layouts/shop-layout";
     }
