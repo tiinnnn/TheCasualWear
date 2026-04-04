@@ -4,6 +4,9 @@ import com.datn.TheCasualWear.config.ResourceNotFoundException;
 import com.datn.TheCasualWear.entity.*;
 import com.datn.TheCasualWear.enums.OrderStatus;
 import com.datn.TheCasualWear.repository.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +23,8 @@ public class OrderService {
     private final CartService cartService;
     private final VoucherService voucherService;
     private final ProductRepository productRepository;
+    private static final int ADMIN_PAGE_SIZE = 10;
+
 
     public OrderService(AppOrderRepository orderRepository,
                         OrderDetailRepository orderDetailRepository,
@@ -33,6 +38,14 @@ public class OrderService {
         this.cartService = cartService;
         this.voucherService = voucherService;
         this.productRepository = productRepository;
+    }
+
+
+    public Page<AppOrder> getAllOrders(String keyword, String status, int page) {
+        String kw = (keyword == null || keyword.isBlank()) ? null : keyword;
+        String st = (status == null || status.isBlank()) ? null : status;
+        Pageable pageable = PageRequest.of(page, ADMIN_PAGE_SIZE);
+        return orderRepository.searchOrders(kw, st, pageable);
     }
 
     public AppOrder getOrderById(Integer id) {
@@ -61,7 +74,6 @@ public class OrderService {
             throw new IllegalStateException("Giỏ hàng trống!");
         }
 
-        // Tính tổng tiền gốc
         BigDecimal totalPrice = BigDecimal.valueOf(cartService.getTotalPrice(user));
 
         // Áp dụng voucher nếu có

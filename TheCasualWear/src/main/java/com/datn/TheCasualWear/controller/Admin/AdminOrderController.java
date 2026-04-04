@@ -1,7 +1,9 @@
 package com.datn.TheCasualWear.controller.Admin;
 
+import com.datn.TheCasualWear.entity.AppOrder;
 import com.datn.TheCasualWear.enums.OrderStatus;
 import com.datn.TheCasualWear.service.OrderService;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -18,14 +20,16 @@ public class AdminOrderController {
     }
 
     @GetMapping
-    public String listOrders(@RequestParam(required = false) String status,
+    public String listOrders(@RequestParam(required = false) String keyword,
+                             @RequestParam(required = false) String status,
+                             @RequestParam(defaultValue = "0") int page,
                              Model model) {
-        if (status != null && !status.isBlank()) {
-            model.addAttribute("orders",
-                    orderService.getOrdersByStatus(OrderStatus.valueOf(status)));
-        } else {
-            model.addAttribute("orders", orderService.getAllOrders());
-        }
+        Page<AppOrder> orderPage = orderService.getAllOrders(keyword, status, page);
+        model.addAttribute("orders", orderPage.getContent());
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", orderPage.getTotalPages());
+        model.addAttribute("totalItems", orderPage.getTotalElements());
+        model.addAttribute("keyword", keyword);
         model.addAttribute("selectedStatus", status);
         model.addAttribute("statuses", OrderStatus.values());
         model.addAttribute("view", "admin/order/list");

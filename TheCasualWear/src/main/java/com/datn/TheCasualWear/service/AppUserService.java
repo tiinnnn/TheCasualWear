@@ -5,6 +5,10 @@ import com.datn.TheCasualWear.entity.AppUser;
 import com.datn.TheCasualWear.entity.Role;
 import com.datn.TheCasualWear.repository.AppUserRepository;
 import com.datn.TheCasualWear.repository.RoleRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,11 +18,19 @@ public class AppUserService {
 
     private final AppUserRepository appUserRepository;
     private final RoleRepository roleRepository;
+    private static final int ADMIN_PAGE_SIZE = 10;
 
     public AppUserService(AppUserRepository appUserRepository,
                           RoleRepository roleRepository) {
         this.appUserRepository = appUserRepository;
         this.roleRepository = roleRepository;
+    }
+
+    public Page<AppUser> getAllUsers(String keyword, int page) {
+        String kw = (keyword == null || keyword.isBlank()) ? null : keyword;
+        Pageable pageable = PageRequest.of(page, ADMIN_PAGE_SIZE,
+                Sort.by("id").ascending());
+        return appUserRepository.searchUsers(kw, pageable);
     }
 //validation
     private boolean isValidEmail(String email) {

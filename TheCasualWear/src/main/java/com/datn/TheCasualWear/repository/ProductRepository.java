@@ -13,7 +13,7 @@ import java.util.Optional;
 
 public interface ProductRepository extends JpaRepository<Product, Integer> {
 
-    // ==================== PHÍA USER ====================
+    //  PHÍA USER
 
     // Trang shop: search + sort (stock > 0, chưa xóa)
     // Lấy 1 đại diện mỗi nhóm (tên + màu) cho trang shop
@@ -46,17 +46,18 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
             "ORDER BY p.createdAt DESC")
     List<Product> findTop8Newest(Pageable pageable);
 
-    // ==================== PHÍA ADMIN ====================
+    //  PHÍA ADMIN
 
     // Danh sách chưa xóa (có thể search theo tên)
     @Query("SELECT p FROM Product p WHERE p.isDeleted = false " +
             "AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')))")
-    List<Product> searchProductsForAdmin(@Param("keyword") String keyword);
+    Page<Product> searchProductsForAdmin(@Param("keyword") String keyword, Pageable pageable);
+
 
     List<Product> findByIsDeletedFalse();   // lấy tất cả không cần search
     List<Product> findByIsDeletedTrue();    // danh sách đã xóa mềm
 
-    // ==================== DÙNG CHUNG ====================
+    // DÙNG CHUNG
 
     Optional<Product> findByIdAndIsDeletedFalse(Integer id);
 

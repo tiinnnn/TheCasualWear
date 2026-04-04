@@ -14,23 +14,23 @@ import java.util.List;
 @Service
 public class ProductService {
     private final ProductRepository productRepository;
+    private static final int SHOP_PAGE_SIZE = 12;
+    private static final int ADMIN_PAGE_SIZE = 15;
 
     public ProductService(ProductRepository productRepository) {
         this.productRepository = productRepository;
     }
 
-    // ==================== DÙNG CHUNG ====================
+    // DÙNG CHUNG
 
     public Product getProductById(Integer id) {
         return productRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + id));
     }
 
-    // ==================== PHÍA USER ====================
+    // PHÍA USER
 
     // Trang shop: search + sort
-    private static final int SHOP_PAGE_SIZE = 12;
-
     public Page<Product> getShopProducts(String keyword, String sort,
                                          Integer categoryId, int page) {
         Sort sortObj = switch (sort != null ? sort : "newest") {
@@ -55,15 +55,19 @@ public class ProductService {
         return productRepository.findTop8Newest(top8);
     }
 
-    // ==================== PHÍA ADMIN ====================
+    // PHÍA ADMIN
 
-    public List<Product> getAdminProducts() {
-        return productRepository.findByIsDeletedFalse();
+
+    public Page<Product> getAdminProducts(String keyword, int page) {
+        String kw = (keyword == null || keyword.isBlank()) ? null : keyword;
+        Pageable pageable = PageRequest.of(page, ADMIN_PAGE_SIZE,
+                Sort.by("createdAt").descending());
+        return productRepository.searchProductsForAdmin(kw, pageable);
     }
 
-    public List<Product> getAdminProducts(String keyword) {
-        String kw = (keyword == null || keyword.isBlank()) ? null : keyword;
-        return productRepository.searchProductsForAdmin(kw);
+    // Giữ lại overload không tham số cho dashboard
+    public List<Product> getAdminProducts() {
+        return productRepository.findByIsDeletedFalse();
     }
 
     public List<Product> getDeletedProducts() {

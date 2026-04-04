@@ -1,6 +1,8 @@
 package com.datn.TheCasualWear.controller.Admin;
 
+import com.datn.TheCasualWear.entity.AppUser;
 import com.datn.TheCasualWear.service.AppUserService;
+import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -18,9 +20,16 @@ public class AdminUserController {
     }
 
     @GetMapping
-    public String listUsers(Authentication auth, Model model) {
-        model.addAttribute("users", appUserService.getAllUsers());
-        // Truyền flag isOwner xuống view
+    public String listUsers(@RequestParam(required = false) String keyword,
+                            @RequestParam(defaultValue = "0") int page,
+                            Authentication auth, Model model) {
+        Page<AppUser> userPage = appUserService.getAllUsers(keyword, page);
+        model.addAttribute("users", userPage.getContent());
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", userPage.getTotalPages());
+        model.addAttribute("totalItems", userPage.getTotalElements());
+        model.addAttribute("keyword", keyword);
+
         boolean isOwner = auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_OWNER"));
         model.addAttribute("isOwner", isOwner);

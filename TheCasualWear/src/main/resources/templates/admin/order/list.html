@@ -2,32 +2,31 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head><title>Quản lý đơn hàng</title></head>
 <body>
-<h4 class="fw-bold mb-4">Quản lý đơn hàng</h4>
-
-<!-- Filter theo trạng thái -->
-<div class="d-flex gap-2 mb-3 flex-wrap">
-    <a th:href="@{/admin/orders}"
-       th:classappend="${selectedStatus == null} ? 'btn-dark' : 'btn-outline-dark'"
-       class="btn btn-sm">Tất cả</a>
-    <a th:href="@{/admin/orders(status='PENDING')}"
-       th:classappend="${selectedStatus == 'PENDING'} ? 'btn-warning' : 'btn-outline-warning'"
-       class="btn btn-sm">Chờ xác nhận</a>
-    <a th:href="@{/admin/orders(status='CONFIRMED')}"
-       th:classappend="${selectedStatus == 'CONFIRMED'} ? 'btn-info' : 'btn-outline-info'"
-       class="btn btn-sm">Đã xác nhận</a>
-    <a th:href="@{/admin/orders(status='SHIPPING')}"
-       th:classappend="${selectedStatus == 'SHIPPING'} ? 'btn-primary' : 'btn-outline-primary'"
-       class="btn btn-sm">Đang giao</a>
-    <a th:href="@{/admin/orders(status='DELIVERED')}"
-       th:classappend="${selectedStatus == 'DELIVERED'} ? 'btn-success' : 'btn-outline-success'"
-       class="btn btn-sm">Đã giao</a>
-    <a th:href="@{/admin/orders(status='COMPLETED')}"
-       th:classappend="${selectedStatus == 'COMPLETED'} ? 'btn-success' : 'btn-outline-success'"
-       class="btn btn-sm">Hoàn thành</a>
-    <a th:href="@{/admin/orders(status='CANCELLED')}"
-       th:classappend="${selectedStatus == 'CANCELLED'} ? 'btn-danger' : 'btn-outline-danger'"
-       class="btn btn-sm">Đã hủy</a>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold">
+        Quản lý đơn hàng
+        <small class="text-muted fs-6"
+               th:text="'(' + ${totalItems} + ' đơn)'"></small>
+    </h4>
 </div>
+
+<!-- Search + Filter -->
+<form th:action="@{/admin/orders}" method="get" class="d-flex gap-2 mb-3">
+    <input type="text" name="keyword" th:value="${keyword}"
+           class="form-control" placeholder="Tìm theo tên khách hàng..."/>
+    <select name="status" class="form-select w-auto" onchange="this.form.submit()">
+        <option value="">Tất cả trạng thái</option>
+        <option value="PENDING"   th:selected="${selectedStatus == 'PENDING'}">Chờ xác nhận</option>
+        <option value="CONFIRMED" th:selected="${selectedStatus == 'CONFIRMED'}">Đã xác nhận</option>
+        <option value="SHIPPING"  th:selected="${selectedStatus == 'SHIPPING'}">Đang giao</option>
+        <option value="DELIVERED" th:selected="${selectedStatus == 'DELIVERED'}">Đã giao</option>
+        <option value="COMPLETED" th:selected="${selectedStatus == 'COMPLETED'}">Hoàn thành</option>
+        <option value="CANCELLED" th:selected="${selectedStatus == 'CANCELLED'}">Đã hủy</option>
+    </select>
+    <button type="submit" class="btn btn-dark">Tìm</button>
+    <a th:if="${keyword != null or selectedStatus != null}"
+       th:href="@{/admin/orders}" class="btn btn-outline-secondary">✕</a>
+</form>
 
 <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
@@ -43,12 +42,19 @@
             </tr>
             </thead>
             <tbody>
+            <tr th:if="${#lists.isEmpty(orders)}">
+                <td colspan="6" class="text-center text-muted py-4">
+                    Không tìm thấy đơn hàng nào!
+                </td>
+            </tr>
             <tr th:each="order : ${orders}">
                 <td th:text="${order.id}"></td>
                 <td>
-                    <p class="mb-0 fw-bold" th:text="${order.customer.username}"></p>
+                    <p class="mb-0 fw-bold"
+                       th:text="${order.customer.username}"></p>
                     <small class="text-muted"
-                           th:text="${order.shippingAddress != null ? order.shippingAddress.phone : ''}"></small>
+                           th:text="${order.shippingAddress != null ?
+                                         order.shippingAddress.phone : ''}"></small>
                 </td>
                 <td th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy HH:mm')}"></td>
                 <td class="text-danger fw-bold"
@@ -71,6 +77,38 @@
             </tbody>
         </table>
     </div>
+</div>
+
+<!-- Pagination -->
+<div th:if="${totalPages > 1}"
+     class="d-flex justify-content-center mt-4">
+    <nav>
+        <ul class="pagination">
+            <li class="page-item"
+                th:classappend="${currentPage == 0} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/admin/orders(page=${currentPage-1},
+                                           keyword=${keyword},
+                                           status=${selectedStatus})}">←</a>
+            </li>
+            <li th:each="i : ${#numbers.sequence(0, totalPages-1)}"
+                class="page-item"
+                th:classappend="${i == currentPage} ? 'active'">
+                <a class="page-link"
+                   th:href="@{/admin/orders(page=${i},
+                                           keyword=${keyword},
+                                           status=${selectedStatus})}"
+                   th:text="${i + 1}"></a>
+            </li>
+            <li class="page-item"
+                th:classappend="${currentPage == totalPages-1} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/admin/orders(page=${currentPage+1},
+                                           keyword=${keyword},
+                                           status=${selectedStatus})}">→</a>
+            </li>
+        </ul>
+    </nav>
 </div>
 </body>
 </html>

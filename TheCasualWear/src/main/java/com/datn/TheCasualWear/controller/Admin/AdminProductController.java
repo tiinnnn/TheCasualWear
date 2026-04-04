@@ -2,6 +2,7 @@ package com.datn.TheCasualWear.controller.Admin;
 
 import com.datn.TheCasualWear.entity.Product;
 import com.datn.TheCasualWear.service.*;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -40,8 +41,13 @@ public class AdminProductController {
 
     @GetMapping
     public String listProducts(@RequestParam(required = false) String keyword,
+                               @RequestParam(defaultValue = "0") int page,
                                Model model) {
-        model.addAttribute("products", productService.getAdminProducts(keyword));
+        Page<Product> productPage = productService.getAdminProducts(keyword, page);
+        model.addAttribute("products", productPage.getContent());
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", productPage.getTotalPages());
+        model.addAttribute("totalItems", productPage.getTotalElements());
         model.addAttribute("keyword", keyword);
         model.addAttribute("view", "admin/product/list");
         return "layouts/admin-layout";

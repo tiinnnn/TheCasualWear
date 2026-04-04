@@ -2,8 +2,11 @@ package com.datn.TheCasualWear.repository;
 
 import com.datn.TheCasualWear.entity.AppOrder;
 import com.datn.TheCasualWear.enums.OrderStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
@@ -27,4 +30,19 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
             "WHEN 'CANCELLED' THEN 6 " +
             "END ASC, o.orderDate ASC")
     List<AppOrder> findAllOrderedByStatus();
+
+    @Query("SELECT o FROM AppOrder o WHERE " +
+            "(:keyword IS NULL OR LOWER(o.customer.username) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+            "AND (:status IS NULL OR o.status = :status) " +
+            "ORDER BY CASE o.status " +
+            "WHEN 'PENDING'   THEN 1 " +
+            "WHEN 'CONFIRMED' THEN 2 " +
+            "WHEN 'SHIPPING'  THEN 3 " +
+            "WHEN 'DELIVERED' THEN 4 " +
+            "WHEN 'COMPLETED' THEN 5 " +
+            "WHEN 'CANCELLED' THEN 6 " +
+            "END ASC, o.orderDate ASC")
+    Page<AppOrder> searchOrders(@Param("keyword") String keyword,
+                                @Param("status") String status,
+                                Pageable pageable);
 }

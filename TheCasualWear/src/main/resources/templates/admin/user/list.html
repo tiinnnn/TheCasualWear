@@ -1,8 +1,23 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+<html xmlns:th="http://www.thymeleaf.org">
 <head><title>Quản lý user</title></head>
 <body>
-<h4 class="fw-bold mb-4">Quản lý người dùng</h4>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold">
+        Quản lý người dùng
+        <small class="text-muted fs-6"
+               th:text="'(' + ${totalItems} + ' người dùng)'"></small>
+    </h4>
+</div>
+
+<!-- Search -->
+<form th:action="@{/admin/users}" method="get" class="d-flex gap-2 mb-3">
+    <input type="text" name="keyword" th:value="${keyword}"
+           class="form-control" placeholder="Tìm theo tên đăng nhập..."/>
+    <button type="submit" class="btn btn-dark">Tìm</button>
+    <a th:if="${keyword != null}"
+       th:href="@{/admin/users}" class="btn btn-outline-secondary">✕</a>
+</form>
 
 <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
@@ -19,6 +34,11 @@
             </tr>
             </thead>
             <tbody>
+            <tr th:if="${#lists.isEmpty(users)}">
+                <td colspan="7" class="text-center text-muted py-4">
+                    Không tìm thấy người dùng nào!
+                </td>
+            </tr>
             <tr th:each="u : ${users}">
                 <td th:text="${u.id}"></td>
                 <td th:text="${u.username}"></td>
@@ -30,60 +50,72 @@
                               th:text="${r.name.replace('ROLE_', '')}"></span>
                 </td>
                 <td>
-                    <span th:if="${u.enabled}" class="badge bg-success">Hoạt động</span>
-                    <span th:unless="${u.enabled}" class="badge bg-danger">Đã khóa</span>
+                        <span th:if="${u.enabled}"
+                              class="badge bg-success">Hoạt động</span>
+                    <span th:unless="${u.enabled}"
+                          class="badge bg-danger">Đã khóa</span>
                 </td>
                 <td>
-                    <div class="d-flex align-items-center gap-1 flex-wrap">
-                        <!-- Khóa / Mở khóa -->
-                        <a th:if="${u.enabled}"
-                           th:href="@{'/admin/users/' + ${u.id} + '/lock'}"
-                           class="btn btn-sm btn-outline-danger"
-                           onclick="return confirm('Khóa tài khoản này?')"
-                           title="Khóa">
-                            <i class="bi bi-lock"></i>
-                        </a>
-                        <a th:unless="${u.enabled}"
-                           th:href="@{'/admin/users/' + ${u.id} + '/unlock'}"
-                           class="btn btn-sm btn-outline-success"
-                           onclick="return confirm('Mở khóa tài khoản này?')"
-                           title="Mở khóa">
-                            <i class="bi bi-unlock"></i>
-                        </a>
+                    <a th:if="${u.enabled}"
+                       th:href="@{'/admin/users/' + ${u.id} + '/lock'}"
+                       class="btn btn-sm btn-outline-danger me-1"
+                       onclick="return confirm('Khóa tài khoản này?')">
+                        <i class="bi bi-lock"></i>
+                    </a>
+                    <a th:unless="${u.enabled}"
+                       th:href="@{'/admin/users/' + ${u.id} + '/unlock'}"
+                       class="btn btn-sm btn-outline-success me-1"
+                       onclick="return confirm('Mở khóa tài khoản này?')">
+                        <i class="bi bi-unlock"></i>
+                    </a>
 
-                        <!-- Thêm role -->
-                        <form th:action="@{'/admin/users/' + ${u.id} + '/role/add'}"
-                              method="post" class="d-inline">
-                            <select name="roleName" class="form-select form-select-sm d-inline"
-                                    style="width:120px">
-                                <option value="ROLE_CUSTOMER">CUSTOMER</option>
-                                <option value="ROLE_DELIVERY">DELIVERY</option>
-                                <option th:if="${isOwner}" value="ROLE_ADMIN">ADMIN</option>
-                                <option th:if="${isOwner}" value="ROLE_OWNER">OWNER</option>
-                            </select>
-                            <button type="submit" class="btn btn-sm btn-outline-primary">+</button>
-                        </form>
-
-                        <!-- Xóa role -->
-                        <form th:if="${!u.roles.isEmpty()}"
-                              th:action="@{'/admin/users/' + ${u.id} + '/role/remove'}"
-                              method="post" class="d-flex align-items-center gap-1">
-                            <select name="roleName" class="form-select form-select-sm" style="width:110px">
-                                <option th:each="r : ${u.roles}"
-                                        th:value="${r.name}"
-                                        th:text="${r.name.replace('ROLE_', '')}"></option>
-                            </select>
-                            <button type="submit" class="btn btn-sm btn-outline-warning"
-                                    onclick="return confirm('Xóa role này?')" title="Xóa role">
-                                <i class="bi bi-dash-lg"></i>
-                            </button>
-                        </form>
-                    </div>
+                    <!-- Thêm role -->
+                    <form th:action="@{'/admin/users/' + ${u.id} + '/role/add'}"
+                          method="post" class="d-inline">
+                        <select name="roleName"
+                                class="form-select form-select-sm d-inline"
+                                style="width:120px">
+                            <option value="ROLE_CUSTOMER">CUSTOMER</option>
+                            <option value="ROLE_DELIVERY">DELIVERY</option>
+                            <option th:if="${isOwner}" value="ROLE_ADMIN">ADMIN</option>
+                            <option th:if="${isOwner}" value="ROLE_OWNER">OWNER</option>
+                        </select>
+                        <button type="submit"
+                                class="btn btn-sm btn-outline-primary">+</button>
+                    </form>
                 </td>
             </tr>
             </tbody>
         </table>
     </div>
+</div>
+
+<!-- Pagination -->
+<div th:if="${totalPages > 1}"
+     class="d-flex justify-content-center mt-4">
+    <nav>
+        <ul class="pagination">
+            <li class="page-item"
+                th:classappend="${currentPage == 0} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/admin/users(page=${currentPage-1},
+                                          keyword=${keyword})}">←</a>
+            </li>
+            <li th:each="i : ${#numbers.sequence(0, totalPages-1)}"
+                class="page-item"
+                th:classappend="${i == currentPage} ? 'active'">
+                <a class="page-link"
+                   th:href="@{/admin/users(page=${i}, keyword=${keyword})}"
+                   th:text="${i + 1}"></a>
+            </li>
+            <li class="page-item"
+                th:classappend="${currentPage == totalPages-1} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/admin/users(page=${currentPage+1},
+                                          keyword=${keyword})}">→</a>
+            </li>
+        </ul>
+    </nav>
 </div>
 </body>
 </html>

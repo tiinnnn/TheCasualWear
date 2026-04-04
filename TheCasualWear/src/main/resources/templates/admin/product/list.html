@@ -3,12 +3,18 @@
 <head><title>Quản lý sản phẩm</title></head>
 <body>
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="fw-bold">Quản lý sản phẩm</h4>
+    <h4 class="fw-bold">
+        Quản lý sản phẩm
+        <small class="text-muted fs-6"
+               th:text="'(' + ${totalItems} + ' sản phẩm)'"></small>
+    </h4>
     <div class="d-flex gap-2">
-        <a th:href="@{/admin/products/deleted}" class="btn btn-outline-secondary btn-sm">
+        <a th:href="@{/admin/products/deleted}"
+           class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-trash me-1"></i>Đã xóa
         </a>
-        <a th:href="@{/admin/products/add}" class="btn btn-dark btn-sm">
+        <a th:href="@{/admin/products/add}"
+           class="btn btn-dark btn-sm">
             <i class="bi bi-plus-lg me-1"></i>Thêm sản phẩm
         </a>
     </div>
@@ -17,9 +23,10 @@
 <!-- Search -->
 <form th:action="@{/admin/products}" method="get" class="d-flex gap-2 mb-3">
     <input type="text" name="keyword" th:value="${keyword}"
-           class="form-control" placeholder="Tìm kiếm sản phẩm..."/>
+           class="form-control" placeholder="Tìm kiếm theo tên sản phẩm..."/>
     <button type="submit" class="btn btn-dark">Tìm</button>
-    <a th:href="@{/admin/products}" class="btn btn-outline-secondary">Reset</a>
+    <a th:if="${keyword != null}"
+       th:href="@{/admin/products}" class="btn btn-outline-secondary">✕</a>
 </form>
 
 <div class="card border-0 shadow-sm">
@@ -27,26 +34,32 @@
         <table class="table table-hover align-middle mb-0">
             <thead class="table-dark">
             <tr>
-                <th>ID</th>
+                <th>#</th>
                 <th>Ảnh</th>
                 <th>Tên sản phẩm</th>
                 <th>Danh mục</th>
                 <th>Giá</th>
                 <th>Tồn kho</th>
-                <th>Trạng thái</th>
                 <th>Hành động</th>
             </tr>
             </thead>
             <tbody>
+            <tr th:if="${#lists.isEmpty(products)}">
+                <td colspan="7" class="text-center text-muted py-4">
+                    Không tìm thấy sản phẩm nào!
+                </td>
+            </tr>
             <tr th:each="p : ${products}">
                 <td th:text="${p.id}"></td>
                 <td>
                     <img th:if="${p.images != null and !p.images.isEmpty()}"
                          th:src="${p.images[0].imageUrl}"
-                         style="width:50px;height:50px;object-fit:cover" class="rounded"/>
+                         style="width:50px;height:50px;object-fit:cover"
+                         class="rounded"/>
                     <img th:unless="${p.images != null and !p.images.isEmpty()}"
                          src="/images/no-image.png"
-                         style="width:50px;height:50px;object-fit:cover" class="rounded"/>
+                         style="width:50px;height:50px;object-fit:cover"
+                         class="rounded"/>
                 </td>
                 <td>
                     <p class="mb-0 fw-bold" th:text="${p.name}"></p>
@@ -57,11 +70,8 @@
                 <td>
                         <span th:if="${p.stock > 0}" class="badge bg-success"
                               th:text="${p.stock}"></span>
-                    <span th:unless="${p.stock > 0}" class="badge bg-danger">Hết hàng</span>
-                </td>
-                <td>
-                    <span th:if="${!p.isDeleted}" class="badge bg-success">Đang bán</span>
-                    <span th:unless="${!p.isDeleted}" class="badge bg-secondary">Đã ẩn</span>
+                    <span th:unless="${p.stock > 0}"
+                          class="badge bg-danger">Hết hàng</span>
                 </td>
                 <td>
                     <a th:href="@{'/admin/products/edit/' + ${p.id}}"
@@ -78,6 +88,34 @@
             </tbody>
         </table>
     </div>
+</div>
+
+<!-- Pagination -->
+<div th:if="${totalPages > 1}"
+     class="d-flex justify-content-center mt-4">
+    <nav>
+        <ul class="pagination">
+            <li class="page-item"
+                th:classappend="${currentPage == 0} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/admin/products(page=${currentPage-1},
+                                             keyword=${keyword})}">←</a>
+            </li>
+            <li th:each="i : ${#numbers.sequence(0, totalPages-1)}"
+                class="page-item"
+                th:classappend="${i == currentPage} ? 'active'">
+                <a class="page-link"
+                   th:href="@{/admin/products(page=${i}, keyword=${keyword})}"
+                   th:text="${i + 1}"></a>
+            </li>
+            <li class="page-item"
+                th:classappend="${currentPage == totalPages-1} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/admin/products(page=${currentPage+1},
+                                             keyword=${keyword})}">→</a>
+            </li>
+        </ul>
+    </nav>
 </div>
 </body>
 </html>
