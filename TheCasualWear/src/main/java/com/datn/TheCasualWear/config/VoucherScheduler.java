@@ -14,16 +14,8 @@ public class VoucherScheduler {
         this.voucherRepository = voucherRepository;
     }
 
-    // Chạy mỗi ngày lúc 00:00
     @Scheduled(cron = "0 0 0 * * *")
     public void deactivateExpiredVouchers() {
-        voucherRepository.findAll().stream()
-                .filter(v -> v.getIsActive()
-                        && v.getEndDate() != null
-                        && v.getEndDate().isBefore(LocalDateTime.now()))
-                .forEach(v -> {
-                    v.setIsActive(false);
-                    voucherRepository.save(v);
-                });
+        voucherRepository.deactivateExpiredVouchers(LocalDateTime.now());
     }
 }

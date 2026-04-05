@@ -65,7 +65,7 @@ public class CloudinaryService {
         productImageRepository.delete(image);
     }
 
-    // Xóa tất cả ảnh của 1 sản phẩm
+    // Xóa tất cả ảnh của 1 sản phẩm || ko dùng vì chỉ đang soft delete tránh lỗi order cart
     public void deleteAllProductImages(Product product) throws IOException {
         List<ProductImage> images = productImageRepository.findByProductId(product.getId());
         for (ProductImage image : images) {

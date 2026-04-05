@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -24,7 +25,6 @@ public class OrderService {
     private final VoucherService voucherService;
     private final ProductRepository productRepository;
     private static final int ADMIN_PAGE_SIZE = 10;
-
 
     public OrderService(AppOrderRepository orderRepository,
                         OrderDetailRepository orderDetailRepository,
@@ -39,7 +39,6 @@ public class OrderService {
         this.voucherService = voucherService;
         this.productRepository = productRepository;
     }
-
 
     public Page<AppOrder> getAllOrders(String keyword, String status, int page) {
         String kw = (keyword == null || keyword.isBlank()) ? null : keyword;
@@ -122,7 +121,6 @@ public class OrderService {
             orderVoucherRepository.save(orderVoucher);
         }
 
-        // Xóa giỏ hàng
         cartService.clearCart(user);
 
         return order;
@@ -163,7 +161,22 @@ public class OrderService {
         orderRepository.save(order);
     }
 
-    // ==================== PHÍA ADMIN ====================
+    @Transactional
+    public void autoConfirmDeliveredOrders() {
+        List<AppOrder> deliveredOrders = orderRepository
+                .findByStatus(OrderStatus.DELIVERED);
+
+        LocalDateTime twoDaysAgo = LocalDateTime.now().minusDays(2);
+
+        deliveredOrders.stream()
+                .filter(o -> o.getDeliveredAt() != null
+                        && o.getDeliveredAt().isBefore(twoDaysAgo))
+                .forEach(o -> {
+                    o.setStatus(OrderStatus.COMPLETED);
+                    orderRepository.save(o);
+                });
+    }
+    // PHÍA ADMIN
 
     public List<AppOrder> getAllOrders() {
         return orderRepository.findAllOrderedByStatus();
@@ -215,9 +228,8 @@ public class OrderService {
         orderRepository.save(order);
     }
 
-    // ==================== PHÍA DELIVERY ====================
+    // PHÍA DELIVERY
 
-    // Lấy đơn hàng đang giao
     public List<AppOrder> getShippingOrders() {
         return orderRepository.findByStatus(OrderStatus.SHIPPING);
     }
@@ -229,10 +241,11 @@ public class OrderService {
             throw new IllegalStateException("Đơn hàng không ở trạng thái đang giao!");
         }
         order.setStatus(OrderStatus.DELIVERED);
+        order.setDeliveredAt(LocalDateTime.now());
         orderRepository.save(order);
     }
 
-    // ==================== HELPER ====================
+    // HELPER
 
     // Hoàn lại stock khi hủy đơn
     private void restoreStock(AppOrder order) {

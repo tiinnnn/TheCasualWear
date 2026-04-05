@@ -29,6 +29,8 @@ public class AppOrder {
     @Column(name = "order_date", updatable = false)
     private LocalDateTime orderDate = LocalDateTime.now();
 
+    @Column(name = "delivered_at")
+    private LocalDateTime deliveredAt;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)

@@ -106,6 +106,25 @@ public class AdminProductController {
         return "redirect:/admin/products";
     }
 
+    @GetMapping("/copy/{id}")
+    public String copyProduct(@PathVariable Integer id, Model model) {
+        Product source = productService.getProductById(id);
+
+        // Tạo product mới với data từ source, bỏ id và sku
+        Product newProduct = new Product();
+        newProduct.setName(source.getName());
+        newProduct.setDescription(source.getDescription());
+        newProduct.setPrice(source.getPrice());
+        newProduct.setCostPrice(source.getCostPrice());
+        newProduct.setCategory(source.getCategory());
+        newProduct.setColor(source.getColor());
+        model.addAttribute("product", newProduct);
+        model.addAttribute("sourceId", id); // để JS biết đang copy từ đâu
+        addFormData(model);
+        model.addAttribute("view", "admin/product/form");
+        return "layouts/admin-layout";
+    }
+
     @GetMapping("/restore/{id}")
     public String restoreProduct(@PathVariable Integer id,
                                  RedirectAttributes redirectAttributes) {

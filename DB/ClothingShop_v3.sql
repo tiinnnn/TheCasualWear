@@ -103,6 +103,7 @@ CREATE TABLE app_order (
     shipping_address_id INT FOREIGN KEY REFERENCES address(id),
     billing_address_id  INT FOREIGN KEY REFERENCES address(id)
 );
+ALTER TABLE app_order ADD delivered_at DATETIME NULL;
 
 CREATE TABLE order_detail (
     id         INT IDENTITY(1,1) PRIMARY KEY,

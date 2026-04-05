@@ -32,8 +32,17 @@
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label class="form-label">SKU</label>
-                            <input type="text" name="sku" th:value="${product.sku}"
-                                   class="form-control"/>
+                            <div class="input-group">
+                                <input type="text" name="sku" th:value="${product.sku}"
+                                       class="form-control" placeholder="Tự động tạo hoặc nhập tay"/>
+                                <button type="button" class="btn btn-outline-secondary"
+                                        onclick="generateSKU()" title="Tạo SKU tự động">
+                                    <i class="bi bi-magic"></i>
+                                </button>
+                            </div>
+                            <div class="form-text text-muted">
+                                SKU tự động tạo từ tên + màu + size. Có thể chỉnh sửa tay.
+                            </div>
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label">Giá bán <span class="text-danger">*</span></label>
@@ -128,6 +137,55 @@
             </div>
         </div>
     </div>
+    <script th:inline="javascript">
+        // Auto generate SKU
+        function generateSKU() {
+            const name  = document.querySelector('[name="name"]').value.trim();
+            const color = document.querySelector('[name="color.id"]');
+            const size  = document.querySelector('[name="size.id"]');
+
+            if (!name) return;
+
+            // Lấy chữ cái đầu mỗi từ trong tên
+            const nameCode = name.split(' ')
+                .filter(w => w.length > 0)
+                .map(w => w[0].toUpperCase())
+                .join('');
+
+            // Lấy text của option đang chọn
+            const colorText = color.options[color.selectedIndex]?.text || '';
+            const sizeText  = size.options[size.selectedIndex]?.text || '';
+
+            // Lấy 3 ký tự đầu màu (bỏ dấu)
+            const colorCode = removeDiacritics(colorText)
+                .replace(/\s/g, '')
+                .substring(0, 3)
+                .toUpperCase();
+
+            const sizeCode = sizeText.replace(/\s/g, '').toUpperCase();
+
+            const sku = [nameCode, colorCode, sizeCode]
+                .filter(s => s.length > 0)
+                .join('-');
+
+            document.querySelector('[name="sku"]').value = sku;
+        }
+
+        // Bỏ dấu tiếng Việt
+        function removeDiacritics(str) {
+            return str.normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/đ/g, 'd').replace(/Đ/g, 'D');
+        }
+
+        // Trigger khi thay đổi tên, màu, size
+        document.querySelector('[name="name"]')
+            ?.addEventListener('input', generateSKU);
+        document.querySelector('[name="color.id"]')
+            ?.addEventListener('change', generateSKU);
+        document.querySelector('[name="size.id"]')
+            ?.addEventListener('change', generateSKU);
+    </script>
 </form>
 </body>
 </html>
