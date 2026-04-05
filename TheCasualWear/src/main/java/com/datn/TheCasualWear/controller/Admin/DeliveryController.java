@@ -1,4 +1,4 @@
-package com.datn.TheCasualWear.controller;
+package com.datn.TheCasualWear.controller.Admin;
 
 import com.datn.TheCasualWear.enums.OrderStatus;
 import com.datn.TheCasualWear.service.OrderService;

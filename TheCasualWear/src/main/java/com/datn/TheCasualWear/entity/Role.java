@@ -1,8 +1,6 @@
 package com.datn.TheCasualWear.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
-
 import java.util.HashSet;
 import java.util.Set;
 import lombok.AllArgsConstructor;

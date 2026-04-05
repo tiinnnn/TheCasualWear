@@ -2,8 +2,6 @@ package com.datn.TheCasualWear.entity;
 
 import com.datn.TheCasualWear.enums.OrderStatus;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
