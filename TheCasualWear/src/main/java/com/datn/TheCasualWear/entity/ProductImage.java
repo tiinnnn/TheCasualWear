@@ -18,7 +18,7 @@ public class ProductImage {
     private Integer id;
 
     @Column(name = "image_url", nullable = false, length = 500)
-    private String imageUrl;                   // imageUrl → image_url tự động
+    private String imageUrl;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")

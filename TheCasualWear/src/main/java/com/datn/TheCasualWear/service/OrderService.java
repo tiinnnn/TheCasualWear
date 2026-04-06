@@ -256,4 +256,15 @@ public class OrderService {
             productRepository.save(product);
         }
     }
+
+    @Transactional
+    public void deleteCancelledOrder(AppOrder order) {
+        // Xóa order_detail trước
+        orderDetailRepository.deleteByOrderId(order.getId());
+        // Xóa order_voucher nếu có
+        orderVoucherRepository.findByOrderId(order.getId())
+                .ifPresent(orderVoucherRepository::delete);
+        // Xóa order
+        orderRepository.delete(order);
+    }
 }

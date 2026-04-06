@@ -1,6 +1,7 @@
 package com.datn.TheCasualWear.controller.Admin;
 
 import com.datn.TheCasualWear.entity.Product;
+import com.datn.TheCasualWear.entity.ProductImage;
 import com.datn.TheCasualWear.service.*;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
@@ -80,16 +81,27 @@ public class AdminProductController {
     public String saveProduct(@ModelAttribute Product product,
                               @RequestParam(value = "imageFiles", required = false)
                               List<MultipartFile> imageFiles,
+                              @RequestParam(value = "copiedImageUrls", required = false)
+                              List<String> copiedImageUrls,
                               RedirectAttributes redirectAttributes) throws Exception {
         if (product.getId() == null) {
             Product saved = productService.createProduct(product);
-            if (imageFiles != null && !imageFiles.isEmpty()) {
+
+            // Copy ảnh từ sản phẩm gốc
+            if (copiedImageUrls != null && !copiedImageUrls.isEmpty()) {
+                cloudinaryService.copyImagesFromUrls(saved, copiedImageUrls);
+            }
+
+            // Upload ảnh mới nếu có
+            if (imageFiles != null && !imageFiles.isEmpty()
+                    && !imageFiles.get(0).isEmpty()) {
                 cloudinaryService.uploadProductImages(saved, imageFiles);
             }
             redirectAttributes.addFlashAttribute("successMessage", "Thêm sản phẩm thành công!");
         } else {
             productService.updateProduct(product.getId(), product);
-            if (imageFiles != null && !imageFiles.isEmpty()) {
+            if (imageFiles != null && !imageFiles.isEmpty()
+                    && !imageFiles.get(0).isEmpty()) {
                 cloudinaryService.uploadProductImages(
                         productService.getProductById(product.getId()), imageFiles);
             }
@@ -110,7 +122,6 @@ public class AdminProductController {
     public String copyProduct(@PathVariable Integer id, Model model) {
         Product source = productService.getProductById(id);
 
-        // Tạo product mới với data từ source, bỏ id và sku
         Product newProduct = new Product();
         newProduct.setName(source.getName());
         newProduct.setDescription(source.getDescription());
@@ -118,8 +129,10 @@ public class AdminProductController {
         newProduct.setCostPrice(source.getCostPrice());
         newProduct.setCategory(source.getCategory());
         newProduct.setColor(source.getColor());
+        newProduct.setImages(source.getImages());
+
         model.addAttribute("product", newProduct);
-        model.addAttribute("sourceId", id); // để JS biết đang copy từ đâu
+        model.addAttribute("copiedImages", source.getImages());
         addFormData(model);
         model.addAttribute("view", "admin/product/form");
         return "layouts/admin-layout";

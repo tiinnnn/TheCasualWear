@@ -36,12 +36,6 @@ public class CloudinaryService {
         return uploadResult.get("secure_url").toString();
     }
 
-    // Xóa ảnh trên Cloudinary theo publicId
-    public void deleteImage(String imageUrl) throws IOException {
-        String publicId = extractPublicId(imageUrl);
-        cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
-    }
-
     // Upload nhiều ảnh cho 1 sản phẩm
     public void uploadProductImages(Product product, List<MultipartFile> files) throws IOException {
         for (MultipartFile file : files) {
@@ -56,6 +50,20 @@ public class CloudinaryService {
         }
     }
 
+    // Lấy publicId từ URL để xóa trên Cloudinary
+    // URL dạng: https://res.cloudinary.com/cloud_name/image/upload/v123/products/abc.jpg
+    // PublicId: products/abc
+    private String extractPublicId(String imageUrl) {
+        String[] parts = imageUrl.split("/upload/");
+        String afterUpload = parts[1];                          // v123/products/abc.jpg
+        String withoutVersion = afterUpload.replaceFirst("v\\d+/", ""); // products/abc.jpg
+        return withoutVersion.substring(0, withoutVersion.lastIndexOf(".")); // products/abc
+    }
+    // Xóa ảnh trên Cloudinary theo publicId
+    public void deleteImage(String imageUrl) throws IOException {
+        String publicId = extractPublicId(imageUrl);
+        cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+    }
     // Xóa 1 ảnh sản phẩm (xóa trên Cloudinary + xóa trong DB)
     public void deleteProductImage(Integer imageId) throws IOException {
         ProductImage image = productImageRepository.findById(imageId)
@@ -74,13 +82,13 @@ public class CloudinaryService {
         productImageRepository.deleteByProduct(product);
     }
 
-    // Lấy publicId từ URL để xóa trên Cloudinary
-    // URL dạng: https://res.cloudinary.com/cloud_name/image/upload/v123/products/abc.jpg
-    // PublicId: products/abc
-    private String extractPublicId(String imageUrl) {
-        String[] parts = imageUrl.split("/upload/");
-        String afterUpload = parts[1];                          // v123/products/abc.jpg
-        String withoutVersion = afterUpload.replaceFirst("v\\d+/", ""); // products/abc.jpg
-        return withoutVersion.substring(0, withoutVersion.lastIndexOf(".")); // products/abc
+    // Copy ảnh từ URL cũ sang sản phẩm mới (chỉ lưu URL, không upload lại Cloudinary)
+    public void copyImagesFromUrls(Product product, List<String> imageUrls) {
+        for (String url : imageUrls) {
+            ProductImage image = new ProductImage();
+            image.setImageUrl(url);
+            image.setProduct(product);
+            productImageRepository.save(image);
+        }
     }
 }

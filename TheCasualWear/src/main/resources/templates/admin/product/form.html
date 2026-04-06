@@ -67,7 +67,23 @@
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-body">
                     <h6 class="fw-bold mb-3">Hình ảnh sản phẩm</h6>
-
+                    <!-- Ảnh copy từ sản phẩm gốc (chỉ hiện khi đang copy) -->
+                    <div th:if="${copiedImages != null and !copiedImages.isEmpty()}" class="mb-3">
+                        <label class="form-label text-success">
+                            <i class="bi bi-copy me-1"></i>Ảnh được copy từ sản phẩm gốc
+                        </label>
+                        <div class="d-flex gap-2 flex-wrap mb-2">
+                            <div th:each="img : ${copiedImages}" class="position-relative">
+                                <img th:src="${img.imageUrl}"
+                                     style="width:80px;height:80px;object-fit:cover"
+                                     class="rounded border border-success"/>
+                                <!-- Hidden input để truyền URL về controller -->
+                                <input type="hidden" name="copiedImageUrls"
+                                       th:value="${img.imageUrl}"/>
+                            </div>
+                        </div>
+                        <small class="text-muted">Ảnh này sẽ được dùng cho sản phẩm mới</small>
+                    </div>
                     <!-- Ảnh hiện có -->
                     <div th:if="${product.id != null and product.images != null and !product.images.isEmpty()}"
                          class="d-flex gap-2 flex-wrap mb-3">

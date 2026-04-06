@@ -51,7 +51,7 @@ public class Product {
     private BigDecimal costPrice;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")          // nullable=true (không bắt buộc)
+    @JoinColumn(name = "category_id")
     private Category category;
 
     @ManyToOne(fetch = FetchType.LAZY)
