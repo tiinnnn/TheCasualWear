@@ -148,7 +148,6 @@ public class AppUserService {
 
     //  PHÍA CUSTOMER
 
-
     public void updateProfile(String username, AppUser details) {
         AppUser user = getUserByUsername(username);
 

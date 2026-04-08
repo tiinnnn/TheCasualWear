@@ -126,7 +126,6 @@ public class CartService {
                 .sum();
     }
 
-    // Đếm số lượng item trong giỏ (hiển thị badge trên navbar)
     public int getCartItemCount(AppUser user) {
         return getCartItems(user).stream()
                 .mapToInt(CartItem::getQuantity)
