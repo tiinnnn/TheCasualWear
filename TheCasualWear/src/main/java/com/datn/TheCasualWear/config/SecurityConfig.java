@@ -27,7 +27,6 @@ public class SecurityConfig {
     public UserDetailsService userDetailsService() {
         return username -> {
             var user = appUserService.getUserByUsername(username);
-
             if (!user.getEnabled()) {
                 throw new UsernameNotFoundException("Tài khoản đã bị khóa!");
             }
@@ -70,7 +69,7 @@ public class SecurityConfig {
 
                         // Chỉ OWNER
                         .requestMatchers("/admin/users/*/role/**").hasRole("OWNER")
-                        // CUSTOMER + ADMIN (đã đăng nhập)
+
                         .requestMatchers(
                                 "/cart/**",
                                 "/order/**",
@@ -82,8 +81,9 @@ public class SecurityConfig {
 
                 .rememberMe(remember -> remember
                         .key("casualwear-secret-key")
-                        .tokenValiditySeconds(3 * 24 * 60 * 60) // tinh so ngay
+                        .tokenValiditySeconds(3 * 24 * 60 * 60)
                 )
+
                 .csrf(csrf -> csrf.disable())
 
                 .formLogin(form -> form

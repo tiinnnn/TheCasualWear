@@ -31,7 +31,7 @@ public class AccountController {
         return appUserService.getUserByUsername(auth.getName());
     }
 
-    // ==================== TRANG CHỦ TÀI KHOẢN ====================
+    //TRANG CHỦ TÀI KHOẢN
 
     @GetMapping
     public String accountPage(Authentication auth, Model model) {
@@ -40,7 +40,7 @@ public class AccountController {
         return "layouts/shop-layout";
     }
 
-    // ==================== CẬP NHẬT PROFILE ====================
+    //CẬP NHẬT PROFILE
 
     @PostMapping("/update")
     public String updateProfile(Authentication auth,
@@ -52,7 +52,7 @@ public class AccountController {
         return "redirect:/account";
     }
 
-    // ==================== ĐỔI MẬT KHẨU ====================
+    //ĐỔI MẬT KHẨU
 
     @GetMapping("/change-password")
     public String changePasswordPage(Authentication auth, Model model) {
@@ -77,7 +77,7 @@ public class AccountController {
         return "redirect:/account";
     }
 
-    // ==================== ĐỊA CHỈ ====================
+    //ĐỊA CHỈ
 
     @GetMapping("/address")
     public String addressPage(Authentication auth, Model model) {
@@ -150,7 +150,7 @@ public class AccountController {
         return "redirect:/account/address";
     }
 
-    // ==================== LỊCH SỬ ĐƠN HÀNG ====================
+    //LỊCH SỬ ĐƠN HÀNG
 
     @GetMapping("/orders")
     public String orderHistory(Authentication auth, Model model) {

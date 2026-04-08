@@ -6,7 +6,38 @@
     <title>Delivery - The Casual Wear</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"/>
+    <link rel="stylesheet" href="/css/style.css"/>
     <link rel="icon" type="image/png" href="/images/footer.png"/>
+    <style>
+    .pagination .page-link {
+        color: #000;
+        border-color: #dee2e6;
+        background-color: #fff;
+        border-radius: 0;
+    }
+    .pagination .page-link:hover {
+        color: #fff;
+        background-color: #000;
+        border-color: #000;
+    }
+    .pagination .page-item.active .page-link {
+        background-color: #000;
+        border-color: #000;
+        color: #fff;
+        font-weight: 500;
+    }
+    .pagination .page-item.disabled .page-link {
+        color: #ccc;
+        background-color: #fff;
+        border-color: #dee2e6;
+        cursor: not-allowed;
+    }
+    .pagination .page-item:first-child .page-link {
+        border-radius: 4px 0 0 4px;
+    }
+    .pagination .page-item:last-child .page-link {
+        border-radius: 0 4px 4px 0;
+    }</style>
 </head>
 <body>
 <!-- navbar -->

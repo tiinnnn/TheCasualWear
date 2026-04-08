@@ -24,14 +24,14 @@ public class VoucherService {
         this.orderVoucherRepository = orderVoucherRepository;
     }
 
-    // ==================== DÙNG CHUNG ====================
+    //DÙNG CHUNG
 
     public Voucher getVoucherById(Integer id) {
         return voucherRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy voucher với id: " + id));
     }
 
-    // ==================== PHÍA CUSTOMER ====================
+    //PHÍA CUSTOMER
 
     // Kiểm tra và lấy voucher theo code
     public Voucher applyVoucher(String code, BigDecimal totalPrice, AppUser user) {
@@ -86,10 +86,14 @@ public class VoucherService {
         return voucherRepository.findByIsActiveTrueAndEndDateAfter(LocalDateTime.now());
     }
 
-    // ==================== PHÍA ADMIN ====================
+    //PHÍA ADMIN
 
     public List<Voucher> getAllVouchers() {
         return voucherRepository.findAll();
+    }
+
+    public List<Voucher> getVouchersByStatus(Boolean isActive) {
+        return voucherRepository.findByIsActive(isActive);
     }
 
     public Voucher createVoucher(Voucher voucher) {

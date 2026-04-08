@@ -23,5 +23,5 @@ public interface VoucherRepository extends JpaRepository<Voucher, Integer> {
             "AND v.endDate IS NOT NULL " +
             "AND v.endDate < :now")
     void deactivateExpiredVouchers(@Param("now") LocalDateTime now);
-
+    List<Voucher> findByIsActive(Boolean isActive);
 }

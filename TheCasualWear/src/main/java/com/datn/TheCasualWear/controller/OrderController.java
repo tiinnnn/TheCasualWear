@@ -42,8 +42,7 @@ public class OrderController {
         return appUserService.getUserByUsername(auth.getName());
     }
 
-    // ==================== CHECKOUT ====================
-
+    //CHECKOUT
     @GetMapping("/checkout")
     public String checkoutPage(Authentication auth, Model model) {
         AppUser user = getCurrentUser(auth);
@@ -89,15 +88,13 @@ public class OrderController {
             );
             return "redirect:" + paymentUrl;
         }
-
         // COD
         redirectAttributes.addFlashAttribute("successMessage",
                 "Đặt hàng thành công! Mã đơn hàng: #" + order.getId());
         return "redirect:/order/success/" + order.getId();
     }
 
-    // ==================== VNPAY CALLBACK ====================
-
+    //VNPAY CALLBACK
     @GetMapping("/vnpay-return")
     public String vnpayReturn(HttpServletRequest request,
                               RedirectAttributes redirectAttributes) {
@@ -116,8 +113,7 @@ public class OrderController {
         }
     }
 
-    // ==================== ĐẶT HÀNG THÀNH CÔNG ====================
-
+    //ĐẶT HÀNG THÀNH CÔNG
     @GetMapping("/success/{id}")
     public String orderSuccess(@PathVariable Integer id,
                                Authentication auth,
@@ -129,8 +125,7 @@ public class OrderController {
         return "layouts/shop-layout";
     }
 
-    // ==================== LỊCH SỬ ĐƠN HÀNG ====================
-
+    //LỊCH SỬ ĐƠN HÀNG useless but i'll keep it anyway
     @GetMapping("/history")
     public String orderHistory(Authentication auth, Model model) {
         AppUser user = getCurrentUser(auth);
@@ -139,8 +134,7 @@ public class OrderController {
         return "layouts/shop-layout";
     }
 
-    // ==================== CHI TIẾT ĐƠN HÀNG ====================
-
+    //CHI TIẾT ĐƠN HÀNG
     @GetMapping("/detail/{id}")
     public String orderDetail(@PathVariable Integer id,
                               Authentication auth,
@@ -152,8 +146,7 @@ public class OrderController {
         return "layouts/shop-layout";
     }
 
-    // ==================== XÁC NHẬN NHẬN HÀNG ====================
-
+    //XÁC NHẬN NHẬN HÀNG
     @GetMapping("/confirm/{id}")
     public String confirmReceived(@PathVariable Integer id,
                                   Authentication auth,
@@ -164,8 +157,7 @@ public class OrderController {
         return "redirect:/order/detail/" + id;
     }
 
-    // ==================== HỦY ĐƠN HÀNG ====================
-
+    //HỦY ĐƠN HÀNG
     @GetMapping("/cancel/{id}")
     public String cancelOrder(@PathVariable Integer id,
                               Authentication auth,
@@ -173,7 +165,7 @@ public class OrderController {
         AppUser user = getCurrentUser(auth);
         orderService.cancelOrder(id, user);
         redirectAttributes.addFlashAttribute("successMessage", "Hủy đơn hàng thành công!");
-        return "redirect:/order/history";
+        return "redirect:/account/orders";
     }
 
     @GetMapping("/apply-voucher")

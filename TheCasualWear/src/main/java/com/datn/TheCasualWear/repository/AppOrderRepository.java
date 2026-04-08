@@ -32,17 +32,18 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
     List<AppOrder> findAllOrderedByStatus();
 
     @Query("SELECT o FROM AppOrder o WHERE " +
-            "(:keyword IS NULL OR LOWER(o.customer.username) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+            "(:keyword IS NULL OR LOWER(o.customer.username) " +
+            "  LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
             "AND (:status IS NULL OR o.status = :status) " +
             "ORDER BY CASE o.status " +
-            "WHEN 'PENDING'   THEN 1 " +
-            "WHEN 'CONFIRMED' THEN 2 " +
-            "WHEN 'SHIPPING'  THEN 3 " +
-            "WHEN 'DELIVERED' THEN 4 " +
-            "WHEN 'COMPLETED' THEN 5 " +
-            "WHEN 'CANCELLED' THEN 6 " +
+            "WHEN com.datn.TheCasualWear.enums.OrderStatus.PENDING   THEN 1 " +
+            "WHEN com.datn.TheCasualWear.enums.OrderStatus.CONFIRMED THEN 2 " +
+            "WHEN com.datn.TheCasualWear.enums.OrderStatus.SHIPPING  THEN 3 " +
+            "WHEN com.datn.TheCasualWear.enums.OrderStatus.DELIVERED THEN 4 " +
+            "WHEN com.datn.TheCasualWear.enums.OrderStatus.COMPLETED THEN 5 " +
+            "WHEN com.datn.TheCasualWear.enums.OrderStatus.CANCELLED THEN 6 " +
             "END ASC, o.orderDate ASC")
     Page<AppOrder> searchOrders(@Param("keyword") String keyword,
-                                @Param("status") String status,
+                                @Param("status") OrderStatus status,  // ← đổi thành enum
                                 Pageable pageable);
 }

@@ -9,6 +9,15 @@ GO
 -- TABLES
 -- ========================================
 
+CREATE TABLE notification (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    user_id INT FOREIGN KEY REFERENCES app_user(id),
+    message NVARCHAR(500) NOT NULL,
+    link NVARCHAR(255),
+    is_read BIT DEFAULT 0,
+    created_at DATETIME DEFAULT GETDATE()
+);
+
 CREATE TABLE app_user (
     id          INT IDENTITY(1,1) PRIMARY KEY,
     username    NVARCHAR(50)  NOT NULL UNIQUE,

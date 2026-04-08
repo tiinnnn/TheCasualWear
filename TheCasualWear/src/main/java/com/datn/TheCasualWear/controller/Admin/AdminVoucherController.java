@@ -18,9 +18,13 @@ public class AdminVoucherController {
     }
 
     @GetMapping
-    public String listVouchers(Model model) {
-        model.addAttribute("vouchers", voucherService.getAllVouchers());
-        model.addAttribute("newVoucher", new Voucher());
+    public String listVouchers(@RequestParam(required = false) Boolean status, Model model) {
+        if (status != null) {
+            model.addAttribute("vouchers", voucherService.getVouchersByStatus(status));
+        } else {
+            model.addAttribute("vouchers", voucherService.getAllVouchers());
+        }
+        model.addAttribute("selectedStatus", status);
         model.addAttribute("view", "admin/voucher/list");
         return "layouts/admin-layout";
     }

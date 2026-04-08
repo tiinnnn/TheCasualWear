@@ -6,7 +6,38 @@
     <title>The Casual Wear</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"/>
+    <link rel="stylesheet" href="/css/style.css"/>
     <link rel="icon" type="image/png" href="/images/footer.png"/>
+    <style>
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.3; }
+        }
+        li.nav-item {
+            list-style: none;
+        }
+
+        .pagination .page-link {
+            color: #000;
+            border-color: #dee2e6;
+            background-color: #fff;
+        }
+        .pagination .page-link:hover {
+            color: #fff;
+            background-color: #000;
+            border-color: #000;
+        }
+        .pagination .page-item.active .page-link {
+            background-color: #000;
+            border-color: #000;
+            color: #fff;
+        }
+        .pagination .page-item.disabled .page-link {
+            color: #aaa;
+            background-color: #fff;
+            border-color: #dee2e6;
+        }
+    </style>
 </head>
 <body>
 <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top">
@@ -109,6 +140,56 @@
                    sec:authorize="!isAuthenticated()">
                     <i class="bi bi-bag fs-5"></i>
                 </a>
+                <li class="nav-item dropdown" sec:authorize="isAuthenticated()">
+                    <a href="#" class="text-dark position-relative dropdown-toggle"
+                       data-bs-toggle="dropdown"
+                       style="text-decoration:none">
+                        <i class="bi bi-bell fs-5"></i>
+                        <!-- Badge số thông báo chưa đọc -->
+                        <span th:if="${unreadCount > 0}"
+                              class="position-absolute top-0 start-100 translate-middle
+                              badge rounded-pill bg-danger"
+                              style="font-size:0.6rem;animation:blink 1s infinite"
+                              th:text="${unreadCount}">
+                        </span>
+                    </a>
+
+                    <!-- Dropdown thông báo -->
+                    <ul class="dropdown-menu dropdown-menu-end shadow"
+                        style="width:320px;max-height:400px;overflow-y:auto">
+                        <li class="px-3 py-2 d-flex justify-content-between align-items-center
+                   border-bottom">
+                            <strong>Thông báo</strong>
+                            <a th:if="${unreadCount > 0}"
+                               th:href="@{/notifications/read-all}"
+                               class="text-muted small">Đánh dấu đã đọc</a>
+                        </li>
+
+                        <!-- Danh sách thông báo -->
+                        <li th:each="n : ${userNotifications}"
+                            th:classappend="${!n.isRead} ? 'bg-light'">
+                            <a th:href="${n.link != null ? n.link : '/account/orders'}"
+                               class="dropdown-item py-2 text-wrap"
+                               style="white-space:normal">
+                                <div class="d-flex gap-2 align-items-start">
+                                    <i th:classappend="${!n.isRead} ? 'text-danger' : 'text-muted'"
+                                       class="bi bi-bell mt-1 flex-shrink-0"></i>
+                                    <div>
+                                        <p class="mb-0 small" th:text="${n.message}"></p>
+                                        <small class="text-muted"
+                                               th:text="${#temporals.format(n.createdAt,
+                                         'HH:mm dd/MM/yyyy')}"></small>
+                                    </div>
+                                </div>
+                            </a>
+                        </li>
+
+                        <li th:if="${#lists.isEmpty(userNotifications)}"
+                            class="text-center text-muted py-3 small">
+                            Không có thông báo nào
+                        </li>
+                    </ul>
+                </li>
             </div>
         </div>
     </div>

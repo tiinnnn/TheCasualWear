@@ -4,11 +4,20 @@
 <body>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="fw-bold">Quản lý Voucher</h4>
-    <a th:href="@{/admin/vouchers/edit}" class="btn btn-dark btn-sm">
-        <i class="bi bi-plus-lg me-1"></i>Thêm voucher
-    </a>
+    <div class="d-flex gap-2">
+        <form th:action="@{/admin/vouchers}" method="get" class="d-flex gap-2">
+            <select name="status" class="form-select form-select-sm w-auto">
+                <option value="">Tất cả</option>
+                <option value="true"  th:selected="${selectedStatus == true}">Đang hoạt động</option>
+                <option value="false" th:selected="${selectedStatus == false}">Tắt</option>
+            </select>
+            <button type="submit" class="btn btn-sm btn-dark">Lọc</button>
+        </form>
+        <a th:href="@{/admin/vouchers/edit}" class="btn btn-dark btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>Thêm voucher
+        </a>
+    </div>
 </div>
-
 <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
         <table class="table table-hover align-middle mb-0">

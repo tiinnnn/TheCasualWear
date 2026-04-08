@@ -24,12 +24,14 @@ public class OrderService {
     private final CartService cartService;
     private final VoucherService voucherService;
     private final ProductRepository productRepository;
+    private final NotificationService notificationService;
     private static final int ADMIN_PAGE_SIZE = 10;
 
     public OrderService(AppOrderRepository orderRepository,
                         OrderDetailRepository orderDetailRepository,
                         OrderVoucherRepository orderVoucherRepository,
                         CartService cartService,
+                        NotificationService notificationService,
                         VoucherService voucherService,
                         ProductRepository productRepository) {
         this.orderRepository = orderRepository;
@@ -38,13 +40,14 @@ public class OrderService {
         this.cartService = cartService;
         this.voucherService = voucherService;
         this.productRepository = productRepository;
+        this.notificationService = notificationService;
     }
 
     public Page<AppOrder> getAllOrders(String keyword, String status, int page) {
         String kw = (keyword == null || keyword.isBlank()) ? null : keyword;
-        String st = (status == null || status.isBlank()) ? null : status;
+        OrderStatus statusEnum = (status == null || status.isBlank()) ? null : OrderStatus.valueOf(status);
         Pageable pageable = PageRequest.of(page, ADMIN_PAGE_SIZE);
-        return orderRepository.searchOrders(kw, st, pageable);
+        return orderRepository.searchOrders(kw, statusEnum, pageable);
     }
 
     public AppOrder getOrderById(Integer id) {
@@ -61,7 +64,7 @@ public class OrderService {
         return order;
     }
 
-    // ==================== PHÍA CUSTOMER ====================
+    // PHÍA CUSTOMER
 
     // Đặt hàng
     @Transactional
@@ -146,17 +149,15 @@ public class OrderService {
     @Transactional
     public void cancelOrder(Integer orderId, AppUser user) {
         AppOrder order = getOrderByIdAndUser(orderId, user);
-
         if (order.getStatus() != OrderStatus.PENDING) {
             throw new IllegalStateException("Chỉ có thể hủy đơn hàng khi đang chờ xác nhận!");
         }
-
         restoreStock(order);
-
-        // Xóa OrderVoucher để customer dùng lại được
         orderVoucherRepository.findByOrderId(orderId)
-                .ifPresent(orderVoucherRepository::delete);
-
+                .ifPresent(ov -> {
+                    order.setOrderVoucher(null);
+                    orderVoucherRepository.delete(ov);
+                });
         order.setStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
     }
@@ -210,20 +211,19 @@ public class OrderService {
     @Transactional
     public void cancelOrderByAdmin(Integer orderId) {
         AppOrder order = getOrderById(orderId);
-
         if (order.getStatus() == OrderStatus.COMPLETED
                 || order.getStatus() == OrderStatus.CANCELLED) {
             throw new IllegalStateException("Không thể hủy đơn hàng này!");
         }
-
         if (order.getStatus() != OrderStatus.PENDING) {
             restoreStock(order);
         }
-
-        // Xóa OrderVoucher để customer dùng lại được
+        // Xóa OrderVoucher trước để customer dùng lại được
         orderVoucherRepository.findByOrderId(orderId)
-                .ifPresent(orderVoucherRepository::delete);
-
+                .ifPresent(ov -> {
+                    order.setOrderVoucher(null);
+                    orderVoucherRepository.delete(ov);
+                });
         order.setStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
     }
@@ -243,11 +243,16 @@ public class OrderService {
         order.setStatus(OrderStatus.DELIVERED);
         order.setDeliveredAt(LocalDateTime.now());
         orderRepository.save(order);
+        // Tạo thông báo cho customer
+        notificationService.createNotification(
+                order.getCustomer(),
+                "Đơn hàng #" + orderId + " đã được giao! Vui lòng kiểm tra và xác nhận thành công cho đơn hàng:>",
+                "/account/orders"
+        );
     }
 
     // HELPER
 
-    // Hoàn lại stock khi hủy đơn
     private void restoreStock(AppOrder order) {
         List<OrderDetail> details = orderDetailRepository.findByOrderId(order.getId());
         for (OrderDetail detail : details) {
@@ -259,7 +264,7 @@ public class OrderService {
 
     @Transactional
     public void deleteCancelledOrder(AppOrder order) {
-        // Xóa order_detail trước
+        // Xóa order_detail
         orderDetailRepository.deleteByOrderId(order.getId());
         // Xóa order_voucher nếu có
         orderVoucherRepository.findByOrderId(order.getId())
