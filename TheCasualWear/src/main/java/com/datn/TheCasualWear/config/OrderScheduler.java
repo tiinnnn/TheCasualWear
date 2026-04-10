@@ -35,12 +35,7 @@ public class OrderScheduler {
 
     @Scheduled(cron = "0 0 0 * * *")
     public void deleteCancelledOrders() {
-        LocalDateTime oneMonthAgo = LocalDateTime.now().minusMonths(1);
-
-        orderRepository.findByStatus(OrderStatus.CANCELLED)
-                .stream()
-                .filter(o -> o.getOrderDate().isBefore(oneMonthAgo))
-                .forEach(orderService::deleteCancelledOrder);
+        orderService.deleteCancelledOrderAfterMonth();
     }
 
     @Scheduled(cron = "0 0 0 * * *")

@@ -38,9 +38,14 @@
                 <td th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></td>
                 <td>
                     <a th:href="@{'/admin/products/restore/' + ${p.id}}"
-                       class="btn btn-sm btn-success"
+                       class="btn btn-sm btn-success me-1"
                        onclick="return confirm('Khôi phục sản phẩm này?')">
                         <i class="bi bi-arrow-counterclockwise me-1"></i>Khôi phục
+                    </a>
+                    <a th:href="@{'/admin/products/hard-delete/' + ${p.id}}"
+                       class="btn btn-sm btn-danger"
+                       onclick="return confirm('Xóa HOÀN TOÀN sản phẩm này? Hành động này không thể hoàn tác!')">
+                        <i class="bi bi-trash3 me-1"></i>Xóa hoàn toàn
                     </a>
                 </td>
             </tr>

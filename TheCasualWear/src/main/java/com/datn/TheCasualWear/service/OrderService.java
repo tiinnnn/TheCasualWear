@@ -263,13 +263,11 @@ public class OrderService {
     }
 
     @Transactional
-    public void deleteCancelledOrder(AppOrder order) {
-        // Xóa order_detail
-        orderDetailRepository.deleteByOrderId(order.getId());
-        // Xóa order_voucher nếu có
-        orderVoucherRepository.findByOrderId(order.getId())
-                .ifPresent(orderVoucherRepository::delete);
-        // Xóa order
-        orderRepository.delete(order);
+    public void deleteCancelledOrderAfterMonth() {
+        LocalDateTime oneMonthAgo = LocalDateTime.now().minusMonths(1);
+        orderRepository.findByStatus(OrderStatus.CANCELLED)
+                .stream()
+                .filter(o -> o.getOrderDate().isBefore(oneMonthAgo))
+                .forEach(orderRepository:: delete);
     }
 }

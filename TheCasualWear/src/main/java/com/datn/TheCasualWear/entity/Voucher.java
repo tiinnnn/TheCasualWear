@@ -41,4 +41,7 @@ public class Voucher {
 
     @Column(name = "is_active")
     private Boolean isActive = true;
+
+    @Column(name = "max_discount", precision = 18, scale = 2)
+    private BigDecimal maxDiscount; // null = không giới hạn
 }

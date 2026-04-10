@@ -2,8 +2,13 @@ package com.datn.TheCasualWear.service;
 
 import com.datn.TheCasualWear.config.ResourceNotFoundException;
 import com.datn.TheCasualWear.entity.Product;
+import com.datn.TheCasualWear.entity.ProductImage;
+import com.datn.TheCasualWear.enums.OrderStatus;
 import com.datn.TheCasualWear.repository.CartItemRepository;
+import com.datn.TheCasualWear.repository.OrderDetailRepository;
+import com.datn.TheCasualWear.repository.ProductImageRepository;
 import com.datn.TheCasualWear.repository.ProductRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -14,16 +19,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class ProductService {
     private final ProductRepository productRepository;
     private final CartItemRepository cartItemRepository;
+    private final ProductImageRepository productImageRepository;
+    private final OrderDetailRepository orderDetailRepository;
+    private final CloudinaryService cloudinaryService;
     private static final int SHOP_PAGE_SIZE = 12;
     private static final int ADMIN_PAGE_SIZE = 15;
-
-    public ProductService(ProductRepository productRepository, CartItemRepository cartItemRepository ) {
-        this.productRepository = productRepository;
-        this.cartItemRepository = cartItemRepository;
-    }
 
     // DÙNG CHUNG
 
@@ -120,7 +124,37 @@ public class ProductService {
         productRepository.save(product);
     }
 
-    public void deleteDeletedProdcut(Integer id){
-        Product product = getProductById(id);
+    @Transactional
+    public void hardDeleteProduct(Integer id) throws Exception {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm!"));
+
+        // Kiểm tra có trong order nào không (trừ CANCELLED)
+        boolean hasActiveOrder = orderDetailRepository.existsByProductIdAndOrderStatusNot(
+                id, OrderStatus.CANCELLED);
+        if (hasActiveOrder) {
+            throw new IllegalStateException(
+                    "Không thể xóa! Sản phẩm đang có trong đơn hàng chưa hủy.");
+        }
+
+        // Xóa cart_item
+        cartItemRepository.deleteByProduct(product);
+
+        // Chỉ xóa order_detail của đơn CANCELLED không xóa cả order để cho sceduled xóa vào thời gian cố định
+        orderDetailRepository.deleteByProductId(id);
+
+        // Xử lý ảnh — chỉ xóa trên Cloudinary nếu ảnh không dùng bởi SP khác
+        List<ProductImage> images = productImageRepository.findByProductId(id);
+        for (ProductImage image : images) {
+            boolean usedByOther = productImageRepository
+                    .existsByImageUrlAndProductIdNot(image.getImageUrl(), id);
+            if (!usedByOther) {
+                cloudinaryService.deleteImage(image.getImageUrl()); // xóa Cloudinary
+            }
+        }
+        // Xóa product_image trong DB
+        productImageRepository.deleteByProduct(product);
+        // Xóa product
+        productRepository.delete(product);
     }
 }

@@ -139,7 +139,7 @@ CREATE TABLE order_voucher (
     voucher_id  INT FOREIGN KEY REFERENCES voucher(id),
     customer_id INT FOREIGN KEY REFERENCES app_user(id)
 );
-
+ALTER TABLE voucher ADD max_discount DECIMAL(18,2) NULL;
 CREATE TABLE password_reset_token (
     id       INT IDENTITY(1,1) PRIMARY KEY,
     token    VARCHAR(255) NOT NULL UNIQUE,

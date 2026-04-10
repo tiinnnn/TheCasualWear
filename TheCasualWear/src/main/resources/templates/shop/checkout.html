@@ -66,19 +66,29 @@
             <div class="card mb-3">
                 <div class="card-body">
                     <h5>Phương thức thanh toán</h5>
+
                     <div class="form-check mb-2">
                         <input class="form-check-input" type="radio"
-                               name="paymentMethod" value="COD" checked/>
-                        <label class="form-check-label">
+                               name="paymentMethod" value="COD"
+                               id="codOption" checked/>
+                        <label class="form-check-label" for="codOption">
                             <i class="bi bi-cash-coin me-2"></i>Thanh toán khi nhận hàng (COD)
                         </label>
                     </div>
+
                     <div class="form-check">
                         <input class="form-check-input" type="radio"
-                               name="paymentMethod" value="VNPAY"/>
-                        <label class="form-check-label">
+                               name="paymentMethod" value="VNPAY"
+                               id="vnpayOption"/>
+                        <label class="form-check-label" for="vnpayOption">
                             <i class="bi bi-credit-card me-2"></i>Thanh toán qua VNPay
                         </label>
+                    </div>
+
+                    <!-- Thông báo khi > 5 triệu -->
+                    <div id="codWarning" class="alert alert-warning mt-2 d-none">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Đơn hàng trên <strong>5.000.000 đ</strong> bắt buộc thanh toán qua ngân hàng!
                     </div>
                 </div>
             </div>
@@ -132,7 +142,7 @@
 
 <script th:inline="javascript">
     const originalTotal = /*[[${totalPrice}]]*/ 0;
-
+    const LIMIT = 5000000;
     function applyVoucher() {
         const code = document.getElementById('voucherCode').value.trim();
         const resultDiv = document.getElementById('voucher-result');
@@ -143,38 +153,65 @@
         }
 
         fetch('/order/apply-voucher?code=' + encodeURIComponent(code) + '&total=' + originalTotal)
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    resultDiv.innerHTML =
-                        '<span class="text-success">' +
-                        '<i class="bi bi-check-circle me-1"></i>' +
-                        'Giảm ' + data.discountPercent + '%' +
-                        '</span>';
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            let msg = 'Giảm ' + data.discountPercent + '%';
+            if (data.maxDiscount) {
+                msg += ' (tối đa ' + data.maxDiscount + ' đ)';
+            }
+            msg += ' → Tiết kiệm: <strong>' + data.discountAmount + ' đ</strong>';
 
-                    // Hiện dòng giảm giá
-                    document.getElementById('discount-row').classList.remove('d-none');
-                    document.getElementById('discount-amount').textContent =
-                        '-' + (originalTotal - parseFloat(data.finalPriceRaw)).toLocaleString('vi-VN') + ' đ';
+            resultDiv.innerHTML = '<span class="text-success">' +
+                '<i class="bi bi-check-circle me-1"></i>' + msg + '</span>';
 
-                    // Cập nhật tổng cuối
-                    document.getElementById('final-price').textContent = data.finalPrice + ' đ';
-                } else {
+            document.getElementById('discount-row').classList.remove('d-none');
+            document.getElementById('discount-amount').textContent =
+                '-' + data.discountAmount + ' đ';
+            document.getElementById('final-price').textContent =
+                data.finalPrice + ' đ';
+
+            updatePaymentMethod(parseFloat(data.finalPriceRaw));
+        } else {
                     resultDiv.innerHTML =
                         '<span class="text-danger">' +
                         '<i class="bi bi-x-circle me-1"></i>' +
-                        data.message +
-                        '</span>';
+                        data.message + '</span>';
 
-                    // Reset về giá gốc
                     document.getElementById('discount-row').classList.add('d-none');
                     document.getElementById('final-price').textContent =
                         originalTotal.toLocaleString('vi-VN') + ' đ';
+
+                    // Reset lại payment method
+                    updatePaymentMethod(originalTotal);
                 }
             })
             .catch(() => {
-                resultDiv.innerHTML = '<span class="text-danger">Có lỗi xảy ra, vui lòng thử lại!</span>';
+                resultDiv.innerHTML =
+                    '<span class="text-danger">Có lỗi xảy ra, vui lòng thử lại!</span>';
             });
+    }
+
+    // Tách thành function riêng để gọi lại sau khi apply voucher
+    function updatePaymentMethod(price) {
+        const codOption   = document.getElementById('codOption');
+        const vnpayOption = document.getElementById('vnpayOption');
+        const codWarning  = document.getElementById('codWarning');
+
+        if (price > LIMIT) {
+            codOption.disabled = true;
+            codOption.checked  = false;
+            vnpayOption.checked = true;
+            codWarning.classList.remove('d-none');
+        } else {
+            codOption.disabled = false;
+            codWarning.classList.add('d-none');
+        }
+    }
+
+    // Gọi checkPaymentMethod bằng updatePaymentMethod
+    function checkPaymentMethod() {
+        updatePaymentMethod(totalPrice);
     }
 </script>
 </body>

@@ -27,13 +27,19 @@
                        th:value="${voucher != null ? voucher.description : ''}"/>
             </div>
             <div class="row">
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label class="form-label">Phần trăm giảm (%)</label>
                     <input type="number" name="discountPercent" class="form-control"
                            th:value="${voucher != null ? voucher.discountPercent : ''}"
                            min="1" max="100"/>
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Giảm tối đa (đ)</label>
+                    <input type="number" name="maxDiscount" class="form-control"
+                           th:value="${voucher != null ? voucher.maxDiscount : ''}"/>
+                    <div class="form-text text-muted">Trống = không giới hạn</div>
+                </div>
+                <div class="col-md-4 mb-3">
                     <label class="form-label">Giá trị đơn tối thiểu (đ)</label>
                     <input type="number" name="minOrderValue" class="form-control"
                            th:value="${voucher != null ? voucher.minOrderValue : 0}"

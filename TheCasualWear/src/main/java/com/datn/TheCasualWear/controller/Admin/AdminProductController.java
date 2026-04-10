@@ -154,4 +154,17 @@ public class AdminProductController {
         redirectAttributes.addFlashAttribute("successMessage", "Đã xóa ảnh!");
         return "redirect:/admin/products/edit/" + productId;
     }
+    @GetMapping("/hard-delete/{id}")
+    public String hardDeleteProduct(@PathVariable Integer id,
+                                    RedirectAttributes redirectAttributes) {
+        try {
+            productService.hardDeleteProduct(id);
+            redirectAttributes.addFlashAttribute("successMessage", "Đã xóa hoàn toàn sản phẩm!");
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Lỗi khi xóa: " + e.getMessage());
+        }
+        return "redirect:/admin/products/deleted";
+    }
 }

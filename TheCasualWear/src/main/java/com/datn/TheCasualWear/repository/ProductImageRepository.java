@@ -9,4 +9,6 @@ import java.util.List;
 public interface ProductImageRepository extends JpaRepository<ProductImage, Integer> {
     List<ProductImage> findByProductId(Integer productId);
     void deleteByProduct(Product product);
+    // Kiểm tra URL đang dùng bởi SP khác không
+    boolean existsByImageUrlAndProductIdNot(String imageUrl, Integer productId);
 }

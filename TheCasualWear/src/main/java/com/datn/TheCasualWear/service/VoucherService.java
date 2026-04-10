@@ -71,13 +71,18 @@ public class VoucherService {
     public BigDecimal calcDiscountedPrice(BigDecimal totalPrice, Voucher voucher) {
         if (voucher == null) return totalPrice;
 
+        // Tính số tiền giảm
         BigDecimal discount = totalPrice
                 .multiply(voucher.getDiscountPercent())
                 .divide(BigDecimal.valueOf(100), RoundingMode.HALF_UP);
 
-        BigDecimal result = totalPrice.subtract(discount);
+        // Áp dụng giới hạn giảm tối đa nếu có
+        if (voucher.getMaxDiscount() != null
+                && discount.compareTo(voucher.getMaxDiscount()) > 0) {
+            discount = voucher.getMaxDiscount();
+        }
 
-        // Không để âm
+        BigDecimal result = totalPrice.subtract(discount);
         return result.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : result;
     }
 
@@ -100,15 +105,17 @@ public class VoucherService {
         if (voucherRepository.existsByCode(voucher.getCode())) {
             throw new IllegalArgumentException("Mã voucher đã tồn tại: " + voucher.getCode());
         }
+        voucher.setCode(voucher.getCode().toUpperCase());
         return voucherRepository.save(voucher);
     }
 
     public Voucher updateVoucher(Integer id, Voucher details) {
         Voucher voucher = getVoucherById(id);
-        voucher.setCode(details.getCode());
+        voucher.setCode(details.getCode().toUpperCase());
         voucher.setDescription(details.getDescription());
         voucher.setDiscountPercent(details.getDiscountPercent());
         voucher.setMinOrderValue(details.getMinOrderValue());
+        voucher.setMaxDiscount(details.getMaxDiscount());
         voucher.setStartDate(details.getStartDate());
         voucher.setEndDate(details.getEndDate());
         return voucherRepository.save(voucher);

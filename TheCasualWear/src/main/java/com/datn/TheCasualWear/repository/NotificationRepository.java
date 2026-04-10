@@ -14,7 +14,6 @@ public interface NotificationRepository extends JpaRepository<Notification, Inte
     List<Notification> findByUserIdOrderByCreatedAtDesc(Integer userId);
     List<Notification> findByUserIdAndIsReadFalse(Integer userId);
     int countByUserIdAndIsReadFalse(Integer userId);
-    void deleteByUserId(Integer userId);
     @Modifying
     @Transactional
     @Query("DELETE FROM Notification n WHERE n.isRead = true " +

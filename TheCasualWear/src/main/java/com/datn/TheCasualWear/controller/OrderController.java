@@ -3,6 +3,7 @@ package com.datn.TheCasualWear.controller;
 import com.datn.TheCasualWear.entity.*;
 import com.datn.TheCasualWear.service.*;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -71,44 +72,89 @@ public class OrderController {
                              RedirectAttributes redirectAttributes) {
         AppUser user = getCurrentUser(auth);
 
-        Address shippingAddress = addressService.getAddressById(shippingAddressId, user);
-        Address billingAddress = billingAddressId != null
-                ? addressService.getAddressById(billingAddressId, user)
-                : shippingAddress;
+        // Validate COD > 5 triệu
+        long totalPrice = cartService.getTotalPrice(user);
+        if (totalPrice > 5000000 && "COD".equals(paymentMethod)) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Đơn hàng trên 5.000.000 đ bắt buộc thanh toán qua ngân hàng!");
+            return "redirect:/order/checkout";
+        }
 
-        AppOrder order = orderService.placeOrder(user, shippingAddress, billingAddress, voucherCode);
-
-        // Thanh toán VNPay
         if ("VNPAY".equals(paymentMethod)) {
-            request.getSession().setAttribute("pendingOrderId", order.getId());
+            // KHÔNG tạo order ngay — lưu thông tin vào session
+            Address shippingAddress = addressService.getAddressById(shippingAddressId, user);
+            Address billingAddress  = billingAddressId != null
+                    ? addressService.getAddressById(billingAddressId, user)
+                    : shippingAddress;
+
+            // Lưu vào session để dùng sau khi VNPay callback
+            HttpSession session = request.getSession();
+            session.setAttribute("pendingShippingAddressId", shippingAddressId);
+            session.setAttribute("pendingBillingAddressId",
+                    billingAddressId != null ? billingAddressId : shippingAddressId);
+            session.setAttribute("pendingVoucherCode", voucherCode);
+
             String paymentUrl = vnPayService.createPaymentUrl(
-                    order.getTotalPrice().longValue(),
-                    "Thanh toan don hang #" + order.getId(),
+                    totalPrice,
+                    "Thanh toan don hang",
                     request
             );
             return "redirect:" + paymentUrl;
         }
-        // COD
+
+        // COD — tạo order bình thường
+        Address shippingAddress = addressService.getAddressById(shippingAddressId, user);
+        Address billingAddress  = billingAddressId != null
+                ? addressService.getAddressById(billingAddressId, user)
+                : shippingAddress;
+
+        AppOrder order = orderService.placeOrder(user, shippingAddress,
+                billingAddress, voucherCode);
         redirectAttributes.addFlashAttribute("successMessage",
                 "Đặt hàng thành công! Mã đơn hàng: #" + order.getId());
         return "redirect:/order/success/" + order.getId();
     }
 
+
     //VNPAY CALLBACK
     @GetMapping("/vnpay-return")
     public String vnpayReturn(HttpServletRequest request,
+                              Authentication auth,
                               RedirectAttributes redirectAttributes) {
         if (vnPayService.validateReturn(request)) {
-            // Lấy order id từ session
-            Integer orderId = (Integer) request.getSession().getAttribute("pendingOrderId");
-            request.getSession().removeAttribute("pendingOrderId");
+            // Thanh toán thành công → MỚI tạo order
+            AppUser user = getCurrentUser(auth);
+            HttpSession session = request.getSession();
+
+            Integer shippingAddressId = (Integer) session.getAttribute("pendingShippingAddressId");
+            Integer billingAddressId  = (Integer) session.getAttribute("pendingBillingAddressId");
+            String voucherCode        = (String)  session.getAttribute("pendingVoucherCode");
+
+            // Xóa session
+            session.removeAttribute("pendingShippingAddressId");
+            session.removeAttribute("pendingBillingAddressId");
+            session.removeAttribute("pendingVoucherCode");
+
+            if (shippingAddressId == null) {
+                redirectAttributes.addFlashAttribute("errorMessage",
+                        "Phiên đặt hàng đã hết hạn! Vui lòng thử lại.");
+                return "redirect:/cart";
+            }
+
+            Address shippingAddress = addressService.getAddressById(shippingAddressId, user);
+            Address billingAddress  = addressService.getAddressById(billingAddressId, user);
+
+            AppOrder order = orderService.placeOrder(user, shippingAddress,
+                    billingAddress, voucherCode);
 
             redirectAttributes.addFlashAttribute("successMessage",
-                    "Thanh toán thành công! Mã đơn hàng: #" + orderId);
-            return "redirect:/order/success/" + orderId;
+                    "Thanh toán thành công! Mã đơn hàng: #" + order.getId());
+            return "redirect:/order/success/" + order.getId();
+
         } else {
+            // Thanh toán thất bại hoặc huỷ → KHÔNG tạo order, cart vẫn còn
             redirectAttributes.addFlashAttribute("errorMessage",
-                    "Thanh toán thất bại! Vui lòng thử lại.");
+                    "Thanh toán thất bại hoặc bị hủy! Đơn hàng chưa được tạo.");
             return "redirect:/cart";
         }
     }
@@ -179,9 +225,13 @@ public class OrderController {
             BigDecimal totalPrice = BigDecimal.valueOf(total);
             Voucher voucher = voucherService.applyVoucher(code, totalPrice, user);
             BigDecimal finalPrice = voucherService.calcDiscountedPrice(totalPrice, voucher);
+            BigDecimal discountAmount = totalPrice.subtract(finalPrice);
 
             result.put("success", true);
             result.put("discountPercent", voucher.getDiscountPercent());
+            result.put("maxDiscount", voucher.getMaxDiscount() != null
+                    ? String.format("%,.0f", voucher.getMaxDiscount()) : null);
+            result.put("discountAmount", String.format("%,.0f", discountAmount));
             result.put("finalPrice", String.format("%,.0f", finalPrice));
             result.put("finalPriceRaw", finalPrice.doubleValue());
         } catch (Exception e) {
