@@ -46,6 +46,58 @@
                     <i class="bi bi-person-circle"></i>
                     <span sec:authentication="name"></span>
                 </span>
+            <!-- Thêm vào navbar admin, bên cạnh tên user -->
+            <div class="dropdown d-inline-block me-3">
+                <a href="#" class="text-white position-relative dropdown-toggle text-decoration-none"
+                   data-bs-toggle="dropdown">
+                    <i class="bi bi-bell fs-5"></i>
+                    <span th:if="${unreadCount > 0}"
+                          class="position-absolute top-0 start-100 translate-middle
+                     badge rounded-pill bg-danger"
+                          style="font-size:0.6rem;animation:blink 1s infinite"
+                          th:text="${unreadCount}"></span>
+                </a>
+
+                <ul class="dropdown-menu dropdown-menu-end shadow"
+                    style="width:350px;max-height:400px;overflow-y:auto">
+                    <li class="px-3 py-2 d-flex justify-content-between align-items-center border-bottom">
+                        <strong>Thông báo</strong>
+                        <a th:if="${unreadCount > 0}"
+                           th:href="@{/notifications/read-all}"
+                           class="text-muted small">Đánh dấu đã đọc</a>
+                    </li>
+
+                    <li th:each="n : ${userNotifications}"
+                        th:classappend="${!n.isRead} ? 'bg-light'">
+                        <a th:href="${n.link != null ? n.link : '/admin'}"
+                           class="dropdown-item py-2 text-wrap"
+                           style="white-space:normal">
+                            <div class="d-flex gap-2 align-items-start">
+                                <i th:classappend="${!n.isRead} ? 'text-danger' : 'text-muted'"
+                                   class="bi bi-bell mt-1 flex-shrink-0"></i>
+                                <div>
+                                    <p class="mb-0 small" th:text="${n.message}"></p>
+                                    <small class="text-muted"
+                                           th:text="${#temporals.format(n.createdAt,
+                                         'HH:mm dd/MM/yyyy')}"></small>
+                                </div>
+                            </div>
+                        </a>
+                    </li>
+
+                    <li th:if="${#lists.isEmpty(userNotifications)}"
+                        class="text-center text-muted py-3 small">
+                        Không có thông báo nào
+                    </li>
+                </ul>
+            </div>
+
+            <style>
+                @keyframes blink {
+                    0%, 100% { opacity: 1; }
+                    50%       { opacity: 0.3; }
+                }
+            </style>
             <a class="btn btn-outline-danger btn-sm" th:href="@{/auth/logout}">Đăng xuất</a>
         </div>
     </div>

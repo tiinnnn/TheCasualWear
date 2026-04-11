@@ -123,9 +123,12 @@ public class OrderService {
             orderVoucher.setCustomer(user);
             orderVoucherRepository.save(orderVoucher);
         }
-
         cartService.clearCart(user);
-
+        notificationService.createNotificationForAdmins(
+                "Đơn hàng mới #" + order.getId() + " từ khách " +
+                        user.getUsername() + " đang chờ xác nhận!",
+                "/admin/orders/" + order.getId()
+        );
         return order;
     }
 

@@ -47,7 +47,12 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
 
     //  PHÍA ADMIN
 
-    // Danh sách chưa xóa (có thể search theo tên)
+    // Stock thấp
+    List<Product> findByIsDeletedFalseAndStockLessThanAndStockGreaterThan(
+            Integer maxStock, Integer minStock);
+
+    List<Product> findByIsDeletedFalseAndStock(Integer stock);
+
     @Query("SELECT p FROM Product p WHERE p.isDeleted = false " +
             "AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<Product> searchProductsForAdmin(@Param("keyword") String keyword, Pageable pageable);
