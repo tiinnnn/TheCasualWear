@@ -168,9 +168,9 @@
                         <!-- Danh sách thông báo -->
                         <li th:each="n : ${userNotifications}"
                             th:classappend="${!n.isRead} ? 'bg-light'">
-                            <a th:href="${n.link != null ? n.link : '/account/orders'}"
-                               class="dropdown-item py-2 text-wrap"
-                               style="white-space:normal">
+                            <a th:href="@{/notifications/read/{id}(id=${n.id})}"
+                            class="dropdown-item py-2 text-wrap"
+                            style="white-space:normal">
                                 <div class="d-flex gap-2 align-items-start">
                                     <i th:classappend="${!n.isRead} ? 'text-danger' : 'text-muted'"
                                        class="bi bi-bell mt-1 flex-shrink-0"></i>

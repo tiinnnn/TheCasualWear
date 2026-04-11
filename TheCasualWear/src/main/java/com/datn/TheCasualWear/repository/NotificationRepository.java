@@ -17,6 +17,6 @@ public interface NotificationRepository extends JpaRepository<Notification, Inte
     @Modifying
     @Transactional
     @Query("DELETE FROM Notification n WHERE n.isRead = true " +
-            "AND n.createdAt < :sevenDaysAgo")
-    void deleteReadNotificationsOlderThan(@Param("sevenDaysAgo") LocalDateTime ago);
+            "AND n.createdAt < :Ago")
+    void deleteReadNotificationsOlderThan(@Param("Ago") LocalDateTime ago);
 }

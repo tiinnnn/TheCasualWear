@@ -163,6 +163,18 @@ public class OrderService {
                 });
         order.setStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
+
+        notificationService.createNotificationForAdmins(
+                "Khách hàng " + user.getUsername() +
+                        " đã hủy đơn hàng #" + orderId + "!",
+                "/admin/orders/" + orderId
+        );
+
+        notificationService.createNotification(
+                order.getCustomer(),
+                "Đơn hàng #" + orderId + " đã được hủy! Bạn có thể sử dụng lại voucher!:>.",
+                "/order/detail/" + orderId
+        );
     }
 
     @Transactional
@@ -178,6 +190,12 @@ public class OrderService {
                 .forEach(o -> {
                     o.setStatus(OrderStatus.COMPLETED);
                     orderRepository.save(o);
+                    notificationService.createNotification(
+                            o.getCustomer(),
+                            "Đơn hàng #" + o.getId() +
+                                    " đã được tự động xác nhận hoàn thành. Cảm ơn bạn đã mua hàng!=)))))))))))",
+                            "/order/detail/" + o.getId()
+                    );
                 });
     }
     // PHÍA ADMIN
@@ -198,6 +216,12 @@ public class OrderService {
         }
         order.setStatus(OrderStatus.CONFIRMED);
         orderRepository.save(order);
+
+        notificationService.createNotification(
+                order.getCustomer(),
+                "Đơn hàng #" + orderId + " đã được xác nhận! Chúng tôi đang chuẩn bị hàng.",
+                "/order/detail/" + orderId
+        );
     }
 
     // CONFIRMED → SHIPPING
@@ -208,6 +232,17 @@ public class OrderService {
         }
         order.setStatus(OrderStatus.SHIPPING);
         orderRepository.save(order);
+
+        notificationService.createNotification(
+                order.getCustomer(),
+                "Đơn hàng #" + orderId + " đang trên đường giao đến bạn!",
+                "/order/detail/" + orderId
+        );
+
+        notificationService.createNotificationForDeliveries(
+                "Đơn hàng #" + orderId + " đang chờ bạn giao!",
+                "/delivery"
+        );
     }
 
     // Admin hủy đơn
@@ -229,6 +264,12 @@ public class OrderService {
                 });
         order.setStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
+
+        notificationService.createNotification(
+                order.getCustomer(),
+                "Đơn hàng #" + orderId + " đã bị hủy bởi shop. Liên hệ hỗ trợ nếu có thắc mắc.",
+                "/order/detail/" + orderId
+        );
     }
 
     // PHÍA DELIVERY

@@ -58,4 +58,11 @@ public class NotificationService {
                                 || r.getName().equals("ROLE_OWNER")))
                 .forEach(admin -> createNotification(admin, message, link));
     }
+
+    public void createNotificationForDeliveries(String message, String link) {
+        appUserRepository.findAll().stream()
+                .filter(u -> u.getRoles().stream()
+                        .anyMatch(r -> r.getName().equals("ROLE_DELIVERY")))
+                .forEach(delivery -> createNotification(delivery, message, link));
+    }
 }
