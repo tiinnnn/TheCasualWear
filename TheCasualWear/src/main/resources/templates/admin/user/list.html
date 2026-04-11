@@ -20,7 +20,7 @@
 </form>
 
 <div class="card border-0 shadow-sm">
-    <div class="card-body p-0">
+    <div class="card-body p-0 table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-dark">
             <tr>
@@ -74,7 +74,7 @@
                           method="post" class="d-inline">
                         <select name="roleName"
                                 class="form-select form-select-sm d-inline"
-                                style="width:120px">
+                                style="width:110px">
                             <option value="ROLE_CUSTOMER">CUSTOMER</option>
                             <option value="ROLE_DELIVERY">DELIVERY</option>
                             <option th:if="${isOwner}" value="ROLE_ADMIN">ADMIN</option>
@@ -82,6 +82,20 @@
                         </select>
                         <button type="submit"
                                 class="btn btn-sm btn-outline-primary">+</button>
+                    </form>
+                    <form th:action="@{'/admin/users/' + ${u.id} + '/role/remove'}"
+                          method="post" class="d-inline">
+                        <select name="roleName"
+                                class="form-select form-select-sm d-inline"
+                                style="width:110px">
+                            <option value="ROLE_CUSTOMER">CUSTOMER</option>
+                            <option value="ROLE_DELIVERY">DELIVERY</option>
+                            <option th:if="${isOwner}" value="ROLE_ADMIN">ADMIN</option>
+                            <option th:if="${isOwner}" value="ROLE_OWNER">OWNER</option>
+                        </select>
+                        <button type="submit"
+                                class="btn btn-sm btn-outline-danger"
+                                onclick="return confirm('Xóa role này khỏi user?')">−</button>
                     </form>
                 </td>
             </tr>
