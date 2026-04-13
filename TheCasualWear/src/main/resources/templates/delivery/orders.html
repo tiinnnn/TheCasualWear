@@ -22,6 +22,15 @@
             <div class="text-end">
                 <p class="text-danger fw-bold mb-2"
                    th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></p>
+                <!-- Badge phương thức thanh toán -->
+                <span th:if="${order.paymentMethod == 'COD'}"
+                      class="badge bg-danger mb-2">
+                    <i class="bi bi-cash-coin"></i> Cần thu hộ
+                </span>
+                <span th:if="${order.paymentMethod != 'COD'}"
+                      class="badge bg-success mb-2">
+                    <i class="bi bi-credit-card"></i> VNPay - 0đ
+                </span>
                 <a th:href="@{'/delivery/orders/' + ${order.id}}"
                    class="btn btn-sm btn-outline-dark">Chi tiết</a>
             </div>
@@ -47,6 +56,15 @@
             <div class="text-end">
                 <p class="text-danger fw-bold mb-2"
                    th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></p>
+                <!-- Badge phương thức thanh toán -->
+                <span th:if="${order.paymentMethod == 'COD'}"
+                    class="badge bg-danger mb-2">
+                    <i class="bi bi-cash-coin"></i> Cần thu hộ
+                </span>
+                <span th:if="${order.paymentMethod != 'COD'}"
+                      class="badge bg-success mb-2">
+                    <i class="bi bi-credit-card"></i> VNPay - 0đ
+                </span>
                 <div class="d-flex gap-2">
                     <a th:href="@{'/delivery/orders/' + ${order.id}}"
                        class="btn btn-sm btn-outline-dark">Chi tiết</a>

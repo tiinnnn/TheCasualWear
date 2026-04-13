@@ -16,7 +16,6 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
 
     // Lọc theo trạng thái (admin quản lý)
     List<AppOrder> findByStatus(OrderStatus status);
-
     // Tìm đơn hàng của user theo trạng thái
     List<AppOrder> findByCustomerIdAndStatus(Integer customerId, String status);
 
@@ -28,7 +27,7 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
             "WHEN 'DELIVERED' THEN 4 " +
             "WHEN 'COMPLETED' THEN 5 " +
             "WHEN 'CANCELLED' THEN 6 " +
-            "END ASC, o.orderDate ASC")
+            "END ASC, o.orderDate DESC")
     List<AppOrder> findAllOrderedByStatus();
 
     @Query("SELECT o FROM AppOrder o WHERE " +
@@ -42,8 +41,8 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
             "WHEN com.datn.TheCasualWear.enums.OrderStatus.DELIVERED THEN 4 " +
             "WHEN com.datn.TheCasualWear.enums.OrderStatus.COMPLETED THEN 5 " +
             "WHEN com.datn.TheCasualWear.enums.OrderStatus.CANCELLED THEN 6 " +
-            "END ASC, o.orderDate ASC")
+            "END ASC, o.orderDate DESC")
     Page<AppOrder> searchOrders(@Param("keyword") String keyword,
-                                @Param("status") OrderStatus status,  // ← đổi thành enum
+                                @Param("status") OrderStatus status,
                                 Pageable pageable);
 }
