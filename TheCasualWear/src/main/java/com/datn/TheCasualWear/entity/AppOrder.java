@@ -52,4 +52,10 @@ public class AppOrder {
 
     @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private OrderVoucher orderVoucher;
+
+    @Column(name = "payment_method", length = 20)
+    private String paymentMethod = "COD"; // COD hoặc VNPAY
+
+    @Column(name = "is_paid")
+    private Boolean isPaid = false; // VNPay → true ngay, COD → true khi delivery xác nhận
 }

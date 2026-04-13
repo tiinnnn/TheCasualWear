@@ -33,6 +33,15 @@
                     <span class="text-danger"
                           th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></span>
                 </div>
+                <div class="d-flex justify-content-between mb-1">
+                    <span>Thanh toán:</span>
+                    <span th:if="${order.paymentMethod == 'VNPAY'}"
+                          class="badge bg-success">VNPay ✓</span>
+                    <span th:if="${order.paymentMethod == 'COD' and order.isPaid}"
+                          class="badge bg-success">COD - Đã thu tiền ✓</span>
+                    <span th:if="${order.paymentMethod == 'COD' and !order.isPaid}"
+                          class="badge bg-warning text-dark">COD - Chưa thu tiền</span>
+                </div>
             </div>
         </div>
     </div>

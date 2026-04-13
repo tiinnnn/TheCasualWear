@@ -109,7 +109,7 @@ public class OrderController {
                 : shippingAddress;
 
         AppOrder order = orderService.placeOrder(user, shippingAddress,
-                billingAddress, voucherCode);
+                billingAddress, voucherCode, "COD");
         redirectAttributes.addFlashAttribute("successMessage",
                 "Đặt hàng thành công! Mã đơn hàng: #" + order.getId());
         return "redirect:/order/success/" + order.getId();
@@ -145,7 +145,7 @@ public class OrderController {
             Address billingAddress  = addressService.getAddressById(billingAddressId, user);
 
             AppOrder order = orderService.placeOrder(user, shippingAddress,
-                    billingAddress, voucherCode);
+                    billingAddress, voucherCode, "VNPAY");
 
             redirectAttributes.addFlashAttribute("successMessage",
                     "Thanh toán thành công! Mã đơn hàng: #" + order.getId());

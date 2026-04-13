@@ -31,28 +31,78 @@
     </div>
 
     <div class="col-md-5">
+        <!-- Thêm thông tin thanh toán -->
         <div class="card border-0 shadow-sm mb-3">
             <div class="card-body">
-                <h6 class="fw-bold mb-3">Địa chỉ giao hàng</h6>
-                <p class="mb-1 fw-bold" th:text="${order.shippingAddress.fullName}"></p>
-                <p class="mb-1"><i class="bi bi-telephone me-2"></i>
-                    <span th:text="${order.shippingAddress.phone}"></span></p>
-                <p class="mb-0"><i class="bi bi-geo-alt me-2"></i>
-                    <span th:text="${order.shippingAddress.street + ', ' +
-                                    order.shippingAddress.district + ', ' +
-                                    order.shippingAddress.city}"></span></p>
+                <h6 class="fw-bold mb-3">Thông tin thanh toán</h6>
+
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Phương thức:</span>
+                    <span th:if="${order.paymentMethod == 'COD'}"
+                          class="badge bg-warning text-dark fs-6">
+                <i class="bi bi-cash-coin me-1"></i>COD - Thu tiền mặt
+            </span>
+                    <span th:if="${order.paymentMethod == 'VNPAY'}"
+                          class="badge bg-success fs-6">
+                <i class="bi bi-credit-card me-1"></i>VNPay - Đã thanh toán
+            </span>
+                </div>
+
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Số tiền cần thu:</span>
+                    <span class="fw-bold text-danger fs-5"
+                          th:text="${order.paymentMethod == 'COD' and !order.isPaid ?
+                            #numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ' :
+                            'Đã thanh toán'}">
+            </span>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <span>Trạng thái thanh toán:</span>
+                    <span th:if="${order.isPaid}" class="badge bg-success">
+                <i class="bi bi-check-circle me-1"></i>Đã thanh toán
+            </span>
+                    <span th:unless="${order.isPaid}" class="badge bg-danger">
+                <i class="bi bi-x-circle me-1"></i>Chưa thanh toán
+            </span>
+                </div>
             </div>
         </div>
 
-        <div class="d-grid gap-2"
-             th:if="${order.status.name() == 'SHIPPING'}">
-            <a th:href="@{'/delivery/orders/' + ${order.id} + '/delivered'}"
+        <!-- Nút xác nhận thu tiền COD -->
+        <div class="d-grid gap-2">
+            <!-- Chỉ hiện khi COD + chưa thu tiền + đang giao -->
+            <div th:if="${order.paymentMethod == 'COD'
+                 and !order.isPaid
+                 and order.status.name() == 'SHIPPING'}"
+                 class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Nhắc nhở:</strong> Thu
+                <strong th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></strong>
+                tiền mặt từ khách!
+            </div>
+
+            <a th:if="${order.status.name() == 'SHIPPING'}"
+               th:href="@{'/delivery/orders/' + ${order.id} + '/delivered'}"
                class="btn btn-success"
-               onclick="return confirm('Xác nhận đã giao hàng thành công?')">
+               th:attr="data-cod=${order.paymentMethod == 'COD' and !order.isPaid},
+            data-amount=${order.totalPrice}"
+               onclick="return confirmDelivery(this)">
                 <i class="bi bi-check-circle me-2"></i>Xác nhận đã giao hàng
             </a>
         </div>
     </div>
 </div>
+<script>
+    function confirmDelivery(btn) {
+        const isCod = btn.dataset.cod === 'true';
+        const amount = parseFloat(btn.dataset.amount)
+                          .toLocaleString('vi-VN');
+        if (isCod) {
+            return confirm('Đã thu ' + amount + ' đ tiền mặt từ khách chưa?');
+        }
+        return confirm('Xác nhận đã giao hàng thành công?');
+    }
+</script>
 </body>
 </html>

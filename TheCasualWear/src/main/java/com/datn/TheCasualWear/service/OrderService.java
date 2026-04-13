@@ -69,7 +69,7 @@ public class OrderService {
     // Đặt hàng
     @Transactional
     public AppOrder placeOrder(AppUser user, Address shippingAddress,
-                               Address billingAddress, String voucherCode) {
+                               Address billingAddress, String voucherCode, String paymentMethod) {
         // Lấy giỏ hàng
         List<CartItem> cartItems = cartService.getCartItems(user);
         if (cartItems.isEmpty()) {
@@ -92,6 +92,8 @@ public class OrderService {
         order.setBillingAddress(billingAddress);
         order.setTotalPrice(totalPrice);
         order.setStatus(OrderStatus.PENDING);
+        order.setPaymentMethod(paymentMethod);
+        order.setIsPaid("VNPAY".equals(paymentMethod));
         orderRepository.save(order);
 
         for (CartItem item : cartItems) {
@@ -286,12 +288,18 @@ public class OrderService {
         }
         order.setStatus(OrderStatus.DELIVERED);
         order.setDeliveredAt(LocalDateTime.now());
+
+        // COD → đánh dấu đã thu tiền khi giao xong
+        if ("COD".equals(order.getPaymentMethod())) {
+            order.setIsPaid(true);
+        }
+
         orderRepository.save(order);
-        // Tạo thông báo cho customer
+
         notificationService.createNotification(
                 order.getCustomer(),
-                "Đơn hàng #" + orderId + " đã được giao! Vui lòng kiểm tra và xác nhận thành công cho đơn hàng:>",
-                "/account/orders"
+                "Đơn hàng #" + orderId + " đã được giao! Vui lòng xác nhận:>",
+                "/order/detail/" + orderId
         );
     }
 

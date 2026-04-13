@@ -113,6 +113,8 @@ CREATE TABLE app_order (
     billing_address_id  INT FOREIGN KEY REFERENCES address(id)
 );
 ALTER TABLE app_order ADD delivered_at DATETIME NULL;
+ALTER TABLE app_order ADD payment_method NVARCHAR(20) DEFAULT 'COD';
+ALTER TABLE app_order ADD is_paid BIT DEFAULT 0;
 
 CREATE TABLE order_detail (
     id         INT IDENTITY(1,1) PRIMARY KEY,
