@@ -1,6 +1,6 @@
 package com.datn.TheCasualWear.config;
 
-import com.datn.TheCasualWear.service.AppUserService;
+import com.datn.TheCasualWear.repository.AppUserRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -16,17 +16,18 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private final AppUserService appUserService;
+    private final AppUserRepository appUserRepository;
 
-    public SecurityConfig(AppUserService appUserService) {
-        this.appUserService = appUserService;
+    public SecurityConfig(AppUserRepository appUserRepository) {
+        this.appUserRepository = appUserRepository;
     }
 
     // Load user từ DB cho Spring Security
     @Bean
     public UserDetailsService userDetailsService() {
-        return username -> {
-            var user = appUserService.getUserByUsername(username);
+        return value -> {
+            var user = appUserRepository.findByUsernameOrEmailOrPhone(value).orElseThrow(() -> new UsernameNotFoundException(
+                    "Không tìm thấy tài khoản!"));
             if (!user.getEnabled()) {
                 throw new UsernameNotFoundException("Tài khoản đã bị khóa!");
             }

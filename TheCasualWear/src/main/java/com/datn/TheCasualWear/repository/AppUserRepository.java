@@ -19,4 +19,8 @@ public interface AppUserRepository extends JpaRepository<AppUser, Integer> {
     @Query("SELECT u FROM AppUser u WHERE " +
             ":keyword IS NULL OR LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     Page<AppUser> searchUsers(@Param("keyword") String keyword, Pageable pageable);
+
+    @Query("SELECT u FROM AppUser u WHERE u.username = :value " +
+            "OR u.email = :value OR u.phone = :value")
+    Optional<AppUser> findByUsernameOrEmailOrPhone(@Param("value") String value);
 }
