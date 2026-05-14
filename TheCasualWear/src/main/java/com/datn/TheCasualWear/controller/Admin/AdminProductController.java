@@ -1,7 +1,6 @@
 package com.datn.TheCasualWear.controller.Admin;
 
 import com.datn.TheCasualWear.entity.Product;
-import com.datn.TheCasualWear.entity.ProductImage;
 import com.datn.TheCasualWear.service.*;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
