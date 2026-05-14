@@ -25,11 +25,12 @@ public class CloudinaryService {
     }
 
     // Upload 1 ảnh lên Cloudinary, trả về URL
+    @SuppressWarnings("unchecked")
     public String uploadImage(MultipartFile file, String folder) throws IOException {
-        Map uploadResult = cloudinary.uploader().upload(
+        Map<String, Object> uploadResult = (Map<String, Object>) cloudinary.uploader().upload(
                 file.getBytes(),
                 ObjectUtils.asMap(
-                        "folder", folder,       // lưu vào folder trên Cloudinary
+                        "folder", folder,
                         "resource_type", "auto"
                 )
         );
