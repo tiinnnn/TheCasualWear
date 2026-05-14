@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Tài khoản</title></head>
+<body>
+<div class="container">
+<div class="row">
+    <div class="col-md-3">
+        <div th:replace="~{fragments/account-menu :: account-menu}"></div>
+    </div>
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="mb-4">Thông tin tài khoản</h5>
+                <form th:action="@{/account/update}" method="post" id="profileForm">
+                    <div class="mb-3">
+                        <label class="form-label">Tên đăng nhập</label>
+                        <input type="text" th:value="${user.username}"
+                               class="form-control" disabled/>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Email
+                            <span class="text-muted small">(* cần ít nhất Email hoặc SĐT)</span>
+                        </label>
+                        <input type="email" name="email"
+                               th:value="${user != null ? user.email : ''}"
+                               class="form-control"
+                               placeholder="example@gmail.com"
+                               pattern="[a-zA-Z0-9._%+\-]+@gmail\.com"
+                               title="Email phải có đuôi @gmail.com"/>
+                        <div class="form-text text-muted">
+                            <i class="bi bi-info-circle me-1"></i>Chỉ chấp nhận email @gmail.com
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Số điện thoại
+                            <span class="text-muted small">(* cần ít nhất Email hoặc SĐT)</span>
+                        </label>
+                        <input type="text" name="phone"
+                               th:value="${user != null ? user.phone : ''}"
+                               class="form-control"
+                               placeholder="0901234567"
+                               pattern="\d{10}"
+                               maxlength="10"
+                               title="Số điện thoại phải đúng 10 chữ số"/>
+                        <div class="form-text text-muted">
+                            <i class="bi bi-info-circle me-1"></i>Nhập đúng 10 chữ số
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-dark">Cập nhật</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+<script>
+    document.getElementById('profileForm').addEventListener('submit', function(e) {
+        const email = document.getElementById('email').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        if (!email && !phone) {
+            e.preventDefault();
+            alert('Vui lòng giữ ít nhất Email hoặc Số điện thoại!');
+        }
+    });
+    document.querySelector('[name="email"]').addEventListener('input', function() {
+        const email = this.value.trim();
+        const feedback = this.nextElementSibling?.nextElementSibling;
+
+        if (!email) {
+            this.classList.remove('is-invalid', 'is-valid');
+            return;
+        }
+
+        if (email.toLowerCase().endsWith('@gmail.com')) {
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
+        } else {
+            this.classList.remove('is-valid');
+            this.classList.add('is-invalid');
+        }
+    });
+    document.querySelector('[name="phone"]').addEventListener('input', function() {
+        const phone = this.value.trim();
+
+        // Chỉ cho nhập số
+        this.value = phone.replace(/\D/g, '');
+
+        if (!phone) {
+            this.classList.remove('is-invalid', 'is-valid');
+            return;
+        }
+
+        if (/^\d{10}$/.test(phone)) {
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
+        } else {
+            this.classList.remove('is-valid');
+            this.classList.add('is-invalid');
+        }
+    });
+</script>
+</body>
+</html>

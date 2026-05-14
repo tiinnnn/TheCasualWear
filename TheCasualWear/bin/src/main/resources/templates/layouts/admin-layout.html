@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - The Casual Wear</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"/>
+    <link rel="stylesheet" href="/css/style.css"/>
+    <link rel="icon" type="image/png" href="/images/footer.png"/>
+    <style>
+        .pagination .page-link {
+            color: #000;
+            border-color: #dee2e6;
+            background-color: #fff;
+        }
+        .pagination .page-link:hover {
+            color: #fff;
+            background-color: #212529;
+            border-color: #212529;
+        }
+        .pagination .page-item.active .page-link {
+            background-color: #212529;
+            border-color: #212529;
+            color: #fff;
+        }
+        .pagination .page-item.disabled .page-link {
+            color: #aaa;
+            background-color: #fff;
+            border-color: #dee2e6;
+        }
+    </style>
+</head>
+<body>
+<!-- Navbar -->
+<nav class="navbar navbar-dark bg-dark sticky-top">
+    <div class="container-fluid px-4">
+        <a class="navbar-brand fw-bold" th:href="@{/admin}">
+            <i class="bi bi-gear"></i> Admin Panel
+        </a>
+        <div class="d-flex align-items-center gap-3">
+            <a class="text-white text-decoration-none" th:href="@{/}">
+                <i class="bi bi-shop"></i> Về trang shop
+            </a>
+            <span class="text-warning">
+                    <i class="bi bi-person-circle"></i>
+                    <span sec:authentication="name"></span>
+                </span>
+            <!-- Thêm vào navbar admin, bên cạnh tên user -->
+            <div class="dropdown d-inline-block me-3">
+                <a href="#" class="text-white position-relative dropdown-toggle text-decoration-none"
+                   data-bs-toggle="dropdown">
+                    <i class="bi bi-bell fs-5"></i>
+                    <span th:if="${unreadCount > 0}"
+                          class="position-absolute top-0 start-100 translate-middle
+                     badge rounded-pill bg-danger"
+                          style="font-size:0.6rem;animation:blink 1s infinite"
+                          th:text="${unreadCount}"></span>
+                </a>
+
+                <ul class="dropdown-menu dropdown-menu-end shadow"
+                    style="width:350px;max-height:400px;overflow-y:auto">
+                    <li class="px-3 py-2 d-flex justify-content-between align-items-center border-bottom">
+                        <strong>Thông báo</strong>
+                        <a th:if="${unreadCount > 0}"
+                           th:href="@{/notifications/read-all}"
+                           class="text-muted small">Đánh dấu đã đọc</a>
+                    </li>
+
+                    <li th:each="n : ${userNotifications}"
+                        th:classappend="${!n.isRead} ? 'bg-light'">
+                        <a th:href="@{/notifications/read/{id}(id=${n.id})}"
+                        class="dropdown-item py-2 text-wrap"
+                        style="white-space:normal">
+                            <div class="d-flex gap-2 align-items-start">
+                                <i th:classappend="${!n.isRead} ? 'text-danger' : 'text-muted'"
+                                   class="bi bi-bell mt-1 flex-shrink-0"></i>
+                                <div>
+                                    <p class="mb-0 small" th:text="${n.message}"></p>
+                                    <small class="text-muted"
+                                           th:text="${#temporals.format(n.createdAt,
+                                         'HH:mm dd/MM/yyyy')}"></small>
+                                </div>
+                            </div>
+                        </a>
+                    </li>
+
+                    <li th:if="${#lists.isEmpty(userNotifications)}"
+                        class="text-center text-muted py-3 small">
+                        Không có thông báo nào
+                    </li>
+                </ul>
+            </div>
+
+            <style>
+                @keyframes blink {
+                    0%, 100% { opacity: 1; }
+                    50%       { opacity: 0.3; }
+                }
+            </style>
+            <a class="btn btn-outline-danger btn-sm" th:href="@{/auth/logout}">Đăng xuất</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-2 bg-dark min-vh-100 pt-3 px-0">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link text-white py-3 px-4" th:href="@{/admin}">
+                        <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white py-3 px-4" th:href="@{/admin/products}">
+                        <i class="bi bi-box-seam me-2"></i>Sản phẩm
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white py-3 px-4" th:href="@{/admin/categories}">
+                        <i class="bi bi-tags me-2"></i>Danh mục
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white py-3 px-4" th:href="@{/admin/orders}">
+                        <i class="bi bi-cart-check me-2"></i>Đơn hàng
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white py-3 px-4" th:href="@{/admin/users}">
+                        <i class="bi bi-people me-2"></i>User
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white py-3 px-4" th:href="@{/admin/vouchers}">
+                        <i class="bi bi-ticket-perforated me-2"></i>Voucher
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Nội dung chính -->
+        <div class="col-md-10 pt-4 px-4">
+            <div th:replace="~{fragments/alerts :: alerts}"></div>
+            <div th:replace="~{${view}}"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

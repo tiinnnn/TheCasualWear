@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Danh mục / Size / Màu</title></head>
+<body>
+<h4 class="fw-bold mb-4">Quản lý Danh mục / Size / Màu</h4>
+
+<div class="row g-4">
+    <!-- Danh mục -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">Danh mục</h6>
+
+                <!-- Form thêm mới -->
+                <form th:action="@{/admin/categories/add}" method="post"
+                      th:object="${newCategory}" class="d-flex gap-2 mb-3">
+                    <input type="text" th:field="*{name}"
+                           class="form-control form-control-sm" placeholder="Tên danh mục" required/>
+                    <button type="submit" class="btn btn-dark btn-sm">+</button>
+                </form>
+
+                <ul class="list-group list-group-flush">
+                    <li th:each="cat : ${categories}"
+                        class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <span th:text="${cat.name}"></span>
+                        <div class="d-flex gap-1">
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    th:data-id="${cat.id}"
+                                    th:data-name="${cat.name}"
+                                    data-bs-toggle="modal" data-bs-target="#editCategoryModal"
+                                    onclick="editCategory(this)">
+                                <i class="bi bi-pencil" style="pointer-events: none;"></i>
+                            </button>
+                            <a th:href="@{'/admin/categories/delete/' + ${cat.id}}"
+                               class="btn btn-sm btn-outline-danger"
+                               onclick="return confirm('Xóa danh mục này?')">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Size -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">Size</h6>
+
+                <form th:action="@{/admin/categories/size/add}" method="post"
+                      th:object="${newSize}" class="d-flex gap-2 mb-3">
+                    <input type="text" th:field="*{name}"
+                           class="form-control form-control-sm" placeholder="Tên size" required/>
+                    <button type="submit" class="btn btn-dark btn-sm">+</button>
+                </form>
+
+                <ul class="list-group list-group-flush">
+                    <li th:each="s : ${sizes}"
+                        class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <span th:text="${s.name}"></span>
+                        <a th:href="@{'/admin/categories/size/delete/' + ${s.id}}"
+                           class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('Xóa size này?')">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Màu -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">Màu sắc</h6>
+
+                <form th:action="@{/admin/categories/color/add}" method="post"
+                      th:object="${newColor}" class="d-flex gap-2 mb-3">
+                    <input type="text" th:field="*{name}"
+                           class="form-control form-control-sm" placeholder="Tên màu" required/>
+                    <button type="submit" class="btn btn-dark btn-sm">+</button>
+                </form>
+
+                <ul class="list-group list-group-flush">
+                    <li th:each="cl : ${colors}"
+                        class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <span th:text="${cl.name}"></span>
+                        <a th:href="@{'/admin/categories/color/delete/' + ${cl.id}}"
+                           class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('Xóa màu này?')">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal sửa danh mục -->
+<div class="modal fade" id="editCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="editCategoryForm" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title">Sửa danh mục</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="text" id="editCategoryName" name="name"
+                           class="form-control" required/>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-dark">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function editCategory(id, name) {
+        document.getElementById('editCategoryName').value = name;
+        document.getElementById('editCategoryForm').action = '/admin/categories/edit/' + id;
+    }
+    function editCategory(btn) {
+        const button = btn.closest('button'); // luôn lấy button dù click vào icon
+        const id     = button.getAttribute('data-id');
+        const name   = button.getAttribute('data-name');
+        document.getElementById('editCategoryName').value = name;
+        document.getElementById('editCategoryForm').action = '/admin/categories/edit/' + id;
+    }
+</script>
+</body>
+</html>
