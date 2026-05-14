@@ -1,7 +1,6 @@
 package com.datn.TheCasualWear.controller;
 
 import com.datn.TheCasualWear.entity.Product;
-import com.datn.TheCasualWear.service.CategoryService;
 import com.datn.TheCasualWear.service.ProductService;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
@@ -12,12 +11,9 @@ import org.springframework.web.bind.annotation.*;
 public class ShopController {
 
     private final ProductService productService;
-    private final CategoryService categoryService;
 
-    public ShopController(ProductService productService,
-                          CategoryService categoryService) {
+    public ShopController(ProductService productService) {
         this.productService = productService;
-        this.categoryService = categoryService;
     }
 
     //trang chu

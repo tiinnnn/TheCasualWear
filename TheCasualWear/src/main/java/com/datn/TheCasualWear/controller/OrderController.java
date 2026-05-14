@@ -83,10 +83,6 @@ public class OrderController {
         if ("VNPAY".equals(paymentMethod)) {
             // KHÔNG tạo order ngay — lưu thông tin vào session
             Address shippingAddress = addressService.getAddressById(shippingAddressId, user);
-            Address billingAddress  = billingAddressId != null
-                    ? addressService.getAddressById(billingAddressId, user)
-                    : shippingAddress;
-
             // Lưu vào session để dùng sau khi VNPay callback
             HttpSession session = request.getSession();
             session.setAttribute("pendingShippingAddressId", shippingAddressId);
