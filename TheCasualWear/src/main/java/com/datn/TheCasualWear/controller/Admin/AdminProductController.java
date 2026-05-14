@@ -84,30 +84,39 @@ public class AdminProductController {
                               @RequestParam(value = "copiedImageUrls", required = false)
                               List<String> copiedImageUrls,
                               RedirectAttributes redirectAttributes) throws Exception {
-        if (product.getId() == null) {
-            Product saved = productService.createProduct(product);
+        try {
+            if (product.getId() == null) {
+                Product saved = productService.createProduct(product);
 
-            // Copy ảnh từ sản phẩm gốc
-            if (copiedImageUrls != null && !copiedImageUrls.isEmpty()) {
-                cloudinaryService.copyImagesFromUrls(saved, copiedImageUrls);
-            }
+                // Copy ảnh từ sản phẩm gốc
+                if (copiedImageUrls != null && !copiedImageUrls.isEmpty()) {
+                    cloudinaryService.copyImagesFromUrls(saved, copiedImageUrls);
+                }
 
-            // Upload ảnh mới nếu có
-            if (imageFiles != null && !imageFiles.isEmpty()
-                    && !imageFiles.get(0).isEmpty()) {
-                cloudinaryService.uploadProductImages(saved, imageFiles);
+                // Upload ảnh mới nếu có
+                if (imageFiles != null && !imageFiles.isEmpty()
+                        && !imageFiles.get(0).isEmpty()) {
+                    cloudinaryService.uploadProductImages(saved, imageFiles);
+                }
+                redirectAttributes.addFlashAttribute("successMessage", "Thêm sản phẩm thành công!");
+            } else {
+                productService.updateProduct(product.getId(), product);
+                if (imageFiles != null && !imageFiles.isEmpty()
+                        && !imageFiles.get(0).isEmpty()) {
+                    cloudinaryService.uploadProductImages(
+                            productService.getProductById(product.getId()), imageFiles);
+                }
+                redirectAttributes.addFlashAttribute("successMessage", "Cập nhật sản phẩm thành công!");
             }
-            redirectAttributes.addFlashAttribute("successMessage", "Thêm sản phẩm thành công!");
-        } else {
-            productService.updateProduct(product.getId(), product);
-            if (imageFiles != null && !imageFiles.isEmpty()
-                    && !imageFiles.get(0).isEmpty()) {
-                cloudinaryService.uploadProductImages(
-                        productService.getProductById(product.getId()), imageFiles);
+            return "redirect:/admin/products";
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            if (product.getId() == null) {
+                return "redirect:/admin/products/add";
+            } else {
+                return "redirect:/admin/products/edit/" + product.getId();
             }
-            redirectAttributes.addFlashAttribute("successMessage", "Cập nhật sản phẩm thành công!");
         }
-        return "redirect:/admin/products";
     }
 
     @GetMapping("/delete/{id}")
