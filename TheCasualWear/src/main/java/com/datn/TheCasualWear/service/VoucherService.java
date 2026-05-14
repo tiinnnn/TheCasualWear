@@ -106,6 +106,14 @@ public class VoucherService {
             throw new IllegalArgumentException("Mã voucher đã tồn tại: " + voucher.getCode());
         }
         voucher.setCode(voucher.getCode().toUpperCase());
+        
+        // Nếu ngày kết thúc > hôm nay thì set trạng thái đang hoạt động
+        if (voucher.getEndDate() != null && voucher.getEndDate().isAfter(LocalDateTime.now())) {
+            voucher.setIsActive(true);
+        } else {
+            voucher.setIsActive(false);
+        }
+        
         return voucherRepository.save(voucher);
     }
 
@@ -118,6 +126,12 @@ public class VoucherService {
         voucher.setMaxDiscount(details.getMaxDiscount());
         voucher.setStartDate(details.getStartDate());
         voucher.setEndDate(details.getEndDate());
+        
+        // Nếu ngày kết thúc > hôm nay thì set trạng thái đang hoạt động
+        if (details.getEndDate() != null && details.getEndDate().isAfter(LocalDateTime.now())) {
+            voucher.setIsActive(true);
+        }
+        
         return voucherRepository.save(voucher);
     }
 

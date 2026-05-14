@@ -26,7 +26,7 @@ public class VoucherScheduler {
 //                    voucherRepository.save(v);
 //                });
 //    }
-    @Scheduled(cron = "0 0 0 * * *")
+@Scheduled(cron = "0 */5 * * * *")
     public void deactivateExpiredVouchers() {
         System.out.println(">>> Voucher scheduler chạy lúc: " + LocalDateTime.now());
         voucherRepository.deactivateExpiredVouchers(LocalDateTime.now());
