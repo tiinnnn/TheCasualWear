@@ -85,6 +85,13 @@ public class ProductService {
         if (product.getSku() != null && productRepository.existsBySku(product.getSku())) {
             throw new IllegalArgumentException("SKU đã tồn tại: " + product.getSku());
         }
+        
+        // Kiểm tra giá bán phải lớn hơn giá vốn
+        if (product.getPrice() != null && product.getCostPrice() != null &&
+            product.getPrice().compareTo(product.getCostPrice()) <= 0) {
+            throw new IllegalArgumentException("Giá bán phải lớn hơn giá vốn");
+        }
+        
         product.setIsDeleted(false);
         return productRepository.save(product);
     }
@@ -95,6 +102,12 @@ public class ProductService {
         if (productDetails.getSku() != null
                 && productRepository.existsBySkuAndIdNot(productDetails.getSku(), id)) {
             throw new IllegalArgumentException("SKU đã tồn tại: " + productDetails.getSku());
+        }
+
+        // Kiểm tra giá bán phải lớn hơn giá vốn
+        if (productDetails.getPrice() != null && productDetails.getCostPrice() != null &&
+            productDetails.getPrice().compareTo(productDetails.getCostPrice()) <= 0) {
+            throw new IllegalArgumentException("Giá bán phải lớn hơn giá vốn");
         }
 
         product.setName(productDetails.getName());
