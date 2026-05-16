@@ -17,7 +17,6 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 @Controller
 @RequestMapping("/admin")
 @RequiredArgsConstructor
@@ -42,16 +41,21 @@ public class AdminDashboardController {
 
         // Doanh thu (COMPLETED)
         double totalRevenue = allOrders.stream()
-                .filter(o -> o.getStatus() == OrderStatus.COMPLETED)
-                .mapToDouble(o -> o.getTotalPrice().doubleValue())
+                .filter(o -> o != null && o.getStatus() == OrderStatus.COMPLETED)
+                .mapToDouble(o -> o.getTotalPrice() != null ? o.getTotalPrice().doubleValue() : 0.0)
                 .sum();
         model.addAttribute("totalRevenue", totalRevenue);
 
         // Tổng chi phí gốc (cost_price * quantity)
         double totalCost = orderDetailRepository.findAll().stream()
-                .filter(od -> od.getOrder().getStatus() == OrderStatus.COMPLETED)
+                .filter(od -> od != null
+                        && od.getOrder() != null
+                        && od.getOrder().getStatus() == OrderStatus.COMPLETED
+                        && od.getProduct() != null
+                        && od.getProduct().getCostPrice() != null)
                 .mapToDouble(od -> od.getProduct().getCostPrice()
-                        .multiply(BigDecimal.valueOf(od.getQuantity()))
+                        .multiply(BigDecimal.valueOf(
+                                od.getQuantity() != null ? od.getQuantity() : 0))
                         .doubleValue())
                 .sum();
 
@@ -63,18 +67,24 @@ public class AdminDashboardController {
                 .with(DayOfWeek.MONDAY).toLocalDate().atStartOfDay();
 
         List<AppOrder> weekOrders = allOrders.stream()
-                .filter(o -> o.getStatus() == OrderStatus.COMPLETED
+                .filter(o -> o != null
+                        && o.getStatus() == OrderStatus.COMPLETED
+                        && o.getOrderDate() != null
                         && o.getOrderDate().isAfter(startOfWeek))
                 .toList();
 
         double weekRevenue = weekOrders.stream()
-                .mapToDouble(o -> o.getTotalPrice().doubleValue())
+                .mapToDouble(o -> o.getTotalPrice() != null ? o.getTotalPrice().doubleValue() : 0.0)
                 .sum();
 
         double weekCost = weekOrders.stream()
                 .flatMap(o -> orderDetailRepository.findByOrderId(o.getId()).stream())
+                .filter(od -> od != null
+                        && od.getProduct() != null
+                        && od.getProduct().getCostPrice() != null)
                 .mapToDouble(od -> od.getProduct().getCostPrice()
-                        .multiply(BigDecimal.valueOf(od.getQuantity()))
+                        .multiply(BigDecimal.valueOf(
+                                od.getQuantity() != null ? od.getQuantity() : 0))
                         .doubleValue())
                 .sum();
 
@@ -83,11 +93,18 @@ public class AdminDashboardController {
         model.addAttribute("weekOrders", weekOrders.size());
 
         // ==================== SẢN PHẨM BÁN CHẠY ====================
-        // Tính tổng lượt bán theo product
+        // FIX: dùng lambda thay Integer::sum để tránh unboxing null (lỗi compiler warning dòng 90)
         Map<Product, Integer> soldMap = new LinkedHashMap<>();
         orderDetailRepository.findAll().stream()
-                .filter(od -> od.getOrder().getStatus() == OrderStatus.COMPLETED)
-                .forEach(od -> soldMap.merge(od.getProduct(), od.getQuantity(), Integer::sum));
+                .filter(od -> od != null
+                        && od.getOrder() != null
+                        && od.getOrder().getStatus() == OrderStatus.COMPLETED
+                        && od.getProduct() != null)
+                .forEach(od -> soldMap.merge(
+                        od.getProduct(),
+                        od.getQuantity() != null ? od.getQuantity() : 0,
+                        (existing, incoming) -> existing + incoming  // tránh NPE từ Integer::sum
+                ));
 
         // Sort theo lượt bán giảm dần, lấy top 5
         List<Map.Entry<Product, Integer>> topSelling = soldMap.entrySet().stream()

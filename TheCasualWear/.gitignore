@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Environment & Credentials ###
+.env
+.env.local
+.env.*.local
+*.properties.local
