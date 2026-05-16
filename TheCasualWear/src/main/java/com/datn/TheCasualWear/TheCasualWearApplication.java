@@ -14,14 +14,15 @@ public class TheCasualWearApplication {
 		SpringApplication.run(TheCasualWearApplication.class, args);
 	}
 
-	private static void loadEnvironmentVariables() {
-		Dotenv dotenv = Dotenv.configure()
-				.ignoreIfMissing()
-				.load();
-		
-		dotenv.entries().forEach(entry -> 
-			System.setProperty(entry.getKey(), entry.getValue())
-		);
-	}
+    private static void loadEnvironmentVariables() {
+        Dotenv dotenv = Dotenv.configure()
+                .filename(".env.local")  // thêm dòng này
+                .ignoreIfMissing()
+                .load();
+
+        dotenv.entries().forEach(entry ->
+                System.setProperty(entry.getKey(), entry.getValue())
+        );
+    }
 
 }
