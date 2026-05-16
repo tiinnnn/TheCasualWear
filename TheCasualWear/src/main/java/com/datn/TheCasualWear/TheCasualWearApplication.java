@@ -16,7 +16,8 @@ public class TheCasualWearApplication {
 
     private static void loadEnvironmentVariables() {
         Dotenv dotenv = Dotenv.configure()
-                .filename(".env.local")  // thêm dòng này
+                .directory("./TheCasualWear")  // tìm vào thư mục con
+                .filename(".env.local")
                 .ignoreIfMissing()
                 .load();
 
