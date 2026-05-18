@@ -106,12 +106,21 @@
 
             <!-- Nút hành động -->
             <div class="mt-3 d-grid gap-2">
-                <a th:if="${order.status.name() == 'PENDING'}"
+                <!-- Đơn PENDING + chưa thanh toán → cho hủy bình thường -->
+                <a th:if="${order.status.name() == 'PENDING' and !order.isPaid}"
                    th:href="@{'/order/cancel/' + ${order.id}}"
                    class="btn btn-outline-danger btn-lg"
                    onclick="return confirm('Bạn có chắc muốn hủy đơn hàng này?')">
                     Hủy đơn hàng
                 </a>
+                <!-- Đơn PENDING + đã thanh toán → không cho hủy, hướng dẫn Zalo -->
+                <div th:if="${order.status.name() == 'PENDING' and order.isPaid}"
+                     class="alert alert-warning mb-0">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>Đơn hàng đã thanh toán không thể hủy trực tiếp.</strong><br/>
+                    Vui lòng liên hệ Zalo <strong>0901.234.567</strong> để được hỗ trợ hủy đơn.
+                    <br/><small class="text-muted">(Phí xử lý hủy đơn: 5.000đ)</small>
+                </div>
                 <a th:if="${order.status.name() == 'DELIVERED'}"
                    th:href="@{'/order/confirm/' + ${order.id}}"
                    class="btn btn-success btn-lg"

@@ -157,6 +157,9 @@ public class OrderService {
         if (order.getStatus() != OrderStatus.PENDING) {
             throw new IllegalStateException("Chỉ có thể hủy đơn hàng khi đang chờ xác nhận!");
         }
+        if (Boolean.TRUE.equals(order.getIsPaid())) {
+            throw new IllegalStateException("Đơn hàng đã thanh toán không thể hủy trực tiếp. Vui lòng liên hệ Zalo 0901.234.567 để được hỗ trợ!");
+        }
         restoreStock(order);
         orderVoucherRepository.findByOrderId(orderId)
                 .ifPresent(ov -> {

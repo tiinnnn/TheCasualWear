@@ -72,11 +72,11 @@ public class OrderController {
                              RedirectAttributes redirectAttributes) {
         AppUser user = getCurrentUser(auth);
 
-        // Validate COD > 5 triệu
+        // Validate COD > 1 triệu
         long totalPrice = cartService.getTotalPrice(user);
-        if (totalPrice > 5000000 && "COD".equals(paymentMethod)) {
+        if (totalPrice > 1000000 && "COD".equals(paymentMethod)) {
             redirectAttributes.addFlashAttribute("errorMessage",
-                    "Đơn hàng trên 5.000.000 đ bắt buộc thanh toán qua ngân hàng!");
+                    "Đơn hàng trên 1.000.000 đ bắt buộc thanh toán qua ngân hàng!");
             return "redirect:/order/checkout";
         }
 
@@ -203,9 +203,14 @@ public class OrderController {
                               Authentication auth,
                               RedirectAttributes redirectAttributes) {
         AppUser user = getCurrentUser(auth);
-        orderService.cancelOrder(id, user);
-        redirectAttributes.addFlashAttribute("successMessage", "Hủy đơn hàng thành công!");
-        return "redirect:/account/orders";
+        try {
+            orderService.cancelOrder(id, user);
+            redirectAttributes.addFlashAttribute("successMessage", "Hủy đơn hàng thành công!");
+            return "redirect:/account/orders";
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/order/detail/" + id;
+        }
     }
 
     @GetMapping("/apply-voucher")
