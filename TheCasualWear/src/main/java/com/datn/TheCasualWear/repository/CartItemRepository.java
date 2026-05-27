@@ -10,10 +10,18 @@ import java.util.Optional;
 
 public interface CartItemRepository extends JpaRepository<CartItem, Integer> {
     List<CartItem> findByCartId(Integer cartId);
+    void deleteByCartId(Integer cartId);
 
-    // Tìm item cụ thể trong giỏ (để cộng số lượng nếu đã có)
-    Optional<CartItem> findByCartIdAndProductId(Integer cartId, Integer productId);
-    @Transactional
-    void deleteByProduct(Product product);
-    void deleteByCartId(Integer cartId); // xóa toàn bộ giỏ sau khi đặt hàng
+    Optional<CartItem> findByCartIdAndVariantId(Integer cartId, Integer variantId);
+
+    // dùng khi soft-delete product
+    void deleteByProductId(Integer productId);
+
+    // dùng khi xóa variant
+    void deleteByVariantId(Integer variantId);
+
+    // Dùng bởi CartService.addToCart() — tìm item trùng variant
+    Optional<CartItem> findByCartIdAndProductIdAndVariantId(
+            Integer cartId, Integer productId, Integer variantId);
+
 }

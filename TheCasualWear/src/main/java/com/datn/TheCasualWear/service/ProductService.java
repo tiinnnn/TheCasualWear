@@ -1,18 +1,11 @@
 package com.datn.TheCasualWear.service;
 
 import com.datn.TheCasualWear.config.ResourceNotFoundException;
-import com.datn.TheCasualWear.entity.Product;
-import com.datn.TheCasualWear.entity.ProductImage;
+import com.datn.TheCasualWear.entity.*;
 import com.datn.TheCasualWear.enums.OrderStatus;
-import com.datn.TheCasualWear.repository.CartItemRepository;
-import com.datn.TheCasualWear.repository.OrderDetailRepository;
-import com.datn.TheCasualWear.repository.ProductImageRepository;
-import com.datn.TheCasualWear.repository.ProductRepository;
+import com.datn.TheCasualWear.repository.*;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,24 +14,27 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class ProductService {
-    private final ProductRepository productRepository;
-    private final CartItemRepository cartItemRepository;
-    private final ProductImageRepository productImageRepository;
-    private final OrderDetailRepository orderDetailRepository;
-    private final CloudinaryService cloudinaryService;
-    private static final int SHOP_PAGE_SIZE = 12;
+
+    private final ProductRepository          productRepository;
+    private final ProductVariantRepository   variantRepository;
+    private final CartItemRepository         cartItemRepository;
+    private final ProductImageRepository     productImageRepository;
+    private final OrderDetailRepository      orderDetailRepository;
+    private final CloudinaryService          cloudinaryService;
+
+    private static final int SHOP_PAGE_SIZE  = 12;
     private static final int ADMIN_PAGE_SIZE = 15;
 
-    // DÙNG CHUNG
+    // ==================== DÙNG CHUNG ====================
 
     public Product getProductById(Integer id) {
         return productRepository.findByIdAndIsDeletedFalse(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy sản phẩm với id: " + id));
     }
 
-    // PHÍA USER
+    // ==================== PHÍA USER ====================
 
-    // Trang shop: search + sort
     public Page<Product> getShopProducts(String keyword, String sort,
                                          Integer categoryId, int page) {
         Sort sortObj = switch (sort != null ? sort : "newest") {
@@ -51,19 +47,11 @@ public class ProductService {
         return productRepository.searchProducts(kw, categoryId, pageable);
     }
 
-    public List<Product> getProductVariants(Integer id) {
-        Product product = getProductById(id);
-        Integer colorId = product.getColor() != null ? product.getColor().getId() : null;
-        return productRepository.findVariantsByNameAndColor(product.getName(), colorId);
-    }
-
-    // Trang chủ: 8 sản phẩm mới nhất
     public List<Product> getNewestProducts() {
-        Pageable top8 = PageRequest.of(0, 8);
-        return productRepository.findTop8Newest(top8);
+        return productRepository.findTop8Newest(PageRequest.of(0, 8));
     }
 
-    // PHÍA ADMIN
+    // ==================== PHÍA ADMIN ====================
 
     public Page<Product> getAdminProducts(String keyword, int page) {
         String kw = (keyword == null || keyword.isBlank()) ? null : keyword;
@@ -72,8 +60,7 @@ public class ProductService {
         return productRepository.searchProductsForAdmin(kw, pageable);
     }
 
-    // Giữ lại overload không tham số cho dashboard
-    public List<Product> getAdminProducts() {
+    public List<Product> getAdminProductsList() {
         return productRepository.findByIsDeletedFalse();
     }
 
@@ -81,93 +68,96 @@ public class ProductService {
         return productRepository.findByIsDeletedTrue();
     }
 
+    // ==================== CRUD PRODUCT ====================
+
+    /**
+     * Tạo product đơn (không kèm variant).
+     * Variant sẽ được tạo riêng qua ProductVariantService.
+     */
+    @Transactional
     public Product createProduct(Product product) {
-        if (product.getSku() != null && productRepository.existsBySku(product.getSku())) {
-            throw new IllegalArgumentException("SKU đã tồn tại: " + product.getSku());
-        }
-        
-        // Kiểm tra giá bán phải lớn hơn giá vốn
-        if (product.getPrice() != null && product.getCostPrice() != null &&
-            product.getPrice().compareTo(product.getCostPrice()) <= 0) {
-            throw new IllegalArgumentException("Giá bán phải lớn hơn giá vốn");
-        }
-        
         product.setIsDeleted(false);
         return productRepository.save(product);
     }
 
-    public Product updateProduct(Integer id, Product productDetails) {
+    /**
+     * Tạo product + danh sách variant cùng lúc (form phức hợp).
+     * Admin nhập tất cả biến thể ngay khi tạo sản phẩm mới.
+     */
+    @Transactional
+    public Product createProductWithVariants(Product product,
+                                             List<ProductVariant> variants) {
+        product.setIsDeleted(false);
+        Product saved = productRepository.save(product);
+
+        for (ProductVariant v : variants) {
+            if (v.getSku() != null && variantRepository.existsBySku(v.getSku())) {
+                throw new IllegalArgumentException("SKU đã tồn tại: " + v.getSku());
+            }
+            v.setProduct(saved);
+            variantRepository.save(v);
+        }
+        return saved;
+    }
+
+    @Transactional
+    public Product updateProduct(Integer id, Product details) {
         Product product = getProductById(id);
-
-        if (productDetails.getSku() != null
-                && productRepository.existsBySkuAndIdNot(productDetails.getSku(), id)) {
-            throw new IllegalArgumentException("SKU đã tồn tại: " + productDetails.getSku());
-        }
-
-        // Kiểm tra giá bán phải lớn hơn giá vốn
-        if (productDetails.getPrice() != null && productDetails.getCostPrice() != null &&
-            productDetails.getPrice().compareTo(productDetails.getCostPrice()) <= 0) {
-            throw new IllegalArgumentException("Giá bán phải lớn hơn giá vốn");
-        }
-
-        product.setName(productDetails.getName());
-        product.setPrice(productDetails.getPrice());
-        product.setDescription(productDetails.getDescription());
-        product.setSku(productDetails.getSku());
-        product.setStock(productDetails.getStock());
-        product.setCostPrice(productDetails.getCostPrice());
-        product.setCategory(productDetails.getCategory());
-        product.setSize(productDetails.getSize());
-        product.setColor(productDetails.getColor());
+        product.setName(details.getName());
+        product.setPrice(details.getPrice());
+        product.setDescription(details.getDescription());
+        product.setCategory(details.getCategory());
         return productRepository.save(product);
     }
 
+    /** Soft delete — ẩn sản phẩm + xóa khỏi cart */
     @Transactional
     public void deleteProduct(Integer id) {
         Product product = getProductById(id);
         product.setIsDeleted(true);
         productRepository.save(product);
-        cartItemRepository.deleteByProduct(product);
+        cartItemRepository.deleteByProductId(id);
     }
 
     public void restoreProduct(Integer id) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy sản phẩm với id: " + id));
         product.setIsDeleted(false);
         productRepository.save(product);
     }
 
+    /** Hard delete — xóa hoàn toàn, chỉ cho phép khi không còn đơn active */
     @Transactional
     public void hardDeleteProduct(Integer id) throws Exception {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm!"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy sản phẩm!"));
 
-        // Kiểm tra có trong order nào không (trừ CANCELLED)
-        boolean hasActiveOrder = orderDetailRepository.existsByProductIdAndOrderStatusNot(
-                id, OrderStatus.CANCELLED);
+        boolean hasActiveOrder = orderDetailRepository
+                .existsByProductIdAndOrderStatusNot(id, OrderStatus.CANCELLED);
         if (hasActiveOrder) {
             throw new IllegalStateException(
                     "Không thể xóa! Sản phẩm đang có trong đơn hàng chưa hủy.");
         }
 
-        // Xóa cart_item
-        cartItemRepository.deleteByProduct(product);
+        // Xóa cart items
+        cartItemRepository.deleteByProductId(id);
 
-        // Chỉ xóa order_detail của đơn CANCELLED không xóa cả order để cho sceduled xóa vào thời gian cố định
+        // Xóa order_detail của đơn CANCELLED
         orderDetailRepository.deleteByProductId(id);
 
-        // Xử lý ảnh — chỉ xóa trên Cloudinary nếu ảnh không dùng bởi SP khác
+        // Xóa ảnh trên Cloudinary nếu không dùng bởi SP khác
         List<ProductImage> images = productImageRepository.findByProductId(id);
         for (ProductImage image : images) {
             boolean usedByOther = productImageRepository
                     .existsByImageUrlAndProductIdNot(image.getImageUrl(), id);
             if (!usedByOther) {
-                cloudinaryService.deleteImage(image.getImageUrl()); // xóa Cloudinary
+                cloudinaryService.deleteImage(image.getImageUrl());
             }
         }
-        // Xóa product_image trong DB
+
         productImageRepository.deleteByProduct(product);
-        // Xóa product
         productRepository.delete(product);
     }
 }

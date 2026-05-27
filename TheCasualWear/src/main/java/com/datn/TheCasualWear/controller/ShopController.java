@@ -1,22 +1,24 @@
 package com.datn.TheCasualWear.controller;
 
 import com.datn.TheCasualWear.entity.Product;
+import com.datn.TheCasualWear.entity.ProductVariant;
 import com.datn.TheCasualWear.service.ProductService;
+import com.datn.TheCasualWear.service.ProductVariantService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.*;
+
 @Controller
+@RequiredArgsConstructor
 public class ShopController {
 
-    private final ProductService productService;
+    private final ProductService        productService;
+    private final ProductVariantService variantService;
 
-    public ShopController(ProductService productService) {
-        this.productService = productService;
-    }
-
-    //trang chu
     @GetMapping("/")
     public String homePage(Model model) {
         model.addAttribute("newestProducts", productService.getNewestProducts());
@@ -30,38 +32,63 @@ public class ShopController {
                            @RequestParam(required = false) Integer category,
                            @RequestParam(defaultValue = "0") int page,
                            Model model) {
-        Page<Product> productPage = productService.getShopProducts(
-                keyword, sort, category, page);
-
-        model.addAttribute("products", productPage.getContent());
-        model.addAttribute("keyword", keyword);
-        model.addAttribute("sort", sort);
+        Page<Product> productPage = productService.getShopProducts(keyword, sort, category, page);
+        model.addAttribute("products",         productPage.getContent());
+        model.addAttribute("keyword",          keyword);
+        model.addAttribute("sort",             sort);
         model.addAttribute("selectedCategory", category);
-        model.addAttribute("currentPage", page);
-        model.addAttribute("totalPages", productPage.getTotalPages());
-        model.addAttribute("totalItems", productPage.getTotalElements());
+        model.addAttribute("currentPage",      page);
+        model.addAttribute("totalPages",       productPage.getTotalPages());
+        model.addAttribute("totalItems",       productPage.getTotalElements());
         model.addAttribute("view", "shop/shop");
         return "layouts/shop-layout";
     }
 
-    // Trang chủ - related products trong productDetail
     @GetMapping("/product/{id}")
     public String productDetail(@PathVariable Integer id, Model model) {
         Product product = productService.getProductById(id);
-        model.addAttribute("product", product);
-        model.addAttribute("variants", productService.getProductVariants(id));
+        List<ProductVariant> variants = variantService.getVariantsByProduct(id);
 
-        // Sửa lại - thêm null và 0
+        // ✅ Build plain DTO list để tránh Jackson lazy-load lỗi khi serialize sang JSON
+        List<Map<String, Object>> variantData = new ArrayList<>();
+        for (ProductVariant v : variants) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id",              v.getId());
+            m.put("stock",           v.getStock());
+            m.put("priceAdjustment", v.getPriceAdjustment() != null
+                    ? v.getPriceAdjustment().doubleValue() : 0.0);
+            m.put("sku",             v.getSku());
+
+            Map<String, Object> color = null;
+            if (v.getColor() != null) {
+                color = new LinkedHashMap<>();
+                color.put("id",   v.getColor().getId());
+                color.put("name", v.getColor().getName());
+            }
+            m.put("color", color);
+
+            Map<String, Object> size = null;
+            if (v.getSize() != null) {
+                size = new LinkedHashMap<>();
+                size.put("id",   v.getSize().getId());
+                size.put("name", v.getSize().getName());
+            }
+            m.put("size", size);
+
+            variantData.add(m);
+        }
+
+        model.addAttribute("product",     product);
+        model.addAttribute("variantData", variantData); // dùng trong JS
+        model.addAttribute("variants",    variants);    // dùng trong Thymeleaf nếu cần
+
         if (product.getCategory() != null) {
             model.addAttribute("relatedProducts",
                     productService.getShopProducts(null, "newest",
                                     product.getCategory().getId(), 0)
-                            .getContent()  // ← thêm getContent() vì giờ trả về Page
-                            .stream()
+                            .getContent().stream()
                             .filter(p -> !p.getId().equals(id))
-                            .limit(4)
-                            .toList()
-            );
+                            .limit(4).toList());
         }
 
         model.addAttribute("view", "shop/product-detail");

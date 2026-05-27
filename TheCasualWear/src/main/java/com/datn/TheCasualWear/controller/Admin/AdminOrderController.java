@@ -9,6 +9,14 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+/**
+ * Quản lý đơn hàng phía Admin.
+ *
+ * Template order/detail hiển thị order.orderDetails — mỗi OrderDetail giờ có
+ * trường variant (ProductVariant) chứa đủ size + color + costPrice.
+ * Không cần thay đổi logic controller; chỉ cần template đọc thêm:
+ *   [[${item.variant.size.name}]] / [[${item.variant.color.name}]]
+ */
 @Controller
 @RequestMapping("/admin/orders")
 public class AdminOrderController {
@@ -19,29 +27,40 @@ public class AdminOrderController {
         this.orderService = orderService;
     }
 
+    // ── Danh sách ─────────────────────────────────────────
+
     @GetMapping
     public String listOrders(@RequestParam(required = false) String keyword,
                              @RequestParam(required = false) String status,
                              @RequestParam(defaultValue = "0") int page,
                              Model model) {
         Page<AppOrder> orderPage = orderService.getAllOrders(keyword, status, page);
-        model.addAttribute("orders", orderPage.getContent());
-        model.addAttribute("currentPage", page);
-        model.addAttribute("totalPages", orderPage.getTotalPages());
-        model.addAttribute("totalItems", orderPage.getTotalElements());
-        model.addAttribute("keyword", keyword);
+        model.addAttribute("orders",         orderPage.getContent());
+        model.addAttribute("currentPage",    page);
+        model.addAttribute("totalPages",     orderPage.getTotalPages());
+        model.addAttribute("totalItems",     orderPage.getTotalElements());
+        model.addAttribute("keyword",        keyword);
         model.addAttribute("selectedStatus", status);
-        model.addAttribute("statuses", OrderStatus.values());
+        model.addAttribute("statuses",       OrderStatus.values());
         model.addAttribute("view", "admin/order/list");
         return "layouts/admin-layout";
     }
 
+    // ── Chi tiết ──────────────────────────────────────────
+
+    /**
+     * Đưa đơn hàng vào model.
+     * Template đọc: order.orderDetails → mỗi item có item.variant.size.name
+     * và item.variant.color.name để hiển thị đúng biến thể đã mua.
+     */
     @GetMapping("/{id}")
     public String orderDetail(@PathVariable Integer id, Model model) {
         model.addAttribute("order", orderService.getOrderById(id));
         model.addAttribute("view", "admin/order/detail");
         return "layouts/admin-layout";
     }
+
+    // ── Thay đổi trạng thái ───────────────────────────────
 
     @GetMapping("/{id}/confirm")
     public String confirmOrder(@PathVariable Integer id,
@@ -55,7 +74,8 @@ public class AdminOrderController {
     public String shipOrder(@PathVariable Integer id,
                             RedirectAttributes redirectAttributes) {
         orderService.shipOrder(id);
-        redirectAttributes.addFlashAttribute("successMessage", "Đã chuyển sang trạng thái đang giao!");
+        redirectAttributes.addFlashAttribute("successMessage",
+                "Đã chuyển sang trạng thái đang giao!");
         return "redirect:/admin/orders/" + id;
     }
 

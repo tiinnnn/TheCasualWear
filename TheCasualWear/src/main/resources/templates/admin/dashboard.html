@@ -39,7 +39,6 @@
 
 <!-- ==================== DOANH THU & LỢI NHUẬN ==================== -->
 <div class="row g-3 mb-4">
-    <!-- Tổng lợi nhuận -->
     <div class="col-md-4">
         <div class="card border-0 shadow-sm p-3 border-start border-success border-4">
             <div class="d-flex justify-content-between align-items-center">
@@ -52,8 +51,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Doanh thu tuần này -->
     <div class="col-md-4">
         <div class="card border-0 shadow-sm p-3 border-start border-primary border-4">
             <div class="d-flex justify-content-between align-items-center">
@@ -61,15 +58,12 @@
                     <p class="text-muted mb-1 small">Doanh thu tuần này</p>
                     <h4 class="fw-bold mb-0 text-primary"
                         th:text="${#numbers.formatInteger(weekRevenue, 0, 'COMMA') + ' đ'}"></h4>
-                    <small class="text-muted"
-                           th:text="${weekOrders + ' đơn hoàn thành'}"></small>
+                    <small class="text-muted" th:text="${weekOrders + ' đơn hoàn thành'}"></small>
                 </div>
                 <i class="bi bi-calendar-week text-primary" style="font-size:2rem"></i>
             </div>
         </div>
     </div>
-
-    <!-- Lợi nhuận tuần này -->
     <div class="col-md-4">
         <div class="card border-0 shadow-sm p-3 border-start border-warning border-4">
             <div class="d-flex justify-content-between align-items-center">
@@ -136,45 +130,32 @@
                     <i class="bi bi-fire text-danger me-2"></i>Top 5 sản phẩm bán chạy
                 </h6>
                 <div th:if="${#lists.isEmpty(topSelling)}"
-                     class="text-muted text-center py-3">
-                    Chưa có dữ liệu
-                </div>
+                     class="text-muted text-center py-3">Chưa có dữ liệu</div>
                 <div th:each="entry, i : ${topSelling}"
                      class="d-flex justify-content-between align-items-center mb-3">
                     <div class="d-flex align-items-center gap-2">
-                        <!-- Rank badge -->
-                        <span th:switch="${i.index}"
-                              class="fw-bold" style="width:20px">
+                        <span th:switch="${i.index}" class="fw-bold" style="width:20px">
                             <span th:case="0" style="color:gold">①</span>
                             <span th:case="1" style="color:silver">②</span>
                             <span th:case="2" style="color:#cd7f32">③</span>
-                            <span th:case="*"
-                                  th:text="${i.index + 1} + '.'"></span>
+                            <span th:case="*" th:text="${i.index + 1} + '.'"></span>
                         </span>
-                        <!-- Ảnh -->
-                        <img th:if="${entry.key.images != null
-                                     and !entry.key.images.isEmpty()}"
+                        <img th:if="${entry.key.images != null and !entry.key.images.isEmpty()}"
                              th:src="${entry.key.images[0].imageUrl}"
-                             style="width:40px;height:40px;object-fit:cover"
-                             class="rounded"/>
+                             style="width:40px;height:40px;object-fit:cover" class="rounded"/>
                         <div>
-                            <p class="mb-0 small fw-bold"
-                               th:text="${entry.key.name}"></p>
+                            <p class="mb-0 small fw-bold" th:text="${entry.key.name}"></p>
                             <small class="text-muted"
-                                   th:text="${entry.key.category != null ?
-                                             entry.key.category.name : ''}"></small>
+                                   th:text="${entry.key.category != null ? entry.key.category.name : ''}"></small>
                         </div>
                     </div>
-                    <div class="text-end">
-                        <span class="badge bg-dark"
-                              th:text="${entry.value + ' đã bán'}"></span>
-                    </div>
+                    <span class="badge bg-dark" th:text="${entry.value + ' đã bán'}"></span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ==================== SẮP HẾT HÀNG ==================== -->
+    <!-- ==================== TỒN KHO CẦN CHÚ Ý ==================== -->
     <div class="col-md-6">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
@@ -183,60 +164,75 @@
                     Tồn kho cần chú ý
                 </h6>
 
-                <!-- Hết hàng -->
+                <!-- ✅ Hết hàng — outOfStock là List<ProductVariant> -->
                 <div th:if="${!#lists.isEmpty(outOfStock)}" class="mb-3">
                     <p class="text-danger small fw-bold mb-2">
                         <i class="bi bi-x-circle me-1"></i>Hết hàng
-                        (<span th:text="${#lists.size(outOfStock)}"></span>)
+                        (<span th:text="${#lists.size(outOfStock)}"></span> biến thể)
                     </p>
-                    <div th:each="p : ${outOfStock}"
+                    <div th:each="v : ${outOfStock}"
                          class="d-flex justify-content-between align-items-center mb-2">
                         <div class="d-flex align-items-center gap-2">
-                            <img th:if="${p.images != null and !p.images.isEmpty()}"
-                                 th:src="${p.images[0].imageUrl}"
-                                 style="width:35px;height:35px;object-fit:cover"
-                                 class="rounded"/>
-                            <small th:text="${p.name}"></small>
+                            <img th:if="${v.product.images != null and !v.product.images.isEmpty()}"
+                                 th:src="${v.product.images[0].imageUrl}"
+                                 style="width:35px;height:35px;object-fit:cover" class="rounded"/>
+                            <div>
+                                <small class="fw-bold" th:text="${v.product.name}"></small>
+                                <!-- ✅ Hiện size + màu -->
+                                <div class="d-flex gap-1">
+                                    <span th:if="${v.size != null}"
+                                          class="badge bg-dark" style="font-size:0.65rem"
+                                          th:text="${v.size.name}"></span>
+                                    <span th:if="${v.color != null}"
+                                          class="badge bg-secondary" style="font-size:0.65rem"
+                                          th:text="${v.color.name}"></span>
+                                </div>
+                            </div>
                         </div>
                         <div class="d-flex align-items-center gap-2">
                             <span class="badge bg-danger">Hết hàng</span>
-                            <a th:href="@{'/admin/products/edit/' + ${p.id}}"
-                               class="btn btn-sm btn-outline-dark py-0">
-                                Cập nhật
-                            </a>
+                            <a th:href="@{'/admin/products/' + ${v.product.id} + '/variants'}"
+                               class="btn btn-sm btn-outline-dark py-0">Nhập hàng</a>
                         </div>
                     </div>
                 </div>
 
-                <!-- Sắp hết -->
+                <!-- ✅ Sắp hết — lowStock là List<ProductVariant> -->
                 <div th:if="${!#lists.isEmpty(lowStock)}">
                     <p class="text-warning small fw-bold mb-2">
                         <i class="bi bi-exclamation-circle me-1"></i>Sắp hết
-                        (<span th:text="${#lists.size(lowStock)}"></span>)
+                        (<span th:text="${#lists.size(lowStock)}"></span> biến thể)
                     </p>
-                    <div th:each="p : ${lowStock}"
+                    <div th:each="v : ${lowStock}"
                          class="d-flex justify-content-between align-items-center mb-2">
                         <div class="d-flex align-items-center gap-2">
-                            <img th:if="${p.images != null and !p.images.isEmpty()}"
-                                 th:src="${p.images[0].imageUrl}"
-                                 style="width:35px;height:35px;object-fit:cover"
-                                 class="rounded"/>
-                            <small th:text="${p.name}"></small>
+                            <img th:if="${v.product.images != null and !v.product.images.isEmpty()}"
+                                 th:src="${v.product.images[0].imageUrl}"
+                                 style="width:35px;height:35px;object-fit:cover" class="rounded"/>
+                            <div>
+                                <small class="fw-bold" th:text="${v.product.name}"></small>
+                                <div class="d-flex gap-1">
+                                    <span th:if="${v.size != null}"
+                                          class="badge bg-dark" style="font-size:0.65rem"
+                                          th:text="${v.size.name}"></span>
+                                    <span th:if="${v.color != null}"
+                                          class="badge bg-secondary" style="font-size:0.65rem"
+                                          th:text="${v.color.name}"></span>
+                                </div>
+                            </div>
                         </div>
                         <div class="d-flex align-items-center gap-2">
                             <span class="badge bg-warning text-dark"
-                                  th:text="'Còn ' + ${p.stock}"></span>
-                            <a th:href="@{'/admin/products/edit/' + ${p.id}}"
-                               class="btn btn-sm btn-outline-dark py-0">
-                                Cập nhật
-                            </a>
+                                  th:text="'Còn ' + ${v.stock}"></span>
+                            <a th:href="@{'/admin/products/' + ${v.product.id} + '/variants'}"
+                               class="btn btn-sm btn-outline-dark py-0">Nhập hàng</a>
                         </div>
                     </div>
                 </div>
 
                 <div th:if="${#lists.isEmpty(outOfStock) and #lists.isEmpty(lowStock)}"
                      class="text-success text-center py-3">
-                    <i class="bi bi-check-circle me-2"></i>Tất cả sản phẩm đủ hàng!
+                    <i class="bi bi-check-circle me-2"></i>Tất cả biến thể đủ hàng!
                 </div>
             </div>
         </div>
@@ -248,9 +244,7 @@
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h6 class="fw-bold mb-0">Đơn hàng mới nhất</h6>
-            <a th:href="@{/admin/orders}" class="btn btn-sm btn-outline-dark">
-                Xem tất cả
-            </a>
+            <a th:href="@{/admin/orders}" class="btn btn-sm btn-outline-dark">Xem tất cả</a>
         </div>
         <table class="table table-hover align-middle">
             <thead class="table-dark">
@@ -267,26 +261,18 @@
             <tr th:each="order : ${recentOrders}">
                 <td th:text="${order.id}"></td>
                 <td th:text="${order.customer.username}"></td>
-                <td th:text="${#temporals.format(order.orderDate,
-                                  'dd/MM/yyyy HH:mm')}"></td>
+                <td th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy HH:mm')}"></td>
                 <td class="text-danger fw-bold"
-                    th:text="${#numbers.formatInteger(order.totalPrice,
-                                  0, 'COMMA') + ' đ'}"></td>
+                    th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></td>
                 <td>
-                        <span th:switch="${order.status.name()}">
-                            <span th:case="'PENDING'"
-                                  class="badge bg-warning text-dark">Chờ xác nhận</span>
-                            <span th:case="'CONFIRMED'"
-                                  class="badge bg-info">Đã xác nhận</span>
-                            <span th:case="'SHIPPING'"
-                                  class="badge bg-primary">Đang giao</span>
-                            <span th:case="'DELIVERED'"
-                                  class="badge bg-success">Đã giao</span>
-                            <span th:case="'COMPLETED'"
-                                  class="badge bg-success">Hoàn thành</span>
-                            <span th:case="'CANCELLED'"
-                                  class="badge bg-danger">Đã hủy</span>
-                        </span>
+                    <span th:switch="${order.status.name()}">
+                        <span th:case="'PENDING'"   class="badge bg-warning text-dark">Chờ xác nhận</span>
+                        <span th:case="'CONFIRMED'" class="badge bg-info">Đã xác nhận</span>
+                        <span th:case="'SHIPPING'"  class="badge bg-primary">Đang giao</span>
+                        <span th:case="'DELIVERED'" class="badge bg-success">Đã giao</span>
+                        <span th:case="'COMPLETED'" class="badge bg-success">Hoàn thành</span>
+                        <span th:case="'CANCELLED'" class="badge bg-danger">Đã hủy</span>
+                    </span>
                 </td>
                 <td>
                     <a th:href="@{'/admin/orders/' + ${order.id}}"

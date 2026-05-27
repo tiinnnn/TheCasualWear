@@ -6,15 +6,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Entity
-@Table(name = "cart_item")
+@Entity @Table(name = "cart_item")
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class CartItem {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -25,6 +20,10 @@ public class CartItem {
     @JoinColumn(name = "product_id")
     private Product product;
 
-    @Column(name = "quantity", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "variant_id", nullable = false)   // ← thêm mới
+    private ProductVariant variant;
+
+    @Column(nullable = false)
     private Integer quantity;
 }

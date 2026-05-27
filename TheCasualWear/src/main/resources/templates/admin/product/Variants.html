@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Biến thể sản phẩm</title></head>
+<body>
+<div th:fragment="content">
+
+    <!-- ── HEADER ── -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item">
+                        <a th:href="@{/admin/products}">Sản phẩm</a>
+                    </li>
+                    <li class="breadcrumb-item active" th:text="${product.name}"></li>
+                </ol>
+            </nav>
+            <h4 class="fw-bold mb-0" th:text="${product.name}"></h4>
+            <small class="text-muted">
+                Giá tham chiếu:
+                <span class="fw-semibold text-danger"
+                      th:text="${#numbers.formatInteger(product.price,0,'COMMA') + ' đ'}"></span>
+                &nbsp;|&nbsp; Tổng tồn kho:
+                <span class="fw-bold" id="totalStockBadge"
+                      th:text="${totalStock}"></span>
+            </small>
+        </div>
+        <div class="d-flex gap-2">
+            <a th:href="@{'/admin/products/edit/' + ${product.id}}"
+               class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-pencil me-1"></i>Sửa thông tin SP
+            </a>
+            <a th:href="@{/admin/products}" class="btn btn-sm btn-outline-dark">← Danh sách</a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+
+        <div class="col-md-8">
+
+            <div th:if="${#lists.isEmpty(variants)}" class="text-center py-5 text-muted border rounded">
+                <i class="bi bi-box2-open" style="font-size:3rem"></i>
+                <p class="mt-2 mb-0">Chưa có biến thể nào.</p>
+                <p class="small">Dùng form bên phải để thêm biến thể đầu tiên!</p>
+            </div>
+
+            <!--
+                Render từng variant dưới dạng hidden data node.
+                JS sẽ gom thành accordion theo nhóm màu.
+            -->
+            <div id="variantAccordion"></div>
+
+            <!-- Data nodes ẩn cho JS đọc -->
+            <div style="display:none" id="variantDataContainer">
+                <div th:each="v : ${variants}"
+                     class="variant-data"
+                     th:attr="data-id=${v.id},
+                           data-product-id=${product.id},
+                           data-color-id=${v.color != null ? v.color.id : 0},
+                           data-color-name=${v.color != null ? v.color.name : 'Không rõ'},
+                           data-size-id=${v.size != null ? v.size.id : 0},
+                           data-size-name=${v.size != null ? v.size.name : '-'},
+                           data-sku=${v.sku != null ? v.sku : ''},
+                           data-stock=${v.stock},
+                           data-cost-price=${v.costPrice != null ? v.costPrice : ''},
+                           data-price-adj=${v.priceAdjustment != null ? v.priceAdjustment : ''}">
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════
+             CỘT PHẢI — Form thêm biến thể
+        ══════════════════════════════════ -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm sticky-top" style="top:72px">
+                <div class="card-header bg-dark text-white">
+                    <span class="fw-bold"><i class="bi bi-plus-circle me-2"></i>Thêm biến thể mới</span>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{'/admin/products/' + ${product.id} + '/variants/add-batch'}"
+                          method="post" id="addBatchForm">
+
+                        <!-- Chọn màu -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                Màu sắc <span class="text-danger">*</span>
+                            </label>
+                            <select name="colorId" id="colorSelect" class="form-select" required>
+                                <option value="">-- Chọn màu --</option>
+                                <option th:each="c : ${colors}"
+                                        th:value="${c.id}" th:text="${c.name}"></option>
+                            </select>
+                        </div>
+
+                        <!-- SKU prefix -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                SKU prefix
+                                <small class="text-muted fw-normal">(tuỳ chọn)</small>
+                            </label>
+                            <div class="input-group">
+                                <input type="text" name="skuPrefix" id="skuPrefix"
+                                       class="form-control text-uppercase"
+                                       placeholder="VD: TCW-BLUE"/>
+                                <button type="button" class="btn btn-outline-secondary"
+                                        onclick="autoSKU()" title="Tự tạo prefix từ tên + màu">
+                                    <i class="bi bi-magic"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Hệ thống thêm <code>-SIZE</code> vào sau</small>
+                        </div>
+
+                        <!-- Giá vốn + điều chỉnh giá -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-semibold small">Giá vốn</label>
+                                <input type="number" name="costPrice" id="costPriceInput"
+                                       class="form-control form-control-sm" min="0" placeholder="0"/>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold small">
+                                    Điều chỉnh giá
+                                    <span class="text-muted" title="+/- so với giá tham chiếu"
+                                          data-bs-toggle="tooltip">
+                                    <i class="bi bi-info-circle"></i>
+                                </span>
+                                </label>
+                                <input type="number" name="priceAdjustment"
+                                       class="form-control form-control-sm" placeholder="0"/>
+                            </div>
+                        </div>
+
+                        <!-- Bảng size + stock -->
+                        <div class="mb-2">
+                            <label class="form-label fw-semibold">
+                                Chọn size &amp; nhập số lượng <span class="text-danger">*</span>
+                            </label>
+                            <div class="border rounded overflow-hidden">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead class="table-light">
+                                    <tr>
+                                        <th style="width:36px">
+                                            <input type="checkbox" id="checkAll"
+                                                   class="form-check-input"
+                                                   title="Chọn tất cả"/>
+                                        </th>
+                                        <th>Size</th>
+                                        <th style="width:90px">Số lượng</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr th:each="s : ${sizes}" class="size-row"
+                                        th:attr="data-size-id=${s.id}">
+                                        <td>
+                                            <input type="checkbox" name="sizeId"
+                                                   th:value="${s.id}"
+                                                   class="form-check-input size-check"
+                                                   th:id="'chk_' + ${s.id}"
+                                                   onchange="onSizeCheck(this)"/>
+                                        </td>
+                                        <td>
+                                            <label th:for="'chk_' + ${s.id}"
+                                                   class="fw-semibold mb-0"
+                                                   style="cursor:pointer"
+                                                   th:text="${s.name}"></label>
+                                        </td>
+                                        <td>
+                                            <input type="number" name="stockMap"
+                                                   class="form-control form-control-sm stock-input"
+                                                   value="0" min="0"
+                                                   th:id="'stk_' + ${s.id}"
+                                                   disabled
+                                                   oninput="recalcTotal()"/>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Tổng preview -->
+                        <div class="d-flex justify-content-between align-items-center
+                                border rounded px-3 py-2 mb-3 bg-light">
+                            <span class="small text-muted">Tổng sẽ thêm:</span>
+                            <span class="fw-bold fs-5" id="totalPreview">0</span>
+                            <span class="small text-muted">sản phẩm</span>
+                        </div>
+
+                        <button type="submit" class="btn btn-dark w-100">
+                            <i class="bi bi-plus-circle me-2"></i>Thêm biến thể
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         MODAL SỬA VARIANT
+    ══════════════════════════════════ -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="editModalTitle">Sửa biến thể</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editForm" method="post">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label">Màu</label>
+                                <select name="color.id" id="editColorId" class="form-select">
+                                    <option th:each="c : ${colors}"
+                                            th:value="${c.id}" th:text="${c.name}"></option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Size</label>
+                                <select name="size.id" id="editSizeId" class="form-select">
+                                    <option th:each="s : ${sizes}"
+                                            th:value="${s.id}" th:text="${s.name}"></option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">SKU</label>
+                                <input type="text" name="sku" id="editSku" class="form-control"/>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">
+                                    Tồn kho <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" name="stock" id="editStock"
+                                       class="form-control" min="0" required/>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Giá vốn</label>
+                                <input type="number" name="costPrice" id="editCostPrice"
+                                       class="form-control" min="0"/>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Điều chỉnh giá</label>
+                                <input type="number" name="priceAdjustment"
+                                       id="editPriceAdj" class="form-control"/>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-dark">
+                            <i class="bi bi-save me-1"></i>Lưu thay đổi
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         JAVASCRIPT
+    ══════════════════════════════════ -->
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+
+            const PRODUCT_ID   = /*[[${product.id}]]*/ 0;
+            const PRODUCT_NAME = /*[[${product.name}]]*/ '';
+
+            // ── Tooltips ─────────────────────────────────────────────
+            document.querySelectorAll('[data-bs-toggle="tooltip"]')
+                    .forEach(el => new bootstrap.Tooltip(el));
+
+            // ── Chọn tất cả checkbox size ────────────────────────────
+            document.getElementById('checkAll').addEventListener('change', function () {
+                document.querySelectorAll('.size-check').forEach(cb => {
+                    cb.checked = this.checked;
+                    onSizeCheck(cb);
+                });
+            });
+
+            // ── Render accordion từ data nodes ──────────────────────
+            const nodes = document.querySelectorAll('.variant-data');
+            const groups = {};
+
+            nodes.forEach(n => {
+                const cid = n.dataset.colorId;
+                if (!groups[cid]) groups[cid] = {
+                    colorName: n.dataset.colorName,
+                    items: []
+                };
+                groups[cid].items.push({
+                    id:         n.dataset.id,
+                    productId:  n.dataset.productId,
+                    colorId:    n.dataset.colorId,
+                    colorName:  n.dataset.colorName,
+                    sizeId:     n.dataset.sizeId,
+                    sizeName:   n.dataset.sizeName,
+                    sku:        n.dataset.sku,
+                    stock:      parseInt(n.dataset.stock) || 0,
+                    costPrice:  n.dataset.costPrice,
+                    priceAdj:   n.dataset.priceAdj
+                });
+            });
+
+            const accordion = document.getElementById('variantAccordion');
+
+            Object.entries(groups).forEach(([cid, g], idx) => {
+                const totalStk  = g.items.reduce((s, v) => s + v.stock, 0);
+                const colId     = 'col_' + cid;
+                const isFirst   = idx === 0;
+
+                const rows = g.items.map(v => `
+                    <tr>
+                        <td><span class="badge bg-dark">${esc(v.sizeName)}</span></td>
+                        <td class="text-muted small">${esc(v.sku) || '<span class="text-muted">-</span>'}</td>
+                        <td class="text-center">
+                            <span class="badge ${v.stock === 0 ? 'bg-danger' : 'bg-success'}">${v.stock}</span>
+                        </td>
+                        <td class="small">${v.costPrice
+                            ? Number(v.costPrice).toLocaleString('vi-VN') + ' đ'
+                            : '<span class="text-muted">-</span>'}</td>
+                        <td class="small">${v.priceAdj && v.priceAdj != 0
+                            ? (Number(v.priceAdj) > 0 ? '+' : '') + Number(v.priceAdj).toLocaleString('vi-VN') + ' đ'
+                            : '<span class="text-muted">0</span>'}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-primary me-1"
+                                    onclick='openEdit(${JSON.stringify(v)})' title="Sửa">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <a href="/admin/products/${v.productId}/variants/delete/${v.id}"
+                               class="btn btn-sm btn-outline-danger"
+                               onclick="return confirm('Xóa biến thể ${esc(v.sizeName)} / ${esc(v.colorName)}?')"
+                               title="Xóa">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
+                    </tr>`).join('');
+
+                accordion.insertAdjacentHTML('beforeend', `
+                <div class="accordion-item border-0 shadow-sm mb-2 rounded">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button rounded ${isFirst ? '' : 'collapsed'} fw-semibold"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#${colId}">
+                            <span class="badge bg-secondary me-2">${esc(g.colorName)}</span>
+                            <span class="text-muted fw-normal small">
+                                ${g.items.length} size &nbsp;·&nbsp;
+                                Tổng tồn kho: <strong class="ms-1 text-dark">${totalStk}</strong>
+                            </span>
+                        </button>
+                    </h2>
+                    <div id="${colId}"
+                         class="accordion-collapse collapse ${isFirst ? 'show' : ''}">
+                        <div class="accordion-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                    <tr>
+                                        <th>Size</th><th>SKU</th>
+                                        <th class="text-center">Tồn kho</th>
+                                        <th>Giá vốn</th><th>Đ/chỉnh giá</th>
+                                        <th style="width:90px"></th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>${rows}</tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>`);
+            });
+
+            // ── Mở modal sửa ────────────────────────────────────────
+            window.openEdit = function (v) {
+                document.getElementById('editModalTitle').textContent =
+                    'Sửa: ' + v.colorName + ' / ' + v.sizeName;
+                document.getElementById('editColorId').value  = v.colorId;
+                document.getElementById('editSizeId').value   = v.sizeId;
+                document.getElementById('editSku').value      = v.sku;
+                document.getElementById('editStock').value    = v.stock;
+                document.getElementById('editCostPrice').value = v.costPrice || '';
+                document.getElementById('editPriceAdj').value  = v.priceAdj  || '';
+                document.getElementById('editForm').action =
+                    '/admin/products/' + v.productId + '/variants/edit/' + v.id;
+                new bootstrap.Modal(document.getElementById('editModal')).show();
+            };
+
+            // ── Auto SKU prefix ──────────────────────────────────────
+            window.autoSKU = function () {
+                const colorSel  = document.getElementById('colorSelect');
+                const colorText = colorSel.options[colorSel.selectedIndex]?.text || '';
+                const nameCode  = removeDiac(PRODUCT_NAME)
+                    .split(' ').filter(Boolean)
+                    .map(w => w[0].toUpperCase()).join('');
+                const colorCode = removeDiac(colorText)
+                    .replace(/\s/g, '').substring(0, 4).toUpperCase();
+                document.getElementById('skuPrefix').value =
+                    [nameCode, colorCode].filter(Boolean).join('-');
+            };
+
+            function removeDiac(s) {
+                return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                        .replace(/[đĐ]/g, d => d === 'đ' ? 'd' : 'D');
+            }
+
+            function esc(s) {
+                return String(s || '').replace(/[&<>"']/g, c =>
+                    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+            }
+        });
+
+        // ── Toggle stock input khi tick/untick size ──────────────
+        window.onSizeCheck = function (cb) {
+            const row   = cb.closest('tr');
+            const input = row.querySelector('.stock-input');
+            input.disabled = !cb.checked;
+            if (!cb.checked) { input.value = 0; }
+            recalcTotal();
+        };
+
+        // ── Tính tổng preview ────────────────────────────────────
+        window.recalcTotal = function () {
+            let total = 0;
+            document.querySelectorAll('.size-check:checked').forEach(cb => {
+                const row = cb.closest('tr');
+                total += parseInt(row.querySelector('.stock-input').value) || 0;
+            });
+            document.getElementById('totalPreview').textContent = total;
+        };
+    </script>
+
+</div><!-- /fragment -->
+</body>
+</html>

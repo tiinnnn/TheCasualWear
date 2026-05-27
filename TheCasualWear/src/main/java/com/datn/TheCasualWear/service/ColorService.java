@@ -3,20 +3,18 @@ package com.datn.TheCasualWear.service;
 import com.datn.TheCasualWear.config.ResourceNotFoundException;
 import com.datn.TheCasualWear.entity.Color;
 import com.datn.TheCasualWear.repository.ColorRepository;
-import com.datn.TheCasualWear.repository.ProductRepository;
+import com.datn.TheCasualWear.repository.ProductVariantRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class ColorService {
     private final ColorRepository colorRepository;
-    private final ProductRepository productRepository;
+    private final ProductVariantRepository variantRepository;
 
-    public ColorService(ColorRepository colorRepository, ProductRepository productRepository) {
-        this.colorRepository = colorRepository;
-        this.productRepository = productRepository;
-    }
 
     public List<Color> getAllColors() {
         return colorRepository.findAll();
@@ -42,7 +40,7 @@ public class ColorService {
 
     public void deleteColor(Integer id) {
         Color color = getColorById(id);
-        if (productRepository.existsByColorIdAndIsDeletedFalse(id)) {
+        if (variantRepository.existsByColorId(id)) {
             throw new IllegalStateException("Không thể xóa màu đang được dùng bởi sản phẩm!");
         }
         colorRepository.delete(color);

@@ -3,6 +3,7 @@ package com.datn.TheCasualWear.controller;
 import com.datn.TheCasualWear.entity.AppUser;
 import com.datn.TheCasualWear.service.AppUserService;
 import com.datn.TheCasualWear.service.CartService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -11,17 +12,12 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @RequestMapping("/cart")
+@RequiredArgsConstructor
 public class CartController {
 
-    private final CartService cartService;
+    private final CartService    cartService;
     private final AppUserService appUserService;
 
-    public CartController(CartService cartService, AppUserService appUserService) {
-        this.cartService = cartService;
-        this.appUserService = appUserService;
-    }
-
-    // Lấy user hiện tại đang đăng nhập
     private AppUser getCurrentUser(Authentication auth) {
         return appUserService.getUserByUsername(auth.getName());
     }
@@ -29,20 +25,29 @@ public class CartController {
     @GetMapping
     public String viewCart(Authentication auth, Model model) {
         AppUser user = getCurrentUser(auth);
-        model.addAttribute("cartItems", cartService.getCartItems(user));
+        model.addAttribute("cartItems",  cartService.getCartItems(user));
         model.addAttribute("totalPrice", cartService.getTotalPrice(user));
         model.addAttribute("view", "shop/cart");
         return "layouts/shop-layout";
     }
-    //them vao sau moi product de add vao cart
+
+    /**
+     * Thêm vào giỏ — form product-detail phải gửi kèm variantId.
+     * <input type="hidden" name="variantId" th:value="${selectedVariant.id}">
+     */
     @PostMapping("/add")
     public String addToCart(@RequestParam Integer productId,
+                            @RequestParam Integer variantId,           // ✅ bắt buộc
                             @RequestParam(defaultValue = "1") Integer quantity,
                             Authentication auth,
                             RedirectAttributes redirectAttributes) {
         AppUser user = getCurrentUser(auth);
-        cartService.addToCart(user, productId, quantity);
-        redirectAttributes.addFlashAttribute("successMessage", "Đã thêm vào giỏ hàng!");
+        try {
+            cartService.addToCart(user, productId, variantId, quantity);
+            redirectAttributes.addFlashAttribute("successMessage", "Đã thêm vào giỏ hàng!");
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
         return "redirect:/cart";
     }
 
@@ -52,8 +57,12 @@ public class CartController {
                                  Authentication auth,
                                  RedirectAttributes redirectAttributes) {
         AppUser user = getCurrentUser(auth);
-        cartService.updateQuantity(user, cartItemId, quantity);
-        redirectAttributes.addFlashAttribute("successMessage", "Đã cập nhật giỏ hàng!");
+        try {
+            cartService.updateQuantity(user, cartItemId, quantity);
+            redirectAttributes.addFlashAttribute("successMessage", "Đã cập nhật giỏ hàng!");
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
         return "redirect:/cart";
     }
 

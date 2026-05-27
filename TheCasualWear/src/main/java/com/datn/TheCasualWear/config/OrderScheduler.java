@@ -1,10 +1,10 @@
 package com.datn.TheCasualWear.config;
 
-import com.datn.TheCasualWear.entity.Product;
+import com.datn.TheCasualWear.entity.ProductVariant;
 import com.datn.TheCasualWear.repository.NotificationRepository;
-import com.datn.TheCasualWear.repository.ProductRepository;
 import com.datn.TheCasualWear.service.NotificationService;
 import com.datn.TheCasualWear.service.OrderService;
+import com.datn.TheCasualWear.service.ProductVariantService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -16,62 +16,72 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderScheduler {
 
-    private final OrderService orderService;
+    private final OrderService          orderService;
+    private final ProductVariantService variantService;       // ✅ thay ProductRepository
     private final NotificationRepository notificationRepository;
-    private final ProductRepository productRepository;
-    private final NotificationService notificationService;
+    private final NotificationService   notificationService;
 
-    // Chạy mỗi 2 giờ kiểm tra đơn DELIVERED quá 2 ngày
+    // Mỗi 2 giờ — tự xác nhận đơn DELIVERED quá 2 ngày
     @Scheduled(cron = "0 0 */2 * * *")
     public void autoConfirmOrders() {
         orderService.autoConfirmDeliveredOrders();
     }
 
+    // Mỗi ngày 0h — xóa đơn CANCELLED quá 1 tháng
     @Scheduled(cron = "0 0 0 * * *")
     public void deleteCancelledOrders() {
         orderService.deleteCancelledOrderAfterMonth();
     }
 
+    // Mỗi giờ — xóa notification đã đọc quá 3 ngày
     @Scheduled(cron = "0 0 * * * *")
     public void deleteOldNotifications() {
         notificationRepository.deleteReadNotificationsOlderThan(
                 LocalDateTime.now().minusDays(3));
     }
 
-    // Thông báo stock thấp — 3 ngày lần 8h sáng
+    /**
+     * 8h sáng mỗi 3 ngày — cảnh báo variant sắp hết hàng (0 < stock < 5).
+     * Hiển thị tên sản phẩm + size + màu để admin biết chính xác cần nhập gì.
+     */
     @Scheduled(cron = "0 0 8 */3 * ?")
     public void notifyLowStock() {
-        List<Product> lowStockProducts = productRepository
-                .findByIsDeletedFalseAndStockLessThanAndStockGreaterThan(5, 0);
+        List<ProductVariant> lowStock = variantService.getLowStockVariants();
+        if (lowStock.isEmpty()) return;
 
-        if (lowStockProducts.isEmpty()) return;
+        StringBuilder msg = new StringBuilder("⚠️ Tồn kho thấp: ");
+        lowStock.forEach(v -> msg
+                .append(v.getProduct().getName())
+                .append(" [")
+                .append(v.getSize()  != null ? v.getSize().getName()  : "?")
+                .append("/")
+                .append(v.getColor() != null ? v.getColor().getName() : "?")
+                .append("] còn ").append(v.getStock()).append(", "));
 
-        StringBuilder msg = new StringBuilder("⚠️ Cảnh báo tồn kho thấp: ");
-        lowStockProducts.forEach(p ->
-                msg.append(p.getName())
-                        .append(" (còn ").append(p.getStock()).append("), ")
-        );
-
-        // Bỏ dấu phẩy cuối
-        String message = msg.toString().replaceAll(", $", "");
-
-        notificationService.createNotificationForAdmins(message, "/admin/products");
+        notificationService.createNotificationForAdmins(
+                msg.toString().replaceAll(", $", ""),
+                "/admin/products");
     }
 
-    // Thông báo sản phẩm hết hàng — 3 ngày lần 8h sáng
+    /**
+     * 8h sáng mỗi 3 ngày — cảnh báo variant hết hàng (stock = 0).
+     */
     @Scheduled(cron = "0 0 8 */3 * ?")
     public void notifyOutOfStock() {
-        List<Product> outOfStockProducts = productRepository
-                .findByIsDeletedFalseAndStock(0);
+        List<ProductVariant> outOfStock = variantService.getOutOfStockVariants();
+        if (outOfStock.isEmpty()) return;
 
-        if (outOfStockProducts.isEmpty()) return;
+        StringBuilder msg = new StringBuilder("🚫 Hết hàng: ");
+        outOfStock.forEach(v -> msg
+                .append(v.getProduct().getName())
+                .append(" [")
+                .append(v.getSize()  != null ? v.getSize().getName()  : "?")
+                .append("/")
+                .append(v.getColor() != null ? v.getColor().getName() : "?")
+                .append("], "));
 
-        StringBuilder msg = new StringBuilder("🚫 Sản phẩm hết hàng: ");
-        outOfStockProducts.forEach(p ->
-                msg.append(p.getName()).append(", ")
-        );
-
-        String message = msg.toString().replaceAll(", $", "");
-        notificationService.createNotificationForAdmins(message, "/admin/products");
+        notificationService.createNotificationForAdmins(
+                msg.toString().replaceAll(", $", ""),
+                "/admin/products");
     }
 }

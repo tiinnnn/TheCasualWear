@@ -8,15 +8,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Entity
-@Table(name = "order_detail")
+@Entity @Table(name = "order_detail")
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class OrderDetail {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -27,9 +22,13 @@ public class OrderDetail {
     @JoinColumn(name = "product_id")
     private Product product;
 
-    @Column(name = "quantity", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "variant_id", nullable = false)   // ← thêm mới
+    private ProductVariant variant;
+
+    @Column(nullable = false)
     private Integer quantity;
 
-    @Column(name = "price", nullable = false, precision = 18, scale = 2)
+    @Column(nullable = false, precision = 18, scale = 2)
     private BigDecimal price;
 }

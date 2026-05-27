@@ -4,58 +4,55 @@ import com.datn.TheCasualWear.config.ResourceNotFoundException;
 import com.datn.TheCasualWear.entity.*;
 import com.datn.TheCasualWear.enums.OrderStatus;
 import com.datn.TheCasualWear.repository.*;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class OrderService {
 
-    private final AppOrderRepository orderRepository;
+    private final AppOrderRepository    orderRepository;
     private final OrderDetailRepository orderDetailRepository;
     private final OrderVoucherRepository orderVoucherRepository;
-    private final CartService cartService;
-    private final VoucherService voucherService;
-    private final ProductRepository productRepository;
-    private final NotificationService notificationService;
+    private final CartService           cartService;
+    private final VoucherService        voucherService;
+    private final ProductVariantRepository variantRepository; // ✅ thay ProductRepository
+    private final NotificationService   notificationService;
+
     private static final int ADMIN_PAGE_SIZE = 10;
 
-    public OrderService(AppOrderRepository orderRepository,
-                        OrderDetailRepository orderDetailRepository,
-                        OrderVoucherRepository orderVoucherRepository,
-                        CartService cartService,
-                        NotificationService notificationService,
-                        VoucherService voucherService,
-                        ProductRepository productRepository) {
-        this.orderRepository = orderRepository;
-        this.orderDetailRepository = orderDetailRepository;
-        this.orderVoucherRepository = orderVoucherRepository;
-        this.cartService = cartService;
-        this.voucherService = voucherService;
-        this.productRepository = productRepository;
-        this.notificationService = notificationService;
-    }
+    // ==================== QUERY ====================
 
     public Page<AppOrder> getAllOrders(String keyword, String status, int page) {
-        String kw = (keyword == null || keyword.isBlank()) ? null : keyword;
-        OrderStatus statusEnum = (status == null || status.isBlank()) ? null : OrderStatus.valueOf(status);
+        String      kw         = (keyword == null || keyword.isBlank()) ? null : keyword;
+        OrderStatus statusEnum = (status  == null || status.isBlank())  ? null
+                : OrderStatus.valueOf(status);
         Pageable pageable = PageRequest.of(page, ADMIN_PAGE_SIZE);
         return orderRepository.searchOrders(kw, statusEnum, pageable);
     }
 
-    public AppOrder getOrderById(Integer id) {
-        return orderRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với id: " + id));
+    public List<AppOrder> getAllOrders() {
+        return orderRepository.findAllOrderedByStatus();
     }
 
-    // Kiểm tra đơn hàng có thuộc về user không
+    public List<AppOrder> getOrdersByStatus(OrderStatus status) {
+        return orderRepository.findByStatus(status);
+    }
+
+    public AppOrder getOrderById(Integer id) {
+        return orderRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy đơn hàng với id: " + id));
+    }
+
     public AppOrder getOrderByIdAndUser(Integer id, AppUser user) {
         AppOrder order = getOrderById(id);
         if (!order.getCustomer().getId().equals(user.getId())) {
@@ -64,13 +61,16 @@ public class OrderService {
         return order;
     }
 
-    // PHÍA CUSTOMER
+    public List<AppOrder> getOrdersByUser(AppUser user) {
+        return orderRepository.findByCustomerIdOrderByOrderDateDesc(user.getId());
+    }
 
-    // Đặt hàng
+    // ==================== CUSTOMER ====================
+
     @Transactional
     public AppOrder placeOrder(AppUser user, Address shippingAddress,
-                               Address billingAddress, String voucherCode, String paymentMethod) {
-        // Lấy giỏ hàng
+                               Address billingAddress,
+                               String voucherCode, String paymentMethod) {
         List<CartItem> cartItems = cartService.getCartItems(user);
         if (cartItems.isEmpty()) {
             throw new IllegalStateException("Giỏ hàng trống!");
@@ -81,7 +81,7 @@ public class OrderService {
         // Áp dụng voucher nếu có
         Voucher voucher = null;
         if (voucherCode != null && !voucherCode.isBlank()) {
-            voucher = voucherService.applyVoucher(voucherCode, totalPrice, user);
+            voucher    = voucherService.applyVoucher(voucherCode, totalPrice, user);
             totalPrice = voucherService.calcDiscountedPrice(totalPrice, voucher);
         }
 
@@ -96,25 +96,37 @@ public class OrderService {
         order.setIsPaid("VNPAY".equals(paymentMethod));
         orderRepository.save(order);
 
+        // Tạo order details — check stock từ variant
         for (CartItem item : cartItems) {
-            Product product = item.getProduct();
+            Product        product = item.getProduct();
+            ProductVariant variant = item.getVariant(); // ✅
 
-            // Kiểm tra stock lần cuối trước khi đặt
-            if (product.getStock() < item.getQuantity()) {
-                throw new IllegalStateException("Sản phẩm '"
-                        + product.getName() + "' chỉ còn " + product.getStock() + " trong kho!");
+            // ✅ Check stock từ variant
+            if (variant.getStock() < item.getQuantity()) {
+                throw new IllegalStateException(
+                        "Sản phẩm '" + product.getName()
+                                + "' (size: " + (variant.getSize() != null ? variant.getSize().getName() : "?")
+                                + ", màu: "   + (variant.getColor() != null ? variant.getColor().getName() : "?")
+                                + ") chỉ còn " + variant.getStock() + " trong kho!");
             }
 
-            // Tạo order detail
+            // ✅ Snapshot giá tại thời điểm mua = base + adjustment
+            BigDecimal unitPrice = product.getPrice();
+            if (variant.getPriceAdjustment() != null) {
+                unitPrice = unitPrice.add(variant.getPriceAdjustment());
+            }
+
             OrderDetail detail = new OrderDetail();
             detail.setOrder(order);
             detail.setProduct(product);
+            detail.setVariant(variant); // ✅
             detail.setQuantity(item.getQuantity());
-            detail.setPrice(product.getPrice()); // lưu giá tại thời điểm mua
+            detail.setPrice(unitPrice);
             orderDetailRepository.save(detail);
 
-            product.setStock(product.getStock() - item.getQuantity());
-            productRepository.save(product);
+            // ✅ Trừ stock từ variant
+            variant.setStock(variant.getStock() - item.getQuantity());
+            variantRepository.save(variant);
         }
 
         // Lưu voucher đã dùng
@@ -125,111 +137,76 @@ public class OrderService {
             orderVoucher.setCustomer(user);
             orderVoucherRepository.save(orderVoucher);
         }
+
         cartService.clearCart(user);
+
         notificationService.createNotificationForAdmins(
-                "Đơn hàng mới #" + order.getId() + " từ khách " +
-                        user.getUsername() + " đang chờ xác nhận!",
+                "Đơn hàng mới #" + order.getId() + " từ khách "
+                        + user.getUsername() + " đang chờ xác nhận!",
                 "/admin/orders/" + order.getId()
         );
         return order;
     }
 
-    // Lịch sử đơn hàng của customer
-    public List<AppOrder> getOrdersByUser(AppUser user) {
-        return orderRepository.findByCustomerIdOrderByOrderDateDesc(user.getId());
-    }
-
     public void confirmReceived(Integer orderId, AppUser user) {
         AppOrder order = getOrderByIdAndUser(orderId, user);
-
         if (order.getStatus() != OrderStatus.DELIVERED) {
-            throw new IllegalStateException("Đơn hàng chưa được giao, không thể xác nhận!");
+            throw new IllegalStateException(
+                    "Đơn hàng chưa được giao, không thể xác nhận!");
         }
-
         order.setStatus(OrderStatus.COMPLETED);
         orderRepository.save(order);
     }
 
-    // cancelOrder (customer)
     @Transactional
     public void cancelOrder(Integer orderId, AppUser user) {
         AppOrder order = getOrderByIdAndUser(orderId, user);
         if (order.getStatus() != OrderStatus.PENDING) {
-            throw new IllegalStateException("Chỉ có thể hủy đơn hàng khi đang chờ xác nhận!");
+            throw new IllegalStateException(
+                    "Chỉ có thể hủy đơn hàng khi đang chờ xác nhận!");
         }
         if (Boolean.TRUE.equals(order.getIsPaid())) {
-            throw new IllegalStateException("Đơn hàng đã thanh toán không thể hủy trực tiếp. Vui lòng liên hệ Zalo 0901.234.567 để được hỗ trợ!");
+            throw new IllegalStateException(
+                    "Đơn hàng đã thanh toán không thể hủy trực tiếp. "
+                            + "Vui lòng liên hệ Zalo 0901.234.567 để được hỗ trợ!");
         }
-        restoreStock(order);
-        orderVoucherRepository.findByOrderId(orderId)
-                .ifPresent(ov -> {
-                    order.setOrderVoucher(null);
-                    orderVoucherRepository.delete(ov);
-                });
+        restoreVariantStock(order); // ✅
+        removeOrderVoucher(order, orderId);
         order.setStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
 
         notificationService.createNotificationForAdmins(
-                "Khách hàng " + user.getUsername() +
-                        " đã hủy đơn hàng #" + orderId + "!",
+                "Khách hàng " + user.getUsername()
+                        + " đã hủy đơn hàng #" + orderId + "!",
                 "/admin/orders/" + orderId
         );
-
         notificationService.createNotification(
                 order.getCustomer(),
-                "Đơn hàng #" + orderId + " đã được hủy! Bạn có thể sử dụng lại voucher!:>.",
+                "Đơn hàng #" + orderId
+                        + " đã được hủy! Bạn có thể sử dụng lại voucher!:>.",
                 "/order/detail/" + orderId
         );
     }
 
-    @Transactional
-    public void autoConfirmDeliveredOrders() {
-        List<AppOrder> deliveredOrders = orderRepository
-                .findByStatus(OrderStatus.DELIVERED);
+    // ==================== ADMIN ====================
 
-        LocalDateTime twoDaysAgo = LocalDateTime.now().minusDays(2);
-
-        deliveredOrders.stream()
-                .filter(o -> o.getDeliveredAt() != null
-                        && o.getDeliveredAt().isBefore(twoDaysAgo))
-                .forEach(o -> {
-                    o.setStatus(OrderStatus.COMPLETED);
-                    orderRepository.save(o);
-                    notificationService.createNotification(
-                            o.getCustomer(),
-                            "Đơn hàng #" + o.getId() +
-                                    " đã được tự động xác nhận hoàn thành. Cảm ơn bạn đã mua hàng!=)))))))))))",
-                            "/order/detail/" + o.getId()
-                    );
-                });
-    }
-    // PHÍA ADMIN
-
-    public List<AppOrder> getAllOrders() {
-        return orderRepository.findAllOrderedByStatus();
-    }
-
-    public List<AppOrder> getOrdersByStatus(OrderStatus status) {
-        return orderRepository.findByStatus(status);
-    }
-
-    // PENDING → CONFIRMED
     public void confirmOrder(Integer orderId) {
         AppOrder order = getOrderById(orderId);
         if (order.getStatus() != OrderStatus.PENDING) {
-            throw new IllegalStateException("Đơn hàng không ở trạng thái chờ xác nhận!");
+            throw new IllegalStateException(
+                    "Đơn hàng không ở trạng thái chờ xác nhận!");
         }
         order.setStatus(OrderStatus.CONFIRMED);
         orderRepository.save(order);
 
         notificationService.createNotification(
                 order.getCustomer(),
-                "Đơn hàng #" + orderId + " đã được xác nhận! Chúng tôi đang chuẩn bị hàng.",
+                "Đơn hàng #" + orderId
+                        + " đã được xác nhận! Chúng tôi đang chuẩn bị hàng.",
                 "/order/detail/" + orderId
         );
     }
 
-    // CONFIRMED → SHIPPING
     public void shipOrder(Integer orderId) {
         AppOrder order = getOrderById(orderId);
         if (order.getStatus() != OrderStatus.CONFIRMED) {
@@ -243,14 +220,12 @@ public class OrderService {
                 "Đơn hàng #" + orderId + " đang trên đường giao đến bạn!",
                 "/order/detail/" + orderId
         );
-
         notificationService.createNotificationForDeliveries(
                 "Đơn hàng #" + orderId + " đang chờ bạn giao!",
                 "/delivery"
         );
     }
 
-    // Admin hủy đơn
     @Transactional
     public void cancelOrderByAdmin(Integer orderId) {
         AppOrder order = getOrderById(orderId);
@@ -258,45 +233,40 @@ public class OrderService {
                 || order.getStatus() == OrderStatus.CANCELLED) {
             throw new IllegalStateException("Không thể hủy đơn hàng này!");
         }
+        // ✅ Chỉ hoàn stock nếu đã trừ (PENDING chưa trừ? — tuỳ logic bạn)
+        // Ở đây giữ nguyên logic cũ: PENDING không hoàn, các trạng thái khác thì hoàn
         if (order.getStatus() != OrderStatus.PENDING) {
-            restoreStock(order);
+            restoreVariantStock(order);
         }
-        // Xóa OrderVoucher trước để customer dùng lại được
-        orderVoucherRepository.findByOrderId(orderId)
-                .ifPresent(ov -> {
-                    order.setOrderVoucher(null);
-                    orderVoucherRepository.delete(ov);
-                });
+        removeOrderVoucher(order, orderId);
         order.setStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
 
         notificationService.createNotification(
                 order.getCustomer(),
-                "Đơn hàng #" + orderId + " đã bị hủy bởi shop. Liên hệ hỗ trợ nếu có thắc mắc.",
+                "Đơn hàng #" + orderId
+                        + " đã bị hủy bởi shop. Liên hệ hỗ trợ nếu có thắc mắc.",
                 "/order/detail/" + orderId
         );
     }
 
-    // PHÍA DELIVERY
+    // ==================== DELIVERY ====================
 
     public List<AppOrder> getShippingOrders() {
         return orderRepository.findByStatus(OrderStatus.SHIPPING);
     }
 
-    // SHIPPING → DELIVERED
     public void markDelivered(Integer orderId) {
         AppOrder order = getOrderById(orderId);
         if (order.getStatus() != OrderStatus.SHIPPING) {
-            throw new IllegalStateException("Đơn hàng không ở trạng thái đang giao!");
+            throw new IllegalStateException(
+                    "Đơn hàng không ở trạng thái đang giao!");
         }
         order.setStatus(OrderStatus.DELIVERED);
         order.setDeliveredAt(LocalDateTime.now());
-
-        // COD → đánh dấu đã thu tiền khi giao xong
         if ("COD".equals(order.getPaymentMethod())) {
             order.setIsPaid(true);
         }
-
         orderRepository.save(order);
 
         notificationService.createNotification(
@@ -306,23 +276,54 @@ public class OrderService {
         );
     }
 
-    // HELPER
+    // ==================== SCHEDULED ====================
 
-    private void restoreStock(AppOrder order) {
-        List<OrderDetail> details = orderDetailRepository.findByOrderId(order.getId());
-        for (OrderDetail detail : details) {
-            Product product = detail.getProduct();
-            product.setStock(product.getStock() + detail.getQuantity());
-            productRepository.save(product);
-        }
+    @Transactional
+    public void autoConfirmDeliveredOrders() {
+        LocalDateTime twoDaysAgo = LocalDateTime.now().minusDays(2);
+        orderRepository.findByStatus(OrderStatus.DELIVERED).stream()
+                .filter(o -> o.getDeliveredAt() != null
+                        && o.getDeliveredAt().isBefore(twoDaysAgo))
+                .forEach(o -> {
+                    o.setStatus(OrderStatus.COMPLETED);
+                    orderRepository.save(o);
+                    notificationService.createNotification(
+                            o.getCustomer(),
+                            "Đơn hàng #" + o.getId()
+                                    + " đã được tự động xác nhận hoàn thành. Cảm ơn bạn đã mua hàng!=))",
+                            "/order/detail/" + o.getId()
+                    );
+                });
     }
 
     @Transactional
     public void deleteCancelledOrderAfterMonth() {
         LocalDateTime oneMonthAgo = LocalDateTime.now().minusMonths(1);
-        orderRepository.findByStatus(OrderStatus.CANCELLED)
-                .stream()
+        orderRepository.findByStatus(OrderStatus.CANCELLED).stream()
                 .filter(o -> o.getOrderDate().isBefore(oneMonthAgo))
-                .forEach(orderRepository:: delete);
+                .forEach(orderRepository::delete);
+    }
+
+    // ==================== HELPER ====================
+
+    /**
+     * ✅ Hoàn stock về variant (thay vì product.stock cũ).
+     */
+    @Transactional
+    protected void restoreVariantStock(AppOrder order) {
+        List<OrderDetail> details = orderDetailRepository.findByOrderId(order.getId());
+        for (OrderDetail detail : details) {
+            ProductVariant variant = detail.getVariant(); // ✅
+            variant.setStock(variant.getStock() + detail.getQuantity());
+            variantRepository.save(variant);
+        }
+    }
+
+    private void removeOrderVoucher(AppOrder order, Integer orderId) {
+        orderVoucherRepository.findByOrderId(orderId)
+                .ifPresent(ov -> {
+                    order.setOrderVoucher(null);
+                    orderVoucherRepository.delete(ov);
+                });
     }
 }

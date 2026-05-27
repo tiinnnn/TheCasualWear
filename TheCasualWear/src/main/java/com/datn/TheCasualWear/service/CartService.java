@@ -3,25 +3,20 @@ package com.datn.TheCasualWear.service;
 import com.datn.TheCasualWear.config.ResourceNotFoundException;
 import com.datn.TheCasualWear.entity.*;
 import com.datn.TheCasualWear.repository.*;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class CartService {
 
-    private final CartRepository cartRepository;
-    private final CartItemRepository cartItemRepository;
-    private final ProductRepository productRepository;
-
-    public CartService(CartRepository cartRepository,
-                       CartItemRepository cartItemRepository,
-                       ProductRepository productRepository) {
-        this.cartRepository = cartRepository;
-        this.cartItemRepository = cartItemRepository;
-        this.productRepository = productRepository;
-    }
+    private final CartRepository         cartRepository;
+    private final CartItemRepository     cartItemRepository;
+    private final ProductRepository      productRepository;
+    private final ProductVariantRepository variantRepository; // ✅ thêm mới
 
     // Lấy hoặc tạo mới cart cho user
     public Cart getOrCreateCart(AppUser user) {
@@ -39,35 +34,53 @@ public class CartService {
         return cartItemRepository.findByCartId(cart.getId());
     }
 
-    // Thêm sản phẩm vào giỏ
+    /**
+     * Thêm sản phẩm vào giỏ.
+     * Cần truyền variantId để xác định đúng biến thể (size + màu).
+     */
     @Transactional
-    public void addToCart(AppUser user, Integer productId, Integer quantity) {
+    public void addToCart(AppUser user, Integer productId,
+                          Integer variantId, Integer quantity) {
+        // ✅ Lấy product để hiển thị tên trong thông báo lỗi
         Product product = productRepository.findByIdAndIsDeletedFalse(productId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm!"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy sản phẩm!"));
 
-        if (product.getStock() < quantity) {
-            throw new IllegalStateException("Sản phẩm chỉ còn " + product.getStock() + " trong kho!");
+        // ✅ Lấy variant để check stock
+        ProductVariant variant = variantRepository.findById(variantId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy biến thể sản phẩm!"));
+
+        // ✅ Đảm bảo variant thuộc product
+        if (!variant.getProduct().getId().equals(productId)) {
+            throw new IllegalArgumentException("Biến thể không thuộc sản phẩm này!");
+        }
+
+        if (variant.getStock() < quantity) {
+            throw new IllegalStateException(
+                    "Biến thể này chỉ còn " + variant.getStock() + " trong kho!");
         }
 
         Cart cart = getOrCreateCart(user);
 
-        // Kiểm tra sản phẩm đã có trong giỏ chưa
-        cartItemRepository.findByCartIdAndProductId(cart.getId(), productId)
+        // ✅ Check trùng theo cả productId + variantId
+        cartItemRepository.findByCartIdAndProductIdAndVariantId(
+                        cart.getId(), productId, variantId)
                 .ifPresentOrElse(
                         existingItem -> {
-                            // Đã có → cộng thêm số lượng
                             int newQty = existingItem.getQuantity() + quantity;
-                            if (newQty > product.getStock()) {
-                                throw new IllegalStateException("Sản phẩm chỉ còn " + product.getStock() + " trong kho!");
+                            if (newQty > variant.getStock()) {
+                                throw new IllegalStateException(
+                                        "Biến thể này chỉ còn " + variant.getStock() + " trong kho!");
                             }
                             existingItem.setQuantity(newQty);
                             cartItemRepository.save(existingItem);
                         },
                         () -> {
-                            // Chưa có → thêm mới
                             CartItem item = new CartItem();
                             item.setCart(cart);
                             item.setProduct(product);
+                            item.setVariant(variant); // ✅ set variant
                             item.setQuantity(quantity);
                             cartItemRepository.save(item);
                         }
@@ -78,11 +91,12 @@ public class CartService {
     @Transactional
     public void updateQuantity(AppUser user, Integer cartItemId, Integer quantity) {
         CartItem item = cartItemRepository.findById(cartItemId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy item!"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy item!"));
 
-        // Kiểm tra item có thuộc cart của user không
         if (!item.getCart().getCustomer().getId().equals(user.getId())) {
-            throw new IllegalStateException("Bạn không có quyền thay đổi giỏ hàng này!");
+            throw new IllegalStateException(
+                    "Bạn không có quyền thay đổi giỏ hàng này!");
         }
 
         if (quantity <= 0) {
@@ -90,8 +104,11 @@ public class CartService {
             return;
         }
 
-        if (quantity > item.getProduct().getStock()) {
-            throw new IllegalStateException("Sản phẩm chỉ còn " + item.getProduct().getStock() + " trong kho!");
+        // ✅ Check stock từ variant
+        ProductVariant variant = item.getVariant();
+        if (quantity > variant.getStock()) {
+            throw new IllegalStateException(
+                    "Biến thể này chỉ còn " + variant.getStock() + " trong kho!");
         }
 
         item.setQuantity(quantity);
@@ -101,7 +118,8 @@ public class CartService {
     // Xóa 1 item khỏi giỏ
     public void removeItem(AppUser user, Integer cartItemId) {
         CartItem item = cartItemRepository.findById(cartItemId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy item!"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy item!"));
 
         if (!item.getCart().getCustomer().getId().equals(user.getId())) {
             throw new IllegalStateException("Bạn không có quyền xóa item này!");
@@ -118,11 +136,18 @@ public class CartService {
     }
 
     // Tính tổng tiền giỏ hàng
+    // Giá = product.price + variant.priceAdjustment
     public long getTotalPrice(AppUser user) {
         return getCartItems(user).stream()
-                .mapToLong(item -> item.getProduct().getPrice()
-                        .multiply(java.math.BigDecimal.valueOf(item.getQuantity()))
-                        .longValue())
+                .mapToLong(item -> {
+                    java.math.BigDecimal base = item.getProduct().getPrice();
+                    java.math.BigDecimal adj  = item.getVariant().getPriceAdjustment() != null
+                            ? item.getVariant().getPriceAdjustment()
+                            : java.math.BigDecimal.ZERO;
+                    return base.add(adj)
+                            .multiply(java.math.BigDecimal.valueOf(item.getQuantity()))
+                            .longValue();
+                })
                 .sum();
     }
 
