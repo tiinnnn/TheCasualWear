@@ -13,10 +13,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CartService {
 
-    private final CartRepository         cartRepository;
-    private final CartItemRepository     cartItemRepository;
-    private final ProductRepository      productRepository;
-    private final ProductVariantRepository variantRepository; // ✅ thêm mới
+    private final CartRepository           cartRepository;
+    private final CartItemRepository       cartItemRepository;
+    private final ProductVariantRepository variantRepository;
 
     // Lấy hoặc tạo mới cart cho user
     public Cart getOrCreateCart(AppUser user) {
@@ -36,24 +35,18 @@ public class CartService {
 
     /**
      * Thêm sản phẩm vào giỏ.
-     * Cần truyền variantId để xác định đúng biến thể (size + màu).
+     * Chỉ cần variantId — product được lấy qua variant.getProduct().
      */
     @Transactional
-    public void addToCart(AppUser user, Integer productId,
-                          Integer variantId, Integer quantity) {
-        // ✅ Lấy product để hiển thị tên trong thông báo lỗi
-        Product product = productRepository.findByIdAndIsDeletedFalse(productId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Không tìm thấy sản phẩm!"));
-
-        // ✅ Lấy variant để check stock
+    public void addToCart(AppUser user, Integer variantId, Integer quantity) {
         ProductVariant variant = variantRepository.findById(variantId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Không tìm thấy biến thể sản phẩm!"));
 
-        // ✅ Đảm bảo variant thuộc product
-        if (!variant.getProduct().getId().equals(productId)) {
-            throw new IllegalArgumentException("Biến thể không thuộc sản phẩm này!");
+        // Lấy product qua variant, kiểm tra còn active không
+        Product product = variant.getProduct();
+        if (Boolean.TRUE.equals(product.getIsDeleted())) {
+            throw new ResourceNotFoundException("Sản phẩm không còn tồn tại!");
         }
 
         if (variant.getStock() < quantity) {
@@ -63,9 +56,8 @@ public class CartService {
 
         Cart cart = getOrCreateCart(user);
 
-        // ✅ Check trùng theo cả productId + variantId
-        cartItemRepository.findByCartIdAndProductIdAndVariantId(
-                        cart.getId(), productId, variantId)
+        // Check trùng chỉ cần theo variantId
+        cartItemRepository.findByCartIdAndVariantId(cart.getId(), variantId)
                 .ifPresentOrElse(
                         existingItem -> {
                             int newQty = existingItem.getQuantity() + quantity;
@@ -79,8 +71,7 @@ public class CartService {
                         () -> {
                             CartItem item = new CartItem();
                             item.setCart(cart);
-                            item.setProduct(product);
-                            item.setVariant(variant); // ✅ set variant
+                            item.setVariant(variant);
                             item.setQuantity(quantity);
                             cartItemRepository.save(item);
                         }
@@ -104,7 +95,6 @@ public class CartService {
             return;
         }
 
-        // ✅ Check stock từ variant
         ProductVariant variant = item.getVariant();
         if (quantity > variant.getStock()) {
             throw new IllegalStateException(
@@ -136,11 +126,11 @@ public class CartService {
     }
 
     // Tính tổng tiền giỏ hàng
-    // Giá = product.price + variant.priceAdjustment
+    // Giá = variant.product.price + variant.priceAdjustment
     public long getTotalPrice(AppUser user) {
         return getCartItems(user).stream()
                 .mapToLong(item -> {
-                    java.math.BigDecimal base = item.getProduct().getPrice();
+                    java.math.BigDecimal base = item.getVariant().getProduct().getPrice();
                     java.math.BigDecimal adj  = item.getVariant().getPriceAdjustment() != null
                             ? item.getVariant().getPriceAdjustment()
                             : java.math.BigDecimal.ZERO;

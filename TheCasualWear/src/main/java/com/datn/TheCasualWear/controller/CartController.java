@@ -32,18 +32,18 @@ public class CartController {
     }
 
     /**
-     * Thêm vào giỏ — form product-detail phải gửi kèm variantId.
+     * Thêm vào giỏ — form product-detail chỉ cần gửi variantId.
      * <input type="hidden" name="variantId" th:value="${selectedVariant.id}">
+     * Không cần productId nữa.
      */
     @PostMapping("/add")
-    public String addToCart(@RequestParam Integer productId,
-                            @RequestParam Integer variantId,           // ✅ bắt buộc
+    public String addToCart(@RequestParam Integer variantId,
                             @RequestParam(defaultValue = "1") Integer quantity,
                             Authentication auth,
                             RedirectAttributes redirectAttributes) {
         AppUser user = getCurrentUser(auth);
         try {
-            cartService.addToCart(user, productId, variantId, quantity);
+            cartService.addToCart(user, variantId, quantity);
             redirectAttributes.addFlashAttribute("successMessage", "Đã thêm vào giỏ hàng!");
         } catch (IllegalStateException | IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());

@@ -28,19 +28,20 @@
                     <tr th:each="item : ${cartItems}">
                         <td>
                             <div class="d-flex align-items-center gap-3">
-                                <img th:if="${item.product.images != null and !item.product.images.isEmpty()}"
-                                     th:src="${item.product.images[0].imageUrl}"
+                                <!-- ✅ Ảnh qua item.variant.product.images -->
+                                <img th:if="${item.variant.product.images != null and !item.variant.product.images.isEmpty()}"
+                                     th:src="${item.variant.product.images[0].imageUrl}"
                                      style="width:70px;height:70px;object-fit:cover" class="rounded"/>
-                                <img th:unless="${item.product.images != null and !item.product.images.isEmpty()}"
+                                <img th:unless="${item.variant.product.images != null and !item.variant.product.images.isEmpty()}"
                                      src="/images/no-image.png"
                                      style="width:70px;height:70px;object-fit:cover" class="rounded"/>
                                 <div>
-                                    <p class="mb-1 fw-bold" th:text="${item.product.name}"></p>
-                                    <!-- ✅ Hiện size + màu từ variant -->
+                                    <!-- ✅ Tên qua item.variant.product.name -->
+                                    <p class="mb-1 fw-bold" th:text="${item.variant.product.name}"></p>
                                     <div class="d-flex gap-1 flex-wrap" th:if="${item.variant != null}">
-                                    <span th:if="${item.variant.size != null}"
-                                          class="badge bg-secondary"
-                                          th:text="'Size: ' + ${item.variant.size.name}"></span>
+                                        <span th:if="${item.variant.size != null}"
+                                              class="badge bg-secondary"
+                                              th:text="'Size: ' + ${item.variant.size.name}"></span>
                                         <span th:if="${item.variant.color != null}"
                                               class="badge bg-secondary"
                                               th:text="'Màu: ' + ${item.variant.color.name}"></span>
@@ -51,14 +52,13 @@
                                 </div>
                             </div>
                         </td>
-                        <!-- ✅ Giá = product.price + variant.priceAdjustment -->
+                        <!-- ✅ Giá = variant.product.price + variant.priceAdjustment -->
                         <td>
-                        <span th:with="unitPrice=${item.product.price.add(
-                                item.variant != null and item.variant.priceAdjustment != null
-                                ? item.variant.priceAdjustment : T(java.math.BigDecimal).ZERO)}"
-                              th:text="${#numbers.formatInteger(unitPrice, 0, 'COMMA') + ' đ'}"></span>
-                            <div th:if="${item.variant != null
-                                     and item.variant.priceAdjustment != null
+                            <span th:with="unitPrice=${item.variant.product.price.add(
+                                    item.variant.priceAdjustment != null
+                                    ? item.variant.priceAdjustment : T(java.math.BigDecimal).ZERO)}"
+                                  th:text="${#numbers.formatInteger(unitPrice, 0, 'COMMA') + ' đ'}"></span>
+                            <div th:if="${item.variant.priceAdjustment != null
                                      and item.variant.priceAdjustment.compareTo(T(java.math.BigDecimal).ZERO) != 0}">
                                 <small class="text-muted"
                                        th:text="${item.variant.priceAdjustment.compareTo(T(java.math.BigDecimal).ZERO) > 0
@@ -79,10 +79,10 @@
                                        onchange="this.form.submit()"/>
                             </form>
                         </td>
-                        <!-- Thành tiền -->
+                        <!-- ✅ Thành tiền = (variant.product.price + adjustment) × qty -->
                         <td class="text-danger fw-bold"
-                            th:with="unitPrice=${item.product.price.add(
-                                item.variant != null and item.variant.priceAdjustment != null
+                            th:with="unitPrice=${item.variant.product.price.add(
+                                item.variant.priceAdjustment != null
                                 ? item.variant.priceAdjustment : T(java.math.BigDecimal).ZERO)}"
                             th:text="${#numbers.formatInteger(unitPrice.doubleValue() * item.quantity, 0, 'COMMA') + ' đ'}">
                         </td>

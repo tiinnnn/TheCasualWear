@@ -26,7 +26,7 @@ public class AdminDashboardController {
 
     private final OrderService          orderService;
     private final ProductService        productService;
-    private final ProductVariantService variantService;   // ✅ thay ProductRepository
+    private final ProductVariantService variantService;
     private final AppUserService        appUserService;
     private final OrderDetailRepository orderDetailRepository;
 
@@ -34,7 +34,7 @@ public class AdminDashboardController {
     public String dashboard(Model model) {
         List<AppOrder> allOrders = orderService.getAllOrders();
 
-        // ==================== TỔNG QUAN ====================
+        //  TỔNG QUAN
         model.addAttribute("totalProducts",
                 productService.getAdminProducts(null, 0).getTotalElements());
         model.addAttribute("totalUsers",
@@ -49,7 +49,7 @@ public class AdminDashboardController {
                 .sum();
         model.addAttribute("totalRevenue", totalRevenue);
 
-        // ✅ Chi phí gốc từ variant.costPrice (không phải product.costPrice)
+        // Chi phí gốc từ variant.costPrice
         double totalCost = orderDetailRepository.findAll().stream()
                 .filter(od -> od != null
                         && od.getOrder() != null
@@ -64,7 +64,6 @@ public class AdminDashboardController {
 
         model.addAttribute("totalProfit", totalRevenue - totalCost);
 
-        // ==================== TUẦN NÀY ====================
         LocalDateTime startOfWeek = LocalDateTime.now()
                 .with(DayOfWeek.MONDAY).toLocalDate().atStartOfDay();
 
@@ -80,7 +79,7 @@ public class AdminDashboardController {
                         ? o.getTotalPrice().doubleValue() : 0.0)
                 .sum();
 
-        // ✅ Chi phí tuần từ variant.costPrice
+        // Chi phí tuần từ variant.costPrice
         double weekCost = weekOrders.stream()
                 .flatMap(o -> orderDetailRepository.findByOrderId(o.getId()).stream())
                 .filter(od -> od != null
@@ -102,9 +101,10 @@ public class AdminDashboardController {
                 .filter(od -> od != null
                         && od.getOrder() != null
                         && od.getOrder().getStatus() == OrderStatus.COMPLETED
-                        && od.getProduct() != null)
+                        && od.getVariant() != null
+                        && od.getVariant().getProduct() != null)
                 .forEach(od -> soldMap.merge(
-                        od.getProduct(),
+                        od.getVariant().getProduct(),
                         od.getQuantity() != null ? od.getQuantity() : 0,
                         Integer::sum
                 ));
@@ -115,15 +115,12 @@ public class AdminDashboardController {
                 .toList();
         model.addAttribute("topSelling", topSelling);
 
-        // ==================== SẮP HẾT / HẾT HÀNG ====================
-        // ✅ Dùng variantService thay vì productRepository.findByStock(...)
-        List<ProductVariant> lowStock    = variantService.getLowStockVariants();
-        List<ProductVariant> outOfStock  = variantService.getOutOfStockVariants();
+        List<ProductVariant> lowStock   = variantService.getLowStockVariants();
+        List<ProductVariant> outOfStock = variantService.getOutOfStockVariants();
         model.addAttribute("lowStock",   lowStock);
         model.addAttribute("outOfStock", outOfStock);
 
-        // ==================== ĐƠN HÀNG MỚI NHẤT ====================
-        model.addAttribute("recentOrders",    allOrders.stream().limit(5).toList());
+        model.addAttribute("recentOrders",   allOrders.stream().limit(5).toList());
         model.addAttribute("pendingOrders",
                 orderService.getOrdersByStatus(OrderStatus.PENDING).size());
         model.addAttribute("shippingOrders",

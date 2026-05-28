@@ -19,10 +19,6 @@ public class OrderDetail {
     private AppOrder order;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id")
-    private Product product;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "variant_id", nullable = false)   // ← thêm mới
     private ProductVariant variant;
 

@@ -6,45 +6,58 @@
     <div class="row">
         <!-- ==================== ẢNH SẢN PHẨM ==================== -->
         <div class="col-md-6">
-            <div th:if="${product.images != null and !product.images.isEmpty()}">
-                <div id="productCarousel" class="carousel slide mb-2" data-bs-ride="false">
-                    <div class="carousel-inner">
-                        <div th:each="img, i : ${product.images}"
-                             th:classappend="${i.index == 0} ? 'active'"
-                             class="carousel-item">
+            <!-- Slideshow — Thymeleaf render tất cả ảnh (product + variant) -->
+            <div id="productCarousel" class="carousel slide mb-2" data-bs-ride="false">
+                <div class="carousel-inner">
+
+                    <!-- ✅ Ảnh chung của product trước (index 0, 1, 2...) -->
+                    <div th:each="img, i : ${product.images}"
+                         th:classappend="${i.index == 0} ? 'active'"
+                         class="carousel-item"
+                         th:attr="data-type='product'">
+                        <img th:src="${img.imageUrl}"
+                             class="d-block w-100 rounded"
+                             style="height:450px;object-fit:cover"/>
+                    </div>
+
+                    <!-- ✅ Ảnh riêng từng variant theo sau -->
+                    <th:block th:each="v : ${variants}">
+                        <div th:each="img : ${v.images}"
+                             class="carousel-item"
+                             th:attr="data-type='variant',
+                                      data-color-id=${v.color != null ? v.color.id : 0},
+                                      data-variant-id=${v.id}">
                             <img th:src="${img.imageUrl}"
                                  class="d-block w-100 rounded"
                                  style="height:450px;object-fit:cover"/>
                         </div>
-                    </div>
-                    <div th:if="${product.images.size() > 1}">
-                        <button class="carousel-control-prev" type="button"
-                                data-bs-target="#productCarousel" data-bs-slide="prev">
-                            <span class="carousel-control-prev-icon"></span>
-                        </button>
-                        <button class="carousel-control-next" type="button"
-                                data-bs-target="#productCarousel" data-bs-slide="next">
-                            <span class="carousel-control-next-icon"></span>
-                        </button>
+                    </th:block>
+
+                    <!-- Fallback nếu không có ảnh nào -->
+                    <div th:if="${(product.images == null or product.images.isEmpty())}"
+                         class="carousel-item active"
+                         th:unless="${variants != null and !variants.isEmpty() and variants[0].images != null and !variants[0].images.isEmpty()}">
+                        <img src="/images/no-image.png"
+                             class="d-block w-100 rounded"
+                             style="height:450px;object-fit:cover"/>
                     </div>
                 </div>
-                <!-- Thumbnails -->
-                <div th:if="${product.images.size() > 1}" class="d-flex gap-2 flex-wrap">
-                    <img th:each="img, i : ${product.images}"
-                         th:src="${img.imageUrl}"
-                         th:attr="data-index=${i.index}"
-                         class="rounded border border-2"
-                         style="width:70px;height:70px;object-fit:cover;cursor:pointer;opacity:0.6"/>
-                </div>
+                <button class="carousel-control-prev" type="button"
+                        data-bs-target="#productCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon"></span>
+                </button>
+                <button class="carousel-control-next" type="button"
+                        data-bs-target="#productCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon"></span>
+                </button>
             </div>
-            <img th:unless="${product.images != null and !product.images.isEmpty()}"
-                 src="/images/no-image.png"
-                 class="img-fluid rounded" style="height:450px;object-fit:cover;width:100%"/>
+
+            <!-- Thumbnails — JS render -->
+            <div class="d-flex gap-2 flex-wrap" id="thumbnailRow"></div>
         </div>
 
         <!-- ==================== THÔNG TIN SẢN PHẨM ==================== -->
         <div class="col-md-6">
-            <!-- Breadcrumb -->
             <nav aria-label="breadcrumb" class="mb-3">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a th:href="@{/}">Trang chủ</a></li>
@@ -57,25 +70,24 @@
             <p class="text-muted mb-1"
                th:text="${product.category != null ? product.category.name : ''}"></p>
 
-            <!-- Giá — thay đổi theo variant được chọn -->
             <h3 class="text-danger fw-bold my-3" id="displayPrice"
                 th:text="${#numbers.formatInteger(product.price, 0, 'COMMA') + ' đ'}"></h3>
 
             <hr/>
 
-            <!-- ==================== CHỌN MÀU ==================== -->
+            <!-- CHỌN MÀU -->
             <div class="mb-3" id="colorSection">
                 <small class="text-muted d-block mb-2 fw-bold">Màu sắc:</small>
                 <div id="colorBtns" class="d-flex gap-2 flex-wrap"></div>
             </div>
 
-            <!-- ==================== CHỌN SIZE ==================== -->
+            <!-- CHỌN SIZE -->
             <div class="mb-3" id="sizeSection">
-                <small class="text-muted d-block mb-2 fw-bold">Size:</small>
+                <small class="text-muted d-block mb-2 fw-bold">Kích thước:</small>
                 <div id="sizeBtns" class="d-flex gap-2 flex-wrap"></div>
             </div>
 
-            <!-- Tình trạng tồn kho -->
+            <!-- Tồn kho -->
             <div class="mb-3">
                 <span id="stockBadge" class="badge bg-secondary">Chọn size và màu</span>
             </div>
@@ -84,9 +96,8 @@
 
             <hr/>
 
-            <!-- Form thêm vào giỏ -->
+            <!-- Form thêm vào giỏ — chỉ cần variantId -->
             <form th:action="@{/cart/add}" method="post" id="addToCartForm">
-                <input type="hidden" name="productId" th:value="${product.id}"/>
                 <input type="hidden" name="variantId" id="selectedVariantId" value=""/>
 
                 <div class="d-flex gap-2 align-items-center mb-3">
@@ -108,14 +119,13 @@
                 </button>
             </form>
 
-            <!-- Validate trước khi submit -->
             <div id="variantError" class="text-danger small mt-2" style="display:none">
                 Vui lòng chọn size và màu sắc!
             </div>
         </div>
     </div>
 
-    <!-- ==================== SẢN PHẨM LIÊN QUAN ==================== -->
+    <!-- SẢN PHẨM LIÊN QUAN -->
     <div th:if="${relatedProducts != null and !relatedProducts.isEmpty()}" class="mt-5">
         <h4 class="mb-3 fw-bold">Sản phẩm liên quan</h4>
         <div class="row row-cols-2 row-cols-md-4 g-4">
@@ -144,52 +154,107 @@
 </div>
 
 <script th:inline="javascript">
-    // ── Dữ liệu variant từ server ──────────────────────────────────
-    const variants     = /*[[${variantData}]]*/ [];
-    const basePrice    = /*[[${product.price}]]*/ 0;
+    const variants  = /*[[${variantData}]]*/ [];
+    const basePrice = /*[[${product.price}]]*/ 0;
 
     let selectedColorId = null;
     let selectedSizeId  = null;
     let selectedVariant = null;
+    let carousel        = null;
 
-    // ── Khởi tạo ──────────────────────────────────────────────────
-
-    function init() {
-        // Lấy danh sách màu unique
-        const colorMap = new Map();
-        variants.forEach(v => {
-            if (v.color && !colorMap.has(v.color.id)) {
-                colorMap.set(v.color.id, v.color.name);
+    // ✅ Xây bảng: colorId → index đầu tiên của variant đó trong carousel
+    // Thymeleaf render: product.images trước, rồi variant images theo thứ tự variants
+    // JS tính lại đúng index dựa trên data-color-id của từng carousel-item
+    function buildColorIndexMap() {
+        const items = document.querySelectorAll('#productCarousel .carousel-item');
+        const map   = {};  // colorId → index đầu tiên
+        items.forEach((el, idx) => {
+            if (el.dataset.type === 'variant') {
+                const cid = el.dataset.colorId;
+                if (!(cid in map)) map[cid] = idx;  // chỉ lưu index đầu tiên
             }
         });
+        return map;
+    }
 
-        // Render nút màu
+    // ── Khởi tạo thumbnails từ carousel items ─────────────────────
+    function buildThumbnails() {
+        const items    = document.querySelectorAll('#productCarousel .carousel-item');
+        const thumbRow = document.getElementById('thumbnailRow');
+        thumbRow.innerHTML = '';
+
+        if (items.length <= 1) return;  // không cần thumbnail nếu chỉ 1 ảnh
+
+        items.forEach((el, idx) => {
+            const img = el.querySelector('img');
+            if (!img) return;
+            const thumb = document.createElement('img');
+            thumb.src               = img.src;
+            thumb.dataset.index     = idx;
+            thumb.className         = 'rounded border border-2 thumb-img';
+            thumb.style.cssText     = 'width:70px;height:70px;object-fit:cover;cursor:pointer;opacity:0.6';
+            thumb.addEventListener('click', function () {
+                carousel.to(idx);
+                highlightThumb(idx);
+            });
+            thumbRow.appendChild(thumb);
+        });
+    }
+
+    function highlightThumb(index) {
+        document.querySelectorAll('.thumb-img').forEach(img => {
+            img.style.opacity = '0.6';
+            img.style.border  = '2px solid transparent';
+        });
+        const active = document.querySelector(`.thumb-img[data-index="${index}"]`);
+        if (active) {
+            active.style.opacity = '1';
+            active.style.border  = '2px solid #000';
+            // Scroll thumbnail vào view
+            active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        }
+    }
+
+    // ── Khởi tạo ──────────────────────────────────────────────────
+    function init() {
+        // Carousel
+        const carouselEl = document.getElementById('productCarousel');
+        carousel = new bootstrap.Carousel(carouselEl, { ride: false });
+        buildThumbnails();
+        carouselEl.addEventListener('slid.bs.carousel', e => highlightThumb(e.to));
+        highlightThumb(0);
+
+        // Nút màu
+        const colorMap = new Map();
+        variants.forEach(v => {
+            if (v.color && !colorMap.has(v.color.id))
+                colorMap.set(v.color.id, v.color.name);
+        });
+
         const colorDiv = document.getElementById('colorBtns');
         if (colorMap.size === 0) {
             document.getElementById('colorSection').style.display = 'none';
         }
         colorMap.forEach((name, id) => {
             const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'btn btn-sm btn-outline-dark';
-            btn.textContent = name;
+            btn.type            = 'button';
+            btn.className       = 'btn btn-sm btn-outline-dark';
+            btn.textContent     = name;
             btn.dataset.colorId = id;
-            btn.onclick = () => selectColor(id, btn);
+            btn.onclick         = () => selectColor(id, btn);
             colorDiv.appendChild(btn);
         });
 
-        // Nếu chỉ có 1 màu → tự chọn
+        // Tự chọn màu đầu tiên nếu chỉ có 1 màu
         if (colorMap.size === 1) {
             const firstBtn = colorDiv.querySelector('button');
             selectColor(parseInt(firstBtn.dataset.colorId), firstBtn);
         }
 
-        // Render nút size ban đầu (tất cả size của product)
         renderSizes(null);
     }
 
     // ── Chọn màu ──────────────────────────────────────────────────
-
     function selectColor(colorId, btn) {
         selectedColorId = colorId;
         selectedSizeId  = null;
@@ -203,28 +268,31 @@
         btn.classList.remove('btn-outline-dark');
         btn.classList.add('btn-dark');
 
-        // Render lại size theo màu đã chọn
+        // ✅ Nhảy đến ảnh đầu tiên của màu này trong slideshow
+        const colorIndexMap = buildColorIndexMap();
+        const targetIndex   = colorIndexMap[colorId];
+        if (targetIndex !== undefined) {
+            carousel.to(targetIndex);
+            highlightThumb(targetIndex);
+        }
+
         renderSizes(colorId);
         updateUI();
     }
 
     // ── Render size ────────────────────────────────────────────────
-
     function renderSizes(colorId) {
         const sizeDiv = document.getElementById('sizeBtns');
         sizeDiv.innerHTML = '';
 
-        // Lọc variant theo màu (nếu có)
         const filtered = colorId
             ? variants.filter(v => v.color && v.color.id === colorId)
             : variants;
 
-        // Lấy size unique
         const sizeMap = new Map();
         filtered.forEach(v => {
-            if (v.size && !sizeMap.has(v.size.id)) {
+            if (v.size && !sizeMap.has(v.size.id))
                 sizeMap.set(v.size.id, { name: v.size.name, stock: v.stock });
-            }
         });
 
         if (sizeMap.size === 0) {
@@ -235,18 +303,17 @@
 
         sizeMap.forEach((info, id) => {
             const btn = document.createElement('button');
-            btn.type = 'button';
+            btn.type           = 'button';
             btn.dataset.sizeId = id;
-
             if (info.stock === 0) {
-                btn.className = 'btn btn-sm btn-outline-secondary';
+                btn.className            = 'btn btn-sm btn-outline-secondary';
                 btn.style.textDecoration = 'line-through';
-                btn.style.opacity = '0.5';
-                btn.disabled = true;
-                btn.title = 'Hết hàng';
+                btn.style.opacity        = '0.5';
+                btn.disabled             = true;
+                btn.title                = 'Hết hàng';
             } else {
                 btn.className = 'btn btn-sm btn-outline-dark';
-                btn.onclick = () => selectSize(id, btn);
+                btn.onclick   = () => selectSize(id, btn);
             }
             btn.textContent = info.name;
             sizeDiv.appendChild(btn);
@@ -254,11 +321,9 @@
     }
 
     // ── Chọn size ─────────────────────────────────────────────────
-
     function selectSize(sizeId, btn) {
         selectedSizeId = sizeId;
 
-        // Highlight nút size
         document.querySelectorAll('#sizeBtns button').forEach(b => {
             b.classList.remove('btn-dark');
             b.classList.add('btn-outline-dark');
@@ -266,39 +331,73 @@
         btn.classList.remove('btn-outline-dark');
         btn.classList.add('btn-dark');
 
-        // Tìm variant khớp
         selectedVariant = variants.find(v =>
             (!selectedColorId || (v.color && v.color.id === selectedColorId)) &&
             (v.size && v.size.id === selectedSizeId)
         ) || null;
 
+        // ✅ Khi chọn size + đã có màu → nhảy đến ảnh của variant đó
+        // Khi chỉ chọn size (chưa chọn màu) → giữ nguyên slideshow
+        if (selectedColorId && selectedVariant) {
+            goToVariantImage(selectedColorId, selectedVariant.id);
+        }
+
         updateUI();
     }
 
-    // ── Cập nhật UI theo variant đã chọn ──────────────────────────
+    /**
+     * Nhảy carousel đến ảnh của variant cụ thể.
+     * Ưu tiên: tìm carousel-item có data-variant-id khớp trước,
+     * fallback về ảnh đầu tiên của màu (data-color-id).
+     */
+    function goToVariantImage(colorId, variantId) {
+        const items = document.querySelectorAll('#productCarousel .carousel-item');
+        let targetIdx = -1;
 
+        // Ưu tiên 1: tìm item có data-variant-id = variantId
+        items.forEach((el, idx) => {
+            if (targetIdx === -1 && el.dataset.variantId == variantId) {
+                targetIdx = idx;
+            }
+        });
+
+        // Ưu tiên 2: fallback về ảnh đầu tiên của màu
+        if (targetIdx === -1) {
+            items.forEach((el, idx) => {
+                if (targetIdx === -1
+                        && el.dataset.type === 'variant'
+                        && el.dataset.colorId == colorId) {
+                    targetIdx = idx;
+                }
+            });
+        }
+
+        if (targetIdx !== -1) {
+            carousel.to(targetIdx);
+            highlightThumb(targetIdx);
+        }
+    }
+
+    // ── Cập nhật UI ───────────────────────────────────────────────
     function updateUI() {
-        const stockBadge  = document.getElementById('stockBadge');
-        const addBtn      = document.getElementById('addToCartBtn');
-        const variantInput= document.getElementById('selectedVariantId');
-        const qtyInput    = document.getElementById('qtyInput');
-        const priceEl     = document.getElementById('displayPrice');
+        const stockBadge   = document.getElementById('stockBadge');
+        const addBtn       = document.getElementById('addToCartBtn');
+        const variantInput = document.getElementById('selectedVariantId');
+        const qtyInput     = document.getElementById('qtyInput');
+        const priceEl      = document.getElementById('displayPrice');
 
         if (!selectedVariant) {
-            stockBadge.className  = 'badge bg-secondary';
-            stockBadge.textContent= 'Chọn size và màu';
-            addBtn.disabled       = true;
-            addBtn.textContent    = 'Chọn size và màu trước';
-            variantInput.value    = '';
+            stockBadge.className   = 'badge bg-secondary';
+            stockBadge.textContent = 'Chọn size và màu';
+            addBtn.disabled        = true;
+            addBtn.textContent     = 'Chọn size và màu trước';
+            variantInput.value     = '';
             return;
         }
 
-        // Cập nhật giá
         const adj = selectedVariant.priceAdjustment || 0;
-        const actualPrice = basePrice + adj;
-        priceEl.textContent = actualPrice.toLocaleString('vi-VN') + ' đ';
+        priceEl.textContent = (basePrice + adj).toLocaleString('vi-VN') + ' đ';
 
-        // Cập nhật stock
         const stock = selectedVariant.stock;
         if (stock > 0) {
             stockBadge.className   = 'badge bg-success';
@@ -313,23 +412,17 @@
             addBtn.disabled        = true;
             addBtn.innerHTML       = '<i class="bi bi-x-circle me-2"></i>Hết hàng';
         }
-
         variantInput.value = selectedVariant.id;
     }
 
-    // ── Validate trước submit ──────────────────────────────────────
-
-    document.getElementById('addToCartForm').addEventListener('submit', function(e) {
-        const variantId = document.getElementById('selectedVariantId').value;
-        if (!variantId) {
+    document.getElementById('addToCartForm').addEventListener('submit', function (e) {
+        if (!document.getElementById('selectedVariantId').value) {
             e.preventDefault();
             document.getElementById('variantError').style.display = 'block';
         } else {
             document.getElementById('variantError').style.display = 'none';
         }
     });
-
-    // ── Tăng giảm số lượng ────────────────────────────────────────
 
     function changeQty(delta) {
         const input = document.getElementById('qtyInput');
@@ -340,38 +433,7 @@
         input.value = val;
     }
 
-    // ── Thumbnail carousel ─────────────────────────────────────────
-
-    document.addEventListener('DOMContentLoaded', function() {
-        init();
-
-        const carouselEl = document.getElementById('productCarousel');
-        if (!carouselEl) return;
-
-        const carousel = new bootstrap.Carousel(carouselEl, { ride: false });
-
-        document.querySelectorAll('[data-index]').forEach(thumb => {
-            thumb.addEventListener('click', function() {
-                carousel.to(parseInt(this.dataset.index));
-                updateThumbnail(parseInt(this.dataset.index));
-            });
-        });
-
-        carouselEl.addEventListener('slid.bs.carousel', e => updateThumbnail(e.to));
-
-        function updateThumbnail(index) {
-            document.querySelectorAll('[data-index]').forEach(img => {
-                img.style.opacity = '0.5';
-                img.style.border  = '2px solid transparent';
-            });
-            const active = document.querySelector('[data-index="' + index + '"]');
-            if (active) {
-                active.style.opacity = '1';
-                active.style.border  = '2px solid #000';
-            }
-        }
-        updateThumbnail(0);
-    });
+    document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>

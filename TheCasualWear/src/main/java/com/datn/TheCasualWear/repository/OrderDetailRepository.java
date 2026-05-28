@@ -1,7 +1,6 @@
 package com.datn.TheCasualWear.repository;
 
 import com.datn.TheCasualWear.entity.OrderDetail;
-import com.datn.TheCasualWear.entity.Product;
 import com.datn.TheCasualWear.enums.OrderStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -12,10 +11,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 public interface OrderDetailRepository extends JpaRepository<OrderDetail, Integer> {
+
     List<OrderDetail> findByOrderId(Integer orderId);
 
+    // ✅ Kiểm tra product còn trong đơn hàng active không — qua variant.product
     @Query("SELECT CASE WHEN COUNT(od) > 0 THEN true ELSE false END " +
-            "FROM OrderDetail od WHERE od.product.id = :productId " +
+            "FROM OrderDetail od WHERE od.variant.product.id = :productId " +
             "AND od.order.status != :status")
     boolean existsByProductIdAndOrderStatusNot(@Param("productId") Integer productId,
                                                @Param("status")    OrderStatus status);
@@ -27,7 +28,7 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, Intege
                                                @Param("status")    OrderStatus status);
 
     @Modifying @Transactional
-    @Query("DELETE FROM OrderDetail od WHERE od.product.id = :productId " +
+    @Query("DELETE FROM OrderDetail od WHERE od.variant.product.id = :productId " +
             "AND od.order.status = com.datn.TheCasualWear.enums.OrderStatus.CANCELLED")
     void deleteByProductId(@Param("productId") Integer productId);
 }

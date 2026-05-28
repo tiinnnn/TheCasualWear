@@ -24,26 +24,30 @@ public class CloudinaryService {
         this.productImageRepository = productImageRepository;
     }
 
-    // Upload 1 ảnh lên Cloudinary, trả về URL
     @SuppressWarnings("unchecked")
-    public String uploadImage(MultipartFile file, String folder) throws IOException {
-        Map<String, Object> uploadResult = (Map<String, Object>) cloudinary.uploader().upload(
+    public String uploadFile(MultipartFile file) throws IOException {
+        return uploadFile(file, "products");
+    }
+
+    @SuppressWarnings("unchecked")
+    public String uploadFile(MultipartFile file, String folder) throws IOException {
+        Map<String, Object> result = (Map<String, Object>) cloudinary.uploader().upload(
                 file.getBytes(),
-                ObjectUtils.asMap(
-                        "folder", folder,
-                        "resource_type", "auto"
-                )
+                ObjectUtils.asMap("folder", folder, "resource_type", "auto")
         );
-        return uploadResult.get("secure_url").toString();
+        return result.get("secure_url").toString();
+    }
+
+    // Upload 1 ảnh lên Cloudinary, trả về URL (giữ lại để không breaking change)
+    public String uploadImage(MultipartFile file, String folder) throws IOException {
+        return uploadFile(file, folder);
     }
 
     // Upload nhiều ảnh cho 1 sản phẩm
     public void uploadProductImages(Product product, List<MultipartFile> files) throws IOException {
         for (MultipartFile file : files) {
             if (file.isEmpty()) continue;
-
-            String url = uploadImage(file, "products");
-
+            String url = uploadFile(file, "products");
             ProductImage image = new ProductImage();
             image.setImageUrl(url);
             image.setProduct(product);
@@ -52,29 +56,29 @@ public class CloudinaryService {
     }
 
     // Lấy publicId từ URL để xóa trên Cloudinary
-    // URL dạng: https://res.cloudinary.com/cloud_name/image/upload/v123/products/abc.jpg
-    // PublicId: products/abc
     private String extractPublicId(String imageUrl) {
         String[] parts = imageUrl.split("/upload/");
-        String afterUpload = parts[1];                          // v123/products/abc.jpg
-        String withoutVersion = afterUpload.replaceFirst("v\\d+/", ""); // products/abc.jpg
-        return withoutVersion.substring(0, withoutVersion.lastIndexOf(".")); // products/abc
+        String afterUpload = parts[1];
+        String withoutVersion = afterUpload.replaceFirst("v\\d+/", "");
+        return withoutVersion.substring(0, withoutVersion.lastIndexOf("."));
     }
-    // Xóa ảnh trên Cloudinary theo publicId
+
+    // Xóa ảnh trên Cloudinary theo URL
     public void deleteImage(String imageUrl) throws IOException {
         String publicId = extractPublicId(imageUrl);
         cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
     }
+
     // Xóa 1 ảnh sản phẩm (xóa trên Cloudinary + xóa trong DB)
     public void deleteProductImage(Integer imageId) throws IOException {
         ProductImage image = productImageRepository.findById(imageId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy ảnh với id: " + imageId));
-
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy ảnh với id: " + imageId));
         deleteImage(image.getImageUrl());
         productImageRepository.delete(image);
     }
 
-    // Xóa tất cả ảnh của 1 sản phẩm || ko dùng vì chỉ đang soft delete tránh lỗi order cart
+    // Xóa tất cả ảnh của 1 sản phẩm
     public void deleteAllProductImages(Product product) throws IOException {
         List<ProductImage> images = productImageRepository.findByProductId(product.getId());
         for (ProductImage image : images) {

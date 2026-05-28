@@ -15,12 +15,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProductService {
 
-    private final ProductRepository          productRepository;
-    private final ProductVariantRepository   variantRepository;
-    private final CartItemRepository         cartItemRepository;
-    private final ProductImageRepository     productImageRepository;
-    private final OrderDetailRepository      orderDetailRepository;
-    private final CloudinaryService          cloudinaryService;
+    private final ProductRepository        productRepository;
+    private final ProductVariantRepository variantRepository;
+    private final CartItemRepository       cartItemRepository;
+    private final ProductImageRepository   productImageRepository;
+    private final OrderDetailRepository    orderDetailRepository;
+    private final CloudinaryService        cloudinaryService;
 
     private static final int SHOP_PAGE_SIZE  = 12;
     private static final int ADMIN_PAGE_SIZE = 15;
@@ -70,20 +70,12 @@ public class ProductService {
 
     // ==================== CRUD PRODUCT ====================
 
-    /**
-     * Tạo product đơn (không kèm variant).
-     * Variant sẽ được tạo riêng qua ProductVariantService.
-     */
     @Transactional
     public Product createProduct(Product product) {
         product.setIsDeleted(false);
         return productRepository.save(product);
     }
 
-    /**
-     * Tạo product + danh sách variant cùng lúc (form phức hợp).
-     * Admin nhập tất cả biến thể ngay khi tạo sản phẩm mới.
-     */
     @Transactional
     public Product createProductWithVariants(Product product,
                                              List<ProductVariant> variants) {
@@ -110,13 +102,19 @@ public class ProductService {
         return productRepository.save(product);
     }
 
-    /** Soft delete — ẩn sản phẩm + xóa khỏi cart */
+    /**
+     * Soft delete — ẩn sản phẩm + xóa khỏi cart.
+     * ✅ Xóa cart item qua từng variantId thay vì productId.
+     */
     @Transactional
     public void deleteProduct(Integer id) {
         Product product = getProductById(id);
         product.setIsDeleted(true);
         productRepository.save(product);
-        cartItemRepository.deleteByProductId(id);
+
+        // Xóa cart item của tất cả variant thuộc product này
+        variantRepository.findByProductId(id)
+                .forEach(v -> cartItemRepository.deleteByVariantId(v.getId()));
     }
 
     public void restoreProduct(Integer id) {
@@ -127,7 +125,10 @@ public class ProductService {
         productRepository.save(product);
     }
 
-    /** Hard delete — xóa hoàn toàn, chỉ cho phép khi không còn đơn active */
+    /**
+     * Hard delete — xóa hoàn toàn, chỉ cho phép khi không còn đơn active.
+     * ✅ Xóa cart item qua variantId, check order qua variant.product.
+     */
     @Transactional
     public void hardDeleteProduct(Integer id) throws Exception {
         Product product = productRepository.findById(id)
@@ -141,8 +142,9 @@ public class ProductService {
                     "Không thể xóa! Sản phẩm đang có trong đơn hàng chưa hủy.");
         }
 
-        // Xóa cart items
-        cartItemRepository.deleteByProductId(id);
+        // ✅ Xóa cart items qua variantId
+        variantRepository.findByProductId(id)
+                .forEach(v -> cartItemRepository.deleteByVariantId(v.getId()));
 
         // Xóa order_detail của đơn CANCELLED
         orderDetailRepository.deleteByProductId(id);

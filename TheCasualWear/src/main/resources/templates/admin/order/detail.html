@@ -16,15 +16,15 @@
                 <div th:each="detail : ${order.orderDetails}"
                      class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
                     <div class="d-flex gap-3 align-items-center">
-                        <img th:if="${detail.product.images != null and !detail.product.images.isEmpty()}"
-                             th:src="${detail.product.images[0].imageUrl}"
+                        <img th:if="${detail.variant.product.images != null and !detail.variant.product.images.isEmpty()}"
+                             th:src="${detail.variant.product.images[0].imageUrl}"
                              style="width:65px;height:65px;object-fit:cover" class="rounded"/>
-                        <img th:unless="${detail.product.images != null and !detail.product.images.isEmpty()}"
+                        <img th:unless="${detail.variant.product.images != null and !detail.variant.product.images.isEmpty()}"
                              src="/images/no-image.png"
                              style="width:65px;height:65px;object-fit:cover" class="rounded"/>
                         <div>
-                            <p class="mb-1 fw-bold" th:text="${detail.product.name}"></p>
-                            <!-- ✅ Size + màu + SKU rõ ràng cho admin -->
+                            <p class="mb-1 fw-bold" th:text="${detail.variant.product.name}"></p>
+                            <!-- Size + màu + SKU -->
                             <div class="d-flex gap-1 flex-wrap mb-1"
                                  th:if="${detail.variant != null}">
                                 <span th:if="${detail.variant.size != null}"

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -44,6 +45,10 @@ public class ProductVariant {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @OneToMany(mappedBy = "variant", cascade = CascadeType.ALL)
+    @OrderBy("sortOrder ASC")
+    private List<VariantImage> images;
 
     @Transient
     public BigDecimal getActualPrice() {

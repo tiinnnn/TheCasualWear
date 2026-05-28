@@ -2,6 +2,7 @@ package com.datn.TheCasualWear.controller;
 
 import com.datn.TheCasualWear.entity.Product;
 import com.datn.TheCasualWear.entity.ProductVariant;
+import com.datn.TheCasualWear.entity.VariantImage;
 import com.datn.TheCasualWear.service.ProductService;
 import com.datn.TheCasualWear.service.ProductVariantService;
 import lombok.RequiredArgsConstructor;
@@ -49,7 +50,7 @@ public class ShopController {
         Product product = productService.getProductById(id);
         List<ProductVariant> variants = variantService.getVariantsByProduct(id);
 
-        // ✅ Build plain DTO list để tránh Jackson lazy-load lỗi khi serialize sang JSON
+        // Build plain DTO list để tránh Jackson lazy-load lỗi khi serialize sang JSON
         List<Map<String, Object>> variantData = new ArrayList<>();
         for (ProductVariant v : variants) {
             Map<String, Object> m = new LinkedHashMap<>();
@@ -59,6 +60,7 @@ public class ShopController {
                     ? v.getPriceAdjustment().doubleValue() : 0.0);
             m.put("sku",             v.getSku());
 
+            // Color
             Map<String, Object> color = null;
             if (v.getColor() != null) {
                 color = new LinkedHashMap<>();
@@ -67,6 +69,7 @@ public class ShopController {
             }
             m.put("color", color);
 
+            // Size
             Map<String, Object> size = null;
             if (v.getSize() != null) {
                 size = new LinkedHashMap<>();
@@ -75,12 +78,27 @@ public class ShopController {
             }
             m.put("size", size);
 
+            // ✅ Ảnh riêng của variant — dùng cho slideshow khi chọn màu
+            // Fallback: nếu variant không có ảnh riêng thì dùng ảnh product
+            List<String> imageUrls = new ArrayList<>();
+            if (v.getImages() != null && !v.getImages().isEmpty()) {
+                for (VariantImage img : v.getImages()) {
+                    imageUrls.add(img.getImageUrl());
+                }
+            } else {
+                // Fallback về product images
+                if (product.getImages() != null) {
+                    product.getImages().forEach(img -> imageUrls.add(img.getImageUrl()));
+                }
+            }
+            m.put("images", imageUrls);
+
             variantData.add(m);
         }
 
         model.addAttribute("product",     product);
         model.addAttribute("variantData", variantData); // dùng trong JS
-        model.addAttribute("variants",    variants);    // dùng trong Thymeleaf nếu cần
+        model.addAttribute("variants",    variants);    // dùng trong Thymeleaf
 
         if (product.getCategory() != null) {
             model.addAttribute("relatedProducts",

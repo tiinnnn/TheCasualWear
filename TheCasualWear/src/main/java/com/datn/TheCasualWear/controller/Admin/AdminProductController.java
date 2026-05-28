@@ -26,6 +26,7 @@ public class AdminProductController {
     private final SizeService           sizeService;
     private final ColorService          colorService;
     private final CloudinaryService     cloudinaryService;
+    private final VariantImageService   variantImageService; // ✅ thêm mới
 
     private void addFormData(Model model) {
         model.addAttribute("categories", categoryService.getAllCategories());
@@ -92,8 +93,8 @@ public class AdminProductController {
                     cloudinaryService.copyImagesFromUrls(saved, copiedImageUrls);
                 if (imageFiles != null && !imageFiles.isEmpty() && !imageFiles.get(0).isEmpty())
                     cloudinaryService.uploadProductImages(saved, imageFiles);
-                ra.addFlashAttribute("successMessage", "Thêm sản phẩm thành công! Hãy thêm biến thể bên dưới.");
-                // Redirect thẳng vào trang variants sau khi tạo mới
+                ra.addFlashAttribute("successMessage",
+                        "Thêm sản phẩm thành công! Hãy thêm biến thể bên dưới.");
                 return "redirect:/admin/products/" + saved.getId() + "/variants";
             } else {
                 productService.updateProduct(product.getId(), product);
@@ -118,32 +119,18 @@ public class AdminProductController {
     // TRANG QUẢN LÝ VARIANT
     // =========================================================
 
-    /**
-     * Trang chính: hiển thị danh sách variant theo nhóm màu,
-     * form thêm variant mới (chọn màu → tick nhiều size → nhập stock từng size).
-     */
     @GetMapping("/{id}/variants")
     public String variantPage(@PathVariable Integer id, Model model) {
         Product product = productService.getProductById(id);
         List<ProductVariant> variants = variantService.getVariantsByProduct(id);
-        model.addAttribute("product",  product);
-        model.addAttribute("variants", variants);
+        model.addAttribute("product",    product);
+        model.addAttribute("variants",   variants);
         model.addAttribute("totalStock", variantService.getTotalStock(id));
         addFormData(model);
         model.addAttribute("view", "admin/product/variants");
         return "layouts/admin-layout";
     }
 
-    /**
-     * Thêm nhiều variant cùng lúc: 1 màu + nhiều size, mỗi size có stock riêng.
-     * Form gửi:
-     *   colorId        — 1 giá trị
-     *   sizeId[]       — mảng size được tick
-     *   stock[{sizeId}]— stock cho từng sizeId
-     *   costPrice      — giá vốn chung (áp dụng cho tất cả size trong batch)
-     *   priceAdjustment— chênh lệch giá chung
-     *   skuPrefix      — prefix SKU, hệ thống thêm -SIZE vào sau
-     */
     @PostMapping("/{id}/variants/add-batch")
     public String addVariantBatch(
             @PathVariable Integer id,
@@ -170,15 +157,12 @@ public class AdminProductController {
                     ? stockValues.get(i) : 0;
 
             ProductVariant v = new ProductVariant();
-
             Color c = new Color(); c.setId(colorId); v.setColor(c);
             Size  s = new Size();  s.setId(sizeId);  v.setSize(s);
-
             v.setStock(stock != null && stock >= 0 ? stock : 0);
             v.setCostPrice(costPrice);
             v.setPriceAdjustment(priceAdjustment);
 
-            // SKU = prefix-SIZENAME hoặc tự sinh
             if (skuPrefix != null && !skuPrefix.isBlank()) {
                 String sizeName = sizeService.getSizeById(sizeId).getName();
                 v.setSku(skuPrefix.toUpperCase().trim() + "-" + sizeName.toUpperCase());
@@ -203,7 +187,6 @@ public class AdminProductController {
         return "redirect:/admin/products/" + id + "/variants";
     }
 
-    /** Sửa stock / costPrice / priceAdjustment của 1 variant (inline form). */
     @PostMapping("/{productId}/variants/edit/{variantId}")
     public String editVariant(@PathVariable Integer productId,
                               @PathVariable Integer variantId,
@@ -218,7 +201,6 @@ public class AdminProductController {
         return "redirect:/admin/products/" + productId + "/variants";
     }
 
-    /** Xóa variant. */
     @GetMapping("/{productId}/variants/delete/{variantId}")
     public String deleteVariant(@PathVariable Integer productId,
                                 @PathVariable Integer variantId,
@@ -232,7 +214,6 @@ public class AdminProductController {
         return "redirect:/admin/products/" + productId + "/variants";
     }
 
-    /** Cập nhật stock nhanh — AJAX. */
     @PostMapping("/{productId}/variants/{variantId}/stock")
     @ResponseBody
     public ResponseEntity<String> updateStock(@PathVariable Integer productId,
@@ -244,6 +225,49 @@ public class AdminProductController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    // =========================================================
+    // ✅ QUẢN LÝ ẢNH VARIANT
+    // =========================================================
+
+    /**
+     * Upload ảnh cho 1 variant cụ thể.
+     * Form: POST /admin/products/{productId}/variants/{variantId}/images/upload
+     */
+    @PostMapping("/{productId}/variants/{variantId}/images/upload")
+    public String uploadVariantImages(
+            @PathVariable Integer productId,
+            @PathVariable Integer variantId,
+            @RequestParam("imageFiles") List<MultipartFile> imageFiles,
+            RedirectAttributes ra) {
+        try {
+            ProductVariant variant = variantService.getVariantById(variantId);
+            variantImageService.uploadImages(variant, imageFiles);
+            ra.addFlashAttribute("successMessage", "Đã upload ảnh cho biến thể!");
+        } catch (Exception e) {
+            ra.addFlashAttribute("errorMessage", "Lỗi upload ảnh: " + e.getMessage());
+        }
+        return "redirect:/admin/products/" + productId + "/variants";
+    }
+
+    /**
+     * Xóa 1 ảnh variant.
+     * GET /admin/products/{productId}/variants/{variantId}/images/delete/{imageId}
+     */
+    @GetMapping("/{productId}/variants/{variantId}/images/delete/{imageId}")
+    public String deleteVariantImage(
+            @PathVariable Integer productId,
+            @PathVariable Integer variantId,
+            @PathVariable Integer imageId,
+            RedirectAttributes ra) {
+        try {
+            variantImageService.deleteImage(imageId);
+            ra.addFlashAttribute("successMessage", "Đã xóa ảnh biến thể!");
+        } catch (Exception e) {
+            ra.addFlashAttribute("errorMessage", "Lỗi xóa ảnh: " + e.getMessage());
+        }
+        return "redirect:/admin/products/" + productId + "/variants";
     }
 
     @GetMapping("/delete/{id}")

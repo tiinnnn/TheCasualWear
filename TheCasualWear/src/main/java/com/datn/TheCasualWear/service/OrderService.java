@@ -19,17 +19,17 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderService {
 
-    private final AppOrderRepository    orderRepository;
-    private final OrderDetailRepository orderDetailRepository;
-    private final OrderVoucherRepository orderVoucherRepository;
-    private final CartService           cartService;
-    private final VoucherService        voucherService;
-    private final ProductVariantRepository variantRepository; // ✅ thay ProductRepository
-    private final NotificationService   notificationService;
+    private final AppOrderRepository       orderRepository;
+    private final OrderDetailRepository    orderDetailRepository;
+    private final OrderVoucherRepository   orderVoucherRepository;
+    private final CartService              cartService;
+    private final VoucherService           voucherService;
+    private final ProductVariantRepository variantRepository;
+    private final NotificationService      notificationService;
 
     private static final int ADMIN_PAGE_SIZE = 10;
 
-    // ==================== QUERY ====================
+    // QUERY
 
     public Page<AppOrder> getAllOrders(String keyword, String status, int page) {
         String      kw         = (keyword == null || keyword.isBlank()) ? null : keyword;
@@ -65,7 +65,7 @@ public class OrderService {
         return orderRepository.findByCustomerIdOrderByOrderDateDesc(user.getId());
     }
 
-    // ==================== CUSTOMER ====================
+    //CUSTOMER
 
     @Transactional
     public AppOrder placeOrder(AppUser user, Address shippingAddress,
@@ -80,9 +80,12 @@ public class OrderService {
 
         // Áp dụng voucher nếu có
         Voucher voucher = null;
+        BigDecimal discountAmount = BigDecimal.ZERO;
         if (voucherCode != null && !voucherCode.isBlank()) {
-            voucher    = voucherService.applyVoucher(voucherCode, totalPrice, user);
-            totalPrice = voucherService.calcDiscountedPrice(totalPrice, voucher);
+            voucher       = voucherService.applyVoucher(voucherCode, totalPrice, user);
+            BigDecimal discounted = voucherService.calcDiscountedPrice(totalPrice, voucher);
+            discountAmount = totalPrice.subtract(discounted);
+            totalPrice     = discounted;
         }
 
         // Tạo đơn hàng
@@ -96,21 +99,20 @@ public class OrderService {
         order.setIsPaid("VNPAY".equals(paymentMethod));
         orderRepository.save(order);
 
-        // Tạo order details — check stock từ variant
+        // Tạo order details — product lấy qua variant.getProduct()
         for (CartItem item : cartItems) {
-            Product        product = item.getProduct();
-            ProductVariant variant = item.getVariant(); // ✅
+            ProductVariant variant = item.getVariant();
+            Product product = variant.getProduct();
 
-            // ✅ Check stock từ variant
             if (variant.getStock() < item.getQuantity()) {
                 throw new IllegalStateException(
                         "Sản phẩm '" + product.getName()
-                                + "' (size: " + (variant.getSize() != null ? variant.getSize().getName() : "?")
+                                + "' (size: " + (variant.getSize()  != null ? variant.getSize().getName()  : "?")
                                 + ", màu: "   + (variant.getColor() != null ? variant.getColor().getName() : "?")
                                 + ") chỉ còn " + variant.getStock() + " trong kho!");
             }
 
-            // ✅ Snapshot giá tại thời điểm mua = base + adjustment
+            // Snapshot giá tại thời điểm mua = base + adjustment
             BigDecimal unitPrice = product.getPrice();
             if (variant.getPriceAdjustment() != null) {
                 unitPrice = unitPrice.add(variant.getPriceAdjustment());
@@ -118,23 +120,22 @@ public class OrderService {
 
             OrderDetail detail = new OrderDetail();
             detail.setOrder(order);
-            detail.setProduct(product);
-            detail.setVariant(variant); // ✅
+            detail.setVariant(variant);
             detail.setQuantity(item.getQuantity());
             detail.setPrice(unitPrice);
             orderDetailRepository.save(detail);
 
-            // ✅ Trừ stock từ variant
+            // Trừ stock từ variant
             variant.setStock(variant.getStock() - item.getQuantity());
             variantRepository.save(variant);
         }
 
-        // Lưu voucher đã dùng
         if (voucher != null) {
             OrderVoucher orderVoucher = new OrderVoucher();
             orderVoucher.setOrder(order);
             orderVoucher.setVoucher(voucher);
             orderVoucher.setCustomer(user);
+            orderVoucher.setDiscountAmount(discountAmount);
             orderVoucherRepository.save(orderVoucher);
         }
 
@@ -170,7 +171,7 @@ public class OrderService {
                     "Đơn hàng đã thanh toán không thể hủy trực tiếp. "
                             + "Vui lòng liên hệ Zalo 0901.234.567 để được hỗ trợ!");
         }
-        restoreVariantStock(order); // ✅
+        restoreVariantStock(order);
         removeOrderVoucher(order, orderId);
         order.setStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
@@ -233,8 +234,6 @@ public class OrderService {
                 || order.getStatus() == OrderStatus.CANCELLED) {
             throw new IllegalStateException("Không thể hủy đơn hàng này!");
         }
-        // ✅ Chỉ hoàn stock nếu đã trừ (PENDING chưa trừ? — tuỳ logic bạn)
-        // Ở đây giữ nguyên logic cũ: PENDING không hoàn, các trạng thái khác thì hoàn
         if (order.getStatus() != OrderStatus.PENDING) {
             restoreVariantStock(order);
         }
@@ -306,14 +305,11 @@ public class OrderService {
 
     // ==================== HELPER ====================
 
-    /**
-     * ✅ Hoàn stock về variant (thay vì product.stock cũ).
-     */
     @Transactional
     protected void restoreVariantStock(AppOrder order) {
         List<OrderDetail> details = orderDetailRepository.findByOrderId(order.getId());
         for (OrderDetail detail : details) {
-            ProductVariant variant = detail.getVariant(); // ✅
+            ProductVariant variant = detail.getVariant();
             variant.setStock(variant.getStock() + detail.getQuantity());
             variantRepository.save(variant);
         }
