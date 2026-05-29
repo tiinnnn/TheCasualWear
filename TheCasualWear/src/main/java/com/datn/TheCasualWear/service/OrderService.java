@@ -2,6 +2,7 @@ package com.datn.TheCasualWear.service;
 
 import com.datn.TheCasualWear.config.ResourceNotFoundException;
 import com.datn.TheCasualWear.entity.*;
+import com.datn.TheCasualWear.enums.AssignmentStatus;
 import com.datn.TheCasualWear.enums.OrderStatus;
 import com.datn.TheCasualWear.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -26,7 +28,8 @@ public class OrderService {
     private final VoucherService           voucherService;
     private final ProductVariantRepository variantRepository;
     private final NotificationService      notificationService;
-
+    private final OrderAssignmentRepository assignmentRepository;
+    private final AppUserRepository         appUserRepository;
     private static final int ADMIN_PAGE_SIZE = 10;
 
     // QUERY
@@ -189,7 +192,7 @@ public class OrderService {
         );
     }
 
-    // ==================== ADMIN ====================
+    //ADMIN
 
     public void confirmOrder(Integer orderId) {
         AppOrder order = getOrderById(orderId);
@@ -221,10 +224,6 @@ public class OrderService {
                 "Đơn hàng #" + orderId + " đang trên đường giao đến bạn!",
                 "/order/detail/" + orderId
         );
-        notificationService.createNotificationForDeliveries(
-                "Đơn hàng #" + orderId + " đang chờ bạn giao!",
-                "/delivery"
-        );
     }
 
     @Transactional
@@ -249,18 +248,34 @@ public class OrderService {
         );
     }
 
-    // ==================== DELIVERY ====================
+    //DELIVERY
 
     public List<AppOrder> getShippingOrders() {
         return orderRepository.findByStatus(OrderStatus.SHIPPING);
     }
 
-    public void markDelivered(Integer orderId) {
+    @Transactional
+    public void markDelivered(Integer orderId, AppUser currentUser) {
         AppOrder order = getOrderById(orderId);
+
         if (order.getStatus() != OrderStatus.SHIPPING) {
             throw new IllegalStateException(
                     "Đơn hàng không ở trạng thái đang giao!");
         }
+
+        OrderAssignment assignment = assignmentRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Đơn hàng chưa được phân công cho bạn!"));
+
+        if (!assignment.getDeliveryStaff().getId().equals(currentUser.getId())) {
+            throw new IllegalStateException(
+                    "Bạn không được phân công giao đơn này!");
+        }
+
+        assignment.setStatus(AssignmentStatus.DELIVERED);
+        assignment.setDeliveredAt(LocalDateTime.now());
+        assignmentRepository.save(assignment);
+
         order.setStatus(OrderStatus.DELIVERED);
         order.setDeliveredAt(LocalDateTime.now());
         if ("COD".equals(order.getPaymentMethod())) {
@@ -275,7 +290,7 @@ public class OrderService {
         );
     }
 
-    // ==================== SCHEDULED ====================
+    //SCHEDULED
 
     @Transactional
     public void autoConfirmDeliveredOrders() {
@@ -303,7 +318,86 @@ public class OrderService {
                 .forEach(orderRepository::delete);
     }
 
-    // ==================== HELPER ====================
+    @Transactional
+    public void markFailed(Integer orderId, AppUser currentUser, String failReason) {
+        AppOrder order = getOrderById(orderId);
+
+        if (order.getStatus() != OrderStatus.SHIPPING) {
+            throw new IllegalStateException("Đơn hàng không ở trạng thái đang giao!");
+        }
+
+        OrderAssignment assignment = assignmentRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Đơn hàng chưa được phân công!"));
+
+        if (!assignment.getDeliveryStaff().getId().equals(currentUser.getId())) {
+            throw new IllegalStateException("Bạn không được phân công giao đơn này!");
+        }
+
+        assignment.setStatus(AssignmentStatus.FAILED);
+        assignment.setFailReason(failReason);
+        assignmentRepository.save(assignment);
+
+        restoreVariantStock(order);
+        order.setStatus(OrderStatus.CANCELLED);
+        orderRepository.save(order);
+
+        notificationService.createNotificationForAdmins(
+                "Đơn hàng #" + orderId + " giao thất bại! Lý do: " + failReason,
+                "/admin/orders/" + orderId
+        );
+        notificationService.createNotification(
+                order.getCustomer(),
+                "Đơn hàng #" + orderId + " đã bị hủy do giao không thành công. Lý do: " + failReason,
+                "/order/detail/" + orderId
+        );
+    }
+
+    //ASSIGNMENT
+
+    public Optional<OrderAssignment> getAssignmentByOrderId(Integer orderId) {
+        return assignmentRepository.findByOrderId(orderId);
+    }
+
+    public List<OrderAssignment> getMyAssignments(AppUser currentUser) {
+        return assignmentRepository.findByDeliveryStaffId(currentUser.getId());
+    }
+
+    @Transactional
+    public void assignOrder(Integer orderId, Integer deliveryId, AppUser assignedBy) {
+        AppOrder order = getOrderById(orderId);
+
+        if (order.getStatus() != OrderStatus.SHIPPING) {
+            throw new IllegalStateException(
+                    "Chỉ giao được đơn đang ở trạng thái SHIPPING!");
+        }
+        if (assignmentRepository.existsByOrderId(orderId)) {
+            throw new IllegalStateException(
+                    "Đơn hàng này đã được giao cho nhân viên rồi!");
+        }
+
+        AppUser delivery = appUserRepository.findById(deliveryId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy nhân viên!"));
+
+        OrderAssignment assignment = OrderAssignment.builder()
+                .order(order)
+                .deliveryStaff(delivery)
+                .assignedBy(assignedBy)
+                .status(AssignmentStatus.ASSIGNED)
+                .build();
+        assignmentRepository.save(assignment);
+
+        notificationService.createNotification(
+                delivery,
+                "Bạn được phân công giao đơn hàng #" + orderId
+                        + "! Địa chỉ: " + order.getShippingAddress().getStreet()
+                        + ", " + order.getShippingAddress().getCity(),
+                "/delivery/orders/" + orderId
+        );
+    }
+
+    //HELPER
 
     @Transactional
     protected void restoreVariantStock(AppOrder order) {

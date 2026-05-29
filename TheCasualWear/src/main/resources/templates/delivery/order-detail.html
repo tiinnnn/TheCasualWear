@@ -71,10 +71,47 @@
             </div>
         </div>
 
+        <!-- Thông tin phân công -->
+        <div th:if="${assignment != null}"
+             class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="fw-bold mb-2">
+                    <i class="bi bi-person-badge me-1"></i>Phân công giao hàng
+                </h6>
+                <p class="mb-1 small text-muted">
+                    <i class="bi bi-clock me-1"></i>
+                    Phân công lúc:
+                    <span th:text="${#temporals.format(assignment.assignedAt, 'dd/MM/yyyy HH:mm')}"></span>
+                </p>
+                <p class="mb-0">
+                    <strong>Trạng thái: </strong>
+                    <span th:switch="${assignment.status.name()}">
+                        <span th:case="'ASSIGNED'"  class="badge bg-warning text-dark">Đang giao</span>
+                        <span th:case="'DELIVERED'" class="badge bg-success">Đã giao</span>
+                        <span th:case="'FAILED'"    class="badge bg-danger">Giao thất bại</span>
+                    </span>
+                </p>
+                <p th:if="${assignment.status.name() == 'FAILED' and assignment.failReason != null}"
+                   class="mb-0 mt-1 small text-danger">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Lý do: <span th:text="${assignment.failReason}"></span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Chưa được phân công -->
+        <div th:if="${assignment == null and order.status.name() == 'SHIPPING'}"
+             class="alert alert-warning py-2 mb-3">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            Đơn này chưa được phân công cho bạn.
+        </div>
+
         <div class="d-grid gap-2">
             <div th:if="${order.paymentMethod == 'COD'
                  and !order.isPaid
-                 and order.status.name() == 'SHIPPING'}"
+                 and order.status.name() == 'SHIPPING'
+                 and assignment != null
+                 and assignment.status.name() == 'ASSIGNED'}"
                  class="alert alert-warning">
                 <i class="bi bi-exclamation-triangle me-2"></i>
                 <strong>Nhắc nhở:</strong> Thu
@@ -82,7 +119,10 @@
                 tiền mặt từ khách!
             </div>
 
-            <a th:if="${order.status.name() == 'SHIPPING'}"
+            <!-- Nút Đã giao -->
+            <a th:if="${order.status.name() == 'SHIPPING'
+                        and assignment != null
+                        and assignment.status.name() == 'ASSIGNED'}"
                th:href="@{'/delivery/orders/' + ${order.id} + '/delivered'}"
                class="btn btn-success"
                th:attr="data-cod=${order.paymentMethod == 'COD' and !order.isPaid},
@@ -90,6 +130,54 @@
                onclick="return confirmDelivery(this)">
                 <i class="bi bi-check-circle me-2"></i>Xác nhận đã giao hàng
             </a>
+
+            <!-- Nút Thất bại -->
+            <button th:if="${order.status.name() == 'SHIPPING'
+                             and assignment != null
+                             and assignment.status.name() == 'ASSIGNED'}"
+                    class="btn btn-outline-danger"
+                    data-bs-toggle="modal"
+                    data-bs-target="#failModal">
+                <i class="bi bi-x-circle me-2"></i>Giao hàng thất bại
+            </button>
+        </div>
+
+        <!-- Modal nhập lý do thất bại -->
+        <div class="modal fade" id="failModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h6 class="modal-title fw-bold">
+                            <i class="bi bi-x-circle text-danger me-1"></i>Giao hàng thất bại
+                        </h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form th:action="@{'/delivery/orders/' + ${order.id} + '/failed'}" method="post">
+                        <div class="modal-body">
+                            <label class="form-label small text-muted">Lý do thất bại</label>
+                            <select id="failSelect" class="form-select mb-2" required>
+                                <option value="" disabled selected>-- Chọn lý do --</option>
+                                <option value="Khách không nghe máy">Khách không nghe máy</option>
+                                <option value="Khách vắng nhà">Khách vắng nhà</option>
+                                <option value="Địa chỉ không chính xác">Địa chỉ không chính xác</option>
+                                <option value="Khách từ chối nhận hàng">Khách từ chối nhận hàng</option>
+                                <option value="Khác">Khác</option>
+                            </select>
+                            <input type="hidden" id="failReasonInput" name="failReason" value=""/>
+                            <textarea id="failTextarea" class="form-control d-none"
+                                      rows="2" placeholder="Nhập lý do..."></textarea>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary btn-sm"
+                                    data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-danger btn-sm"
+                                    onclick="return prepareFailReason()">
+                                <i class="bi bi-x-circle me-1"></i>Xác nhận thất bại
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -103,6 +191,41 @@
         }
         return confirm('Xác nhận đã giao hàng thành công?');
     }
+
+    function prepareFailReason() {
+        const select   = document.getElementById('failSelect');
+        const textarea = document.getElementById('failTextarea');
+        const input    = document.getElementById('failReasonInput');
+        if (select.value === 'Khác') {
+            if (!textarea.value.trim()) {
+                alert('Vui lòng nhập lý do!');
+                return false;
+            }
+            input.value = textarea.value.trim();
+        } else {
+            if (!select.value) {
+                alert('Vui lòng chọn lý do!');
+                return false;
+            }
+            input.value = select.value;
+        }
+        return true;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const select   = document.getElementById('failSelect');
+        const textarea = document.getElementById('failTextarea');
+        if (select) {
+            select.addEventListener('change', function () {
+                if (this.value === 'Khác') {
+                    textarea.classList.remove('d-none');
+                } else {
+                    textarea.classList.add('d-none');
+                    textarea.value = '';
+                }
+            });
+        }
+    });
 </script>
 </body>
 </html>

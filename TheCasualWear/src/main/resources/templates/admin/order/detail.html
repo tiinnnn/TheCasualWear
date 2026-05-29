@@ -101,8 +101,7 @@
             </div>
         </div>
 
-        <!-- Cập nhật trạng thái -->
-        <div class="card border-0 shadow-sm">
+        <div class="card border-0 shadow-sm mb-3">
             <div class="card-body">
                 <h6 class="fw-bold mb-3">Cập nhật trạng thái</h6>
                 <div class="d-grid gap-2">
@@ -124,6 +123,85 @@
                         <i class="bi bi-x-lg me-1"></i>Hủy đơn
                     </a>
                 </div>
+            </div>
+        </div>
+
+        <!-- Phân công giao hàng — chỉ hiện khi SHIPPING -->
+        <div th:if="${order.status.name() == 'SHIPPING'}"
+             class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">
+                    <i class="bi bi-person-badge me-1"></i>Phân công giao hàng
+                </h6>
+
+                <!-- Đã assign → hiển thị thông tin -->
+                <div th:if="${currentAssignment != null}">
+                    <div class="alert alert-success py-2 mb-3">
+                        <i class="bi bi-check-circle-fill me-1"></i>
+                        Đã phân công cho
+                        <strong th:text="${currentAssignment.deliveryStaff.username}"></strong>
+                    </div>
+                    <table class="table table-sm table-borderless mb-0 small">
+                        <tr>
+                            <td class="text-muted ps-0">Nhân viên</td>
+                            <td class="fw-bold" th:text="${currentAssignment.deliveryStaff.username}"></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted ps-0">Phân công lúc</td>
+                            <td th:text="${#temporals.format(currentAssignment.assignedAt, 'dd/MM/yyyy HH:mm')}"></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted ps-0">Giao bởi</td>
+                            <td th:text="${currentAssignment.assignedBy != null
+                                           ? currentAssignment.assignedBy.username : 'N/A'}"></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted ps-0">Trạng thái</td>
+                            <td>
+                                <span th:switch="${currentAssignment.status.name()}">
+                                    <span th:case="'ASSIGNED'"  class="badge bg-warning text-dark">Đang giao</span>
+                                    <span th:case="'DELIVERED'" class="badge bg-success">Đã giao</span>
+                                    <span th:case="'FAILED'"    class="badge bg-danger">Giao thất bại</span>
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- Chưa assign → hiện form chọn nhân viên -->
+                <div th:if="${currentAssignment == null}">
+
+                    <!-- Không có nhân viên delivery nào trong hệ thống -->
+                    <div th:if="${deliveryStaffs == null or #lists.isEmpty(deliveryStaffs)}"
+                         class="alert alert-warning py-2 mb-0">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        Không có nhân viên delivery nào!
+                    </div>
+
+                    <!-- Có nhân viên → hiện form -->
+                    <form th:if="${deliveryStaffs != null and !#lists.isEmpty(deliveryStaffs)}"
+                          th:action="@{'/admin/orders/' + ${order.id} + '/assign'}"
+                          method="post">
+                        <div class="mb-3">
+                            <label class="form-label small text-muted mb-1">Chọn nhân viên giao hàng</label>
+                            <select name="deliveryId" class="form-select form-select-sm" required>
+                                <option value="" disabled selected>-- Chọn nhân viên --</option>
+                                <option th:each="staff : ${deliveryStaffs}"
+                                        th:value="${staff.id}"
+                                        th:text="${staff.username
+                                                   + (staff.phone != null ? ' — ' + staff.phone : '')}">
+                                </option>
+                            </select>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-sm"
+                                    onclick="return confirm('Xác nhận giao đơn này cho nhân viên đã chọn?')">
+                                <i class="bi bi-person-check me-1"></i>Xác nhận phân công
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
             </div>
         </div>
     </div>

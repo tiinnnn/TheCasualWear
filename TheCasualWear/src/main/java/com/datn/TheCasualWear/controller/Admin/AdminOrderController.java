@@ -1,13 +1,20 @@
 package com.datn.TheCasualWear.controller.Admin;
 
 import com.datn.TheCasualWear.entity.AppOrder;
+import com.datn.TheCasualWear.entity.AppUser;
 import com.datn.TheCasualWear.enums.OrderStatus;
+import com.datn.TheCasualWear.repository.AppUserRepository;
 import com.datn.TheCasualWear.service.OrderService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.util.List;
 
 /**
  * Quản lý đơn hàng phía Admin.
@@ -19,16 +26,20 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  */
 @Controller
 @RequestMapping("/admin/orders")
+@RequiredArgsConstructor
 public class AdminOrderController {
 
     private final OrderService orderService;
+    private final AppUserRepository appUserRepository;
 
-    public AdminOrderController(OrderService orderService) {
-        this.orderService = orderService;
+    private AppUser getCurrentUser() {
+        String username = SecurityContextHolder.getContext()
+                .getAuthentication().getName();
+        return appUserRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalStateException("User not found"));
     }
 
-    // ── Danh sách ─────────────────────────────────────────
-
+    //Danh sách
     @GetMapping
     public String listOrders(@RequestParam(required = false) String keyword,
                              @RequestParam(required = false) String status,
@@ -46,21 +57,28 @@ public class AdminOrderController {
         return "layouts/admin-layout";
     }
 
-    // ── Chi tiết ──────────────────────────────────────────
-
-    /**
-     * Đưa đơn hàng vào model.
-     * Template đọc: order.orderDetails → mỗi item có item.variant.size.name
-     * và item.variant.color.name để hiển thị đúng biến thể đã mua.
-     */
+    //Chi tiết
     @GetMapping("/{id}")
     public String orderDetail(@PathVariable Integer id, Model model) {
-        model.addAttribute("order", orderService.getOrderById(id));
+        AppOrder order = orderService.getOrderById(id);
+        model.addAttribute("order", order);
+
+        if (order.getStatus() == OrderStatus.SHIPPING) {
+            List<AppUser> deliveryStaffs = appUserRepository.findAll().stream()
+                    .filter(u -> u.getRoles().stream()
+                            .anyMatch(r -> r.getName().equals("ROLE_DELIVERY")))
+                    .toList();
+            model.addAttribute("deliveryStaffs", deliveryStaffs);
+
+            orderService.getAssignmentByOrderId(id)
+                    .ifPresent(a -> model.addAttribute("currentAssignment", a));
+        }
+
         model.addAttribute("view", "admin/order/detail");
         return "layouts/admin-layout";
     }
 
-    // ── Thay đổi trạng thái ───────────────────────────────
+    //Thay đổi trạng thái
 
     @GetMapping("/{id}/confirm")
     public String confirmOrder(@PathVariable Integer id,
@@ -84,6 +102,20 @@ public class AdminOrderController {
                               RedirectAttributes redirectAttributes) {
         orderService.cancelOrderByAdmin(id);
         redirectAttributes.addFlashAttribute("successMessage", "Đã hủy đơn hàng!");
+        return "redirect:/admin/orders/" + id;
+    }
+
+    @PostMapping("/{id}/assign")
+    public String assignOrder(@PathVariable Integer id,
+                              @RequestParam Integer deliveryId,
+                              RedirectAttributes redirectAttributes) {
+        try {
+            orderService.assignOrder(id, deliveryId, getCurrentUser());
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Đã giao đơn hàng cho nhân viên thành công!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
         return "redirect:/admin/orders/" + id;
     }
 }

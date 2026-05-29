@@ -180,6 +180,19 @@ CREATE TABLE password_reset_token (
     CONSTRAINT fk_prt_user FOREIGN KEY (user_id) REFERENCES app_user(id)
 );
 
+CREATE TABLE order_assignment (
+    id           INT IDENTITY(1,1) PRIMARY KEY,
+    order_id     INT          NOT NULL FOREIGN KEY REFERENCES app_order(id),
+    delivery_id  INT          NOT NULL FOREIGN KEY REFERENCES app_user(id),
+    assigned_by  INT          FOREIGN KEY REFERENCES app_user(id),
+    assigned_at  DATETIME     DEFAULT GETDATE(),
+    picked_up_at DATETIME     NULL,
+    delivered_at DATETIME     NULL,
+    status       NVARCHAR(20) DEFAULT 'ASSIGNED',
+    fail_reason  NVARCHAR(255) NULL,
+    note         NVARCHAR(255)
+);
+
 -- Mỗi đơn chỉ dùng 1 voucher; mỗi user chỉ dùng 1 lần mỗi voucher
 ALTER TABLE order_voucher ADD CONSTRAINT UQ_order_voucher UNIQUE (order_id);
 ALTER TABLE order_voucher ADD CONSTRAINT UQ_user_voucher  UNIQUE (customer_id, voucher_id);
