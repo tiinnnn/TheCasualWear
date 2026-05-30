@@ -282,8 +282,7 @@
     // Chọn màu
     function selectColor(colorId, btn) {
         selectedColorId = colorId;
-        selectedSizeId  = null;
-        selectedVariant = null;
+        // KHÔNG reset selectedSizeId — giữ nguyên size người dùng đã chọn
 
         // Highlight nút màu
         document.querySelectorAll('#colorBtns button').forEach(b => {
@@ -293,7 +292,7 @@
         btn.classList.remove('btn-outline-dark');
         btn.classList.add('btn-dark');
 
-        // đến ảnh đầu tiên của màu này trong slideshow
+        // Đến ảnh đầu tiên của màu này trong slideshow
         const colorIndexMap = buildColorIndexMap();
         const targetIndex   = colorIndexMap[colorId];
         if (targetIndex !== undefined) {
@@ -301,48 +300,115 @@
             highlightThumb(targetIndex);
         }
 
+        // Cập nhật trạng thái size (không rebuild lại list)
         renderSizes(colorId);
+
+        // Cập nhật selectedVariant theo color + size hiện tại
+        if (selectedSizeId) {
+            selectedVariant = variants.find(v =>
+                v.color && v.color.id === selectedColorId &&
+                v.size  && v.size.id  === selectedSizeId
+            ) || null;
+        } else {
+            selectedVariant = null;
+        }
+
         updateUI();
     }
 
-    // ── Render size ────────────────────────────────────────────────
+    // ── Thứ tự size chuẩn ─────────────────────────────────────────
+    const SIZE_ORDER = ['None', 'Free Size', 'XS', 'S', 'M', 'L', 'XL', 'XXL',
+                        '3XL', '4XL', '5XL'];
+    function sizeRank(name) {
+        const idx = SIZE_ORDER.indexOf(name);
+        return idx === -1 ? 99 : idx;
+    }
+
+    // ── Render size (union tất cả variant, state theo màu đang chọn) ──
     function renderSizes(colorId) {
         const sizeDiv = document.getElementById('sizeBtns');
-        sizeDiv.innerHTML = '';
 
-        const filtered = colorId
-            ? variants.filter(v => v.color && v.color.id === colorId)
-            : variants;
-
-        const sizeMap = new Map();
-        filtered.forEach(v => {
-            if (v.size && !sizeMap.has(v.size.id))
-                sizeMap.set(v.size.id, { name: v.size.name, stock: v.stock });
+        // Build union tất cả sizes từ mọi variant
+        const allSizeMap = new Map();
+        variants.forEach(v => {
+            if (v.size && !allSizeMap.has(v.size.id))
+                allSizeMap.set(v.size.id, v.size.name);
         });
 
-        if (sizeMap.size === 0) {
+        if (allSizeMap.size === 0) {
             document.getElementById('sizeSection').style.display = 'none';
             return;
         }
         document.getElementById('sizeSection').style.display = '';
 
-        sizeMap.forEach((info, id) => {
+        // Sort theo SIZE_ORDER
+        const sorted = [...allSizeMap.entries()]
+            .sort((a, b) => sizeRank(a[1]) - sizeRank(b[1]));
+
+        // Nếu đã có nút rồi thì chỉ update state, không rebuild
+        const existingBtns = sizeDiv.querySelectorAll('button');
+        if (existingBtns.length === sorted.length) {
+            // Chỉ cập nhật trạng thái từng nút
+            existingBtns.forEach((btn, i) => {
+                const [id, name] = sorted[i];
+                _applySizeState(btn, id, name, colorId);
+            });
+            return;
+        }
+
+        // Build lần đầu
+        sizeDiv.innerHTML = '';
+        sorted.forEach(([id, name]) => {
             const btn = document.createElement('button');
             btn.type           = 'button';
             btn.dataset.sizeId = id;
-            if (info.stock === 0) {
-                btn.className            = 'btn btn-sm btn-outline-secondary';
-                btn.style.textDecoration = 'line-through';
-                btn.style.opacity        = '0.5';
-                btn.disabled             = true;
-                btn.title                = 'Hết hàng';
-            } else {
-                btn.className = 'btn btn-sm btn-outline-dark';
-                btn.onclick   = () => selectSize(id, btn);
-            }
-            btn.textContent = info.name;
+            _applySizeState(btn, id, name, colorId);
             sizeDiv.appendChild(btn);
         });
+    }
+
+    // Helper: áp trạng thái cho 1 nút size theo colorId hiện tại
+    function _applySizeState(btn, sizeId, sizeName, colorId) {
+        // Tìm variant khớp color + size
+        const match = colorId
+            ? variants.find(v => v.color && v.color.id === colorId
+                               && v.size  && v.size.id  === sizeId)
+            : variants.find(v => v.size && v.size.id === sizeId);
+
+        btn.textContent     = sizeName;
+        btn.dataset.sizeId  = sizeId;
+
+        if (!match) {
+            // Size không tồn tại trong color này → in mờ gạch ngang
+            btn.className            = 'btn btn-sm btn-outline-secondary';
+            btn.style.textDecoration = 'line-through';
+            btn.style.opacity        = '0.4';
+            btn.disabled             = true;
+            btn.title                = 'Không có trong màu này';
+            btn.onclick              = null;
+        } else if (match.stock === 0) {
+            // Có variant nhưng hết hàng
+            btn.className            = 'btn btn-sm btn-outline-secondary';
+            btn.style.textDecoration = 'line-through';
+            btn.style.opacity        = '0.5';
+            btn.disabled             = true;
+            btn.title                = 'Hết hàng';
+            btn.onclick              = null;
+        } else {
+            // Có hàng
+            btn.className            = 'btn btn-sm btn-outline-dark';
+            btn.style.textDecoration = '';
+            btn.style.opacity        = '1';
+            btn.disabled             = false;
+            btn.title                = '';
+            btn.onclick              = () => selectSize(sizeId, btn);
+        }
+
+        // Giữ highlight nếu đang được chọn
+        if (sizeId === selectedSizeId && !btn.disabled) {
+            btn.classList.remove('btn-outline-dark');
+            btn.classList.add('btn-dark');
+        }
     }
 
     // ── Chọn size ─────────────────────────────────────────────────

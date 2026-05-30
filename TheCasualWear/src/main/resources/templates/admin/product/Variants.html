@@ -449,16 +449,41 @@
             };
 
             // ── Auto SKU prefix ──────────────────────────────────────
-            window.autoSKU = function () {
+            let skuManuallyEdited = false;
+
+            document.getElementById('skuPrefix').addEventListener('input', function () {
+                skuManuallyEdited = true;
+            });
+
+            function buildSKU() {
                 const colorSel  = document.getElementById('colorSelect');
                 const colorText = colorSel.options[colorSel.selectedIndex]?.text || '';
+                if (!colorText || colorText.startsWith('--')) return '';
                 const nameCode  = removeDiac(PRODUCT_NAME)
                     .split(' ').filter(Boolean)
                     .map(w => w[0].toUpperCase()).join('');
-                const colorCode = removeDiac(colorText)
-                    .replace(/\s/g, '').substring(0, 4).toUpperCase();
-                document.getElementById('skuPrefix').value =
-                    [nameCode, colorCode].filter(Boolean).join('-');
+                // Mỗi từ trong tên màu lấy 2 ký tự đầu → tránh collision
+                // VD: 'Xanh Navy' → 'XANA', 'Xanh Nhạt' → 'XANH'
+                const colorWords = removeDiac(colorText).split(' ').filter(Boolean);
+                const colorCode = colorWords.length === 1
+                    ? colorWords[0].substring(0, 4).toUpperCase()
+                    : colorWords.map(w => w.substring(0, 2)).join('').substring(0, 6).toUpperCase();
+                return [nameCode, colorCode].filter(Boolean).join('-');
+            }
+
+            document.getElementById('colorSelect').addEventListener('change', function () {
+                if (!skuManuallyEdited) {
+                    const val = buildSKU();
+                    if (val) document.getElementById('skuPrefix').value = val;
+                }
+            });
+
+            window.autoSKU = function () {
+                const val = buildSKU();
+                if (val) {
+                    document.getElementById('skuPrefix').value = val;
+                    skuManuallyEdited = false;
+                }
             };
 
             function removeDiac(s) {

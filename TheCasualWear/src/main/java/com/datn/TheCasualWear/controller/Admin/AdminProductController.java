@@ -115,9 +115,7 @@ public class AdminProductController {
         }
     }
 
-    // =========================================================
     // TRANG QUẢN LÝ VARIANT
-    // =========================================================
 
     @GetMapping("/{id}/variants")
     public String variantPage(@PathVariable Integer id, Model model) {
@@ -227,14 +225,6 @@ public class AdminProductController {
         }
     }
 
-    // =========================================================
-    // ✅ QUẢN LÝ ẢNH VARIANT
-    // =========================================================
-
-    /**
-     * Upload ảnh cho 1 variant cụ thể.
-     * Form: POST /admin/products/{productId}/variants/{variantId}/images/upload
-     */
     @PostMapping("/{productId}/variants/{variantId}/images/upload")
     public String uploadVariantImages(
             @PathVariable Integer productId,

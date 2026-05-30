@@ -48,6 +48,36 @@
                               detail.price.doubleValue() * detail.quantity, 0, 'COMMA') + ' đ'}"></span>
                 </div>
                 <hr/>
+
+                <!-- Tạm tính (trước voucher) -->
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Tạm tính:</span>
+                    <!-- Nếu có voucher: totalPrice (đã giảm) + discountAmount = giá gốc -->
+                    <span th:if="${order.orderVoucher == null}"
+                          th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></span>
+                    <span th:if="${order.orderVoucher != null}"
+                          th:text="${#numbers.formatInteger(
+                              order.totalPrice.add(order.orderVoucher.discountAmount),
+                              0, 'COMMA') + ' đ'}"></span>
+                </div>
+
+                <!-- Giảm giá voucher -->
+                <div th:if="${order.orderVoucher != null}"
+                     class="d-flex justify-content-between mb-2">
+                    <span class="text-success">
+                        <i class="bi bi-tag-fill me-1"></i>
+                        Voucher
+                        <small class="text-muted"
+                               th:text="'(' + ${order.orderVoucher.voucher.code} + ')'"></small>:
+                    </span>
+                    <span class="text-success fw-bold"
+                          th:text="'- ' + ${#numbers.formatInteger(
+                              order.orderVoucher.discountAmount, 0, 'COMMA') + ' đ'}"></span>
+                </div>
+
+                <hr class="my-2"/>
+
+                <!-- Tổng thực tế phải trả -->
                 <div class="d-flex justify-content-between fw-bold fs-5">
                     <span>Tổng cộng:</span>
                     <span class="text-danger"
