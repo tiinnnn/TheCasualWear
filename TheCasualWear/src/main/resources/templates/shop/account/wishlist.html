@@ -1,0 +1,79 @@
+<div xmlns:th="http://www.thymeleaf.org"
+     class="container py-5">
+
+    <h4 class="fw-bold mb-4">
+        <i class="bi bi-heart-fill text-danger me-2"></i>Sản phẩm yêu thích
+        <span th:if="${not #lists.isEmpty(wishlist)}"
+              class="text-muted fs-6 fw-normal ms-2"
+              th:text="'(' + ${#lists.size(wishlist)} + ' sản phẩm)'"></span>
+    </h4>
+
+    <!-- Danh sách rỗng -->
+    <div th:if="${#lists.isEmpty(wishlist)}" class="text-center py-5">
+        <i class="bi bi-heart display-1 text-muted d-block mb-3"></i>
+        <p class="text-muted mb-4">Bạn chưa có sản phẩm yêu thích nào.</p>
+        <a th:href="@{/shop}" class="btn btn-dark px-5">Khám phá ngay</a>
+    </div>
+
+    <!-- Grid sản phẩm -->
+    <div th:unless="${#lists.isEmpty(wishlist)}"
+         class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-4">
+
+        <div class="col" th:each="item : ${wishlist}">
+            <div class="card border-0 shadow-sm h-100">
+
+                <!-- Ảnh -->
+                <div class="position-relative overflow-hidden" style="height:240px;">
+                    <a th:href="@{/product/{id}(id=${item.product.id})}">
+                        <img th:if="${item.product.images != null and !item.product.images.empty}"
+                             th:src="${item.product.images[0].imageUrl}"
+                             th:alt="${item.product.name}"
+                             class="w-100 h-100 object-fit-cover"/>
+                        <img th:unless="${item.product.images != null and !item.product.images.empty}"
+                             src="/images/no-image.png"
+                             alt="No image"
+                             class="w-100 h-100 object-fit-cover"/>
+                    </a>
+
+                    <!-- Nút xóa góc trên phải -->
+                    <form th:action="@{/wishlist/remove/{id}(id=${item.product.id})}"
+                          method="post"
+                          class="position-absolute top-0 end-0 m-2">
+                        <button type="submit"
+                                class="btn btn-light btn-sm rounded-circle shadow-sm"
+                                style="width:34px;height:34px;padding:0"
+                                title="Xóa khỏi yêu thích">
+                            <i class="bi bi-heart-fill text-danger"></i>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Thông tin -->
+                <div class="card-body d-flex flex-column p-3">
+                    <a th:href="@{/product/{id}(id=${item.product.id})}"
+                       class="text-decoration-none text-dark fw-semibold mb-1 text-truncate d-block"
+                       th:text="${item.product.name}"></a>
+
+                    <p class="text-muted small mb-1"
+                       th:text="${item.product.category != null ? item.product.category.name : ''}"></p>
+
+                    <p class="text-danger fw-bold mb-3"
+                       th:text="${#numbers.formatInteger(item.product.price, 0, 'COMMA') + ' đ'}"></p>
+
+                    <a th:href="@{/product/{id}(id=${item.product.id})}"
+                       class="btn btn-dark btn-sm mt-auto">Xem sản phẩm</a>
+                </div>
+
+                <!-- Footer: ngày thêm -->
+                <div class="card-footer bg-white border-top-0 pb-3 pt-0">
+                    <small class="text-muted">
+                        <i class="bi bi-clock me-1"></i>
+                        <span th:text="${#temporals.format(item.addedAt, 'dd/MM/yyyy')}"></span>
+                    </small>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div>

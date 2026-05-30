@@ -5,8 +5,10 @@ import com.datn.TheCasualWear.entity.ProductVariant;
 import com.datn.TheCasualWear.entity.VariantImage;
 import com.datn.TheCasualWear.service.ProductService;
 import com.datn.TheCasualWear.service.ProductVariantService;
+import com.datn.TheCasualWear.service.WishlistService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +21,7 @@ public class ShopController {
 
     private final ProductService        productService;
     private final ProductVariantService variantService;
+    private final WishlistService       wishlistService;
 
     @GetMapping("/")
     public String homePage(Model model) {
@@ -46,11 +49,12 @@ public class ShopController {
     }
 
     @GetMapping("/product/{id}")
-    public String productDetail(@PathVariable Integer id, Model model) {
+    public String productDetail(@PathVariable Integer id,
+                                Authentication auth,
+                                Model model) {
         Product product = productService.getProductById(id);
         List<ProductVariant> variants = variantService.getVariantsByProduct(id);
 
-        // Build plain DTO list để tránh Jackson lazy-load lỗi khi serialize sang JSON
         List<Map<String, Object>> variantData = new ArrayList<>();
         for (ProductVariant v : variants) {
             Map<String, Object> m = new LinkedHashMap<>();
@@ -78,8 +82,6 @@ public class ShopController {
             }
             m.put("size", size);
 
-            // ✅ Ảnh riêng của variant — dùng cho slideshow khi chọn màu
-            // Fallback: nếu variant không có ảnh riêng thì dùng ảnh product
             List<String> imageUrls = new ArrayList<>();
             if (v.getImages() != null && !v.getImages().isEmpty()) {
                 for (VariantImage img : v.getImages()) {
@@ -99,6 +101,13 @@ public class ShopController {
         model.addAttribute("product",     product);
         model.addAttribute("variantData", variantData); // dùng trong JS
         model.addAttribute("variants",    variants);    // dùng trong Thymeleaf
+
+        // Wishlist: check nếu user đã đăng nhập (loại trừ anonymousUser)
+        boolean isWishlisted = auth != null
+                && auth.isAuthenticated()
+                && !auth.getName().equals("anonymousUser")
+                && wishlistService.isWishlisted(auth.getName(), id);
+        model.addAttribute("isWishlisted", isWishlisted);
 
         if (product.getCategory() != null) {
             model.addAttribute("relatedProducts",

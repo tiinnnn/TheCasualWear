@@ -3,6 +3,7 @@ package com.datn.TheCasualWear.controller;
 import com.datn.TheCasualWear.entity.AppUser;
 import com.datn.TheCasualWear.service.AppUserService;
 import com.datn.TheCasualWear.service.CartService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -40,15 +41,20 @@ public class CartController {
     public String addToCart(@RequestParam Integer variantId,
                             @RequestParam(defaultValue = "1") Integer quantity,
                             Authentication auth,
+                            HttpServletRequest request,
                             RedirectAttributes redirectAttributes) {
         AppUser user = getCurrentUser(auth);
+        String referer = request.getHeader("Referer");
+        String redirectTo = (referer != null && !referer.isBlank()) ? referer : "/shop";
+
         try {
             cartService.addToCart(user, variantId, quantity);
             redirectAttributes.addFlashAttribute("successMessage", "Đã thêm vào giỏ hàng!");
+            redirectAttributes.addFlashAttribute("cartLink", true);
         } catch (IllegalStateException | IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
-        return "redirect:/cart";
+        return "redirect:" + redirectTo;
     }
 
     @PostMapping("/update")

@@ -120,6 +120,7 @@
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" th:href="@{/account}">Tài khoản</a></li>
                         <li><a class="dropdown-item" th:href="@{/account/orders}">Đơn hàng</a></li>
+                        <li><a class="dropdown-item" th:href="@{/wishlist}">Yêu thích</a></li>
                         <li sec:authorize="hasRole('ADMIN')">
                             <a class="dropdown-item text-warning" th:href="@{/admin}">Quản trị</a>
                         </li>
@@ -169,8 +170,8 @@
                         <li th:each="n : ${userNotifications}"
                             th:classappend="${!n.isRead} ? 'bg-light'">
                             <a th:href="@{/notifications/read/{id}(id=${n.id})}"
-                            class="dropdown-item py-2 text-wrap"
-                            style="white-space:normal">
+                               class="dropdown-item py-2 text-wrap"
+                               style="white-space:normal">
                                 <div class="d-flex gap-2 align-items-start">
                                     <i th:classappend="${!n.isRead} ? 'text-danger' : 'text-muted'"
                                        class="bi bi-bell mt-1 flex-shrink-0"></i>

@@ -193,6 +193,14 @@ CREATE TABLE order_assignment (
     note         NVARCHAR(255)
 );
 
+CREATE TABLE wishlist (
+    id          INT IDENTITY(1,1) PRIMARY KEY,
+    user_id     INT NOT NULL FOREIGN KEY REFERENCES app_user(id),
+    product_id  INT NOT NULL FOREIGN KEY REFERENCES product(id),
+    added_at    DATETIME DEFAULT GETDATE(),
+    CONSTRAINT UQ_wishlist UNIQUE (user_id, product_id)
+);
+
 -- Mỗi đơn chỉ dùng 1 voucher; mỗi user chỉ dùng 1 lần mỗi voucher
 ALTER TABLE order_voucher ADD CONSTRAINT UQ_order_voucher UNIQUE (order_id);
 ALTER TABLE order_voucher ADD CONSTRAINT UQ_user_voucher  UNIQUE (customer_id, voucher_id);

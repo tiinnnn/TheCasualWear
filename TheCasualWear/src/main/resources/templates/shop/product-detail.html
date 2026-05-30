@@ -66,8 +66,33 @@
                 </ol>
             </nav>
 
-            <h2 class="fw-bold" th:text="${product.name}"></h2>
-            <p class="text-muted mb-1"
+            <div class="d-flex align-items-start justify-content-between gap-2">
+                <h2 class="fw-bold mb-0" th:text="${product.name}"></h2>
+
+                <!-- Nút yêu thích — đã đăng nhập -->
+                <form sec:authorize="isAuthenticated()"
+                      th:action="@{/wishlist/toggle/{id}(id=${product.id})}"
+                      method="post" class="flex-shrink-0">
+                    <button type="submit"
+                            class="btn btn-light border rounded-circle p-2"
+                            style="width:44px;height:44px"
+                            th:title="${isWishlisted} ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'">
+                        <i class="bi fs-5"
+                           th:classappend="${isWishlisted} ? 'bi-heart-fill text-danger' : 'bi-heart'"></i>
+                    </button>
+                </form>
+
+                <!-- Chưa đăng nhập → redirect login -->
+                <a sec:authorize="!isAuthenticated()"
+                   th:href="@{/auth/login}"
+                   class="btn btn-light border rounded-circle p-2 flex-shrink-0"
+                   style="width:44px;height:44px"
+                   title="Đăng nhập để yêu thích">
+                    <i class="bi bi-heart fs-5"></i>
+                </a>
+            </div>
+
+            <p class="text-muted mb-1 mt-1"
                th:text="${product.category != null ? product.category.name : ''}"></p>
 
             <h3 class="text-danger fw-bold my-3" id="displayPrice"
@@ -162,7 +187,7 @@
     let selectedVariant = null;
     let carousel        = null;
 
-    // ✅ Xây bảng: colorId → index đầu tiên của variant đó trong carousel
+    //  Xây bảng: colorId → index đầu tiên của variant đó trong carousel
     // Thymeleaf render: product.images trước, rồi variant images theo thứ tự variants
     // JS tính lại đúng index dựa trên data-color-id của từng carousel-item
     function buildColorIndexMap() {
@@ -177,7 +202,7 @@
         return map;
     }
 
-    // ── Khởi tạo thumbnails từ carousel items ─────────────────────
+    // Khởi tạo thumbnails từ carousel items
     function buildThumbnails() {
         const items    = document.querySelectorAll('#productCarousel .carousel-item');
         const thumbRow = document.getElementById('thumbnailRow');
@@ -215,7 +240,7 @@
         }
     }
 
-    // ── Khởi tạo ──────────────────────────────────────────────────
+    //Khởi tạo
     function init() {
         // Carousel
         const carouselEl = document.getElementById('productCarousel');
@@ -254,7 +279,7 @@
         renderSizes(null);
     }
 
-    // ── Chọn màu ──────────────────────────────────────────────────
+    // Chọn màu
     function selectColor(colorId, btn) {
         selectedColorId = colorId;
         selectedSizeId  = null;
@@ -268,7 +293,7 @@
         btn.classList.remove('btn-outline-dark');
         btn.classList.add('btn-dark');
 
-        // ✅ Nhảy đến ảnh đầu tiên của màu này trong slideshow
+        // đến ảnh đầu tiên của màu này trong slideshow
         const colorIndexMap = buildColorIndexMap();
         const targetIndex   = colorIndexMap[colorId];
         if (targetIndex !== undefined) {
@@ -336,7 +361,7 @@
             (v.size && v.size.id === selectedSizeId)
         ) || null;
 
-        // ✅ Khi chọn size + đã có màu → nhảy đến ảnh của variant đó
+        //  Khi chọn size + đã có màu → nhảy đến ảnh của variant đó
         // Khi chỉ chọn size (chưa chọn màu) → giữ nguyên slideshow
         if (selectedColorId && selectedVariant) {
             goToVariantImage(selectedColorId, selectedVariant.id);
