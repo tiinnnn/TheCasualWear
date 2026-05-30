@@ -8,15 +8,15 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
-    // Lịch sử đơn hàng của user
+
     List<AppOrder> findByCustomerIdOrderByOrderDateDesc(Integer customerId);
 
-    // Lọc theo trạng thái (admin quản lý)
     List<AppOrder> findByStatus(OrderStatus status);
-    // Tìm đơn hàng của user theo trạng thái
+
     List<AppOrder> findByCustomerIdAndStatus(Integer customerId, String status);
 
     @Query("SELECT o FROM AppOrder o ORDER BY " +
@@ -31,9 +31,10 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
     List<AppOrder> findAllOrderedByStatus();
 
     @Query("SELECT o FROM AppOrder o WHERE " +
-            "(:keyword IS NULL OR LOWER(o.customer.username) " +
-            "  LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
-            "AND (:status IS NULL OR o.status = :status) " +
+            "(:keyword  IS NULL OR LOWER(o.customer.username) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+            "AND (:status   IS NULL OR o.status     = :status) " +
+            "AND (:fromDate IS NULL OR o.orderDate >= :fromDate) " +
+            "AND (:toDate   IS NULL OR o.orderDate <= :toDate) " +
             "ORDER BY CASE o.status " +
             "WHEN com.datn.TheCasualWear.enums.OrderStatus.PENDING   THEN 1 " +
             "WHEN com.datn.TheCasualWear.enums.OrderStatus.CONFIRMED THEN 2 " +
@@ -42,7 +43,9 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
             "WHEN com.datn.TheCasualWear.enums.OrderStatus.COMPLETED THEN 5 " +
             "WHEN com.datn.TheCasualWear.enums.OrderStatus.CANCELLED THEN 6 " +
             "END ASC, o.orderDate DESC")
-    Page<AppOrder> searchOrders(@Param("keyword") String keyword,
-                                @Param("status") OrderStatus status,
+    Page<AppOrder> searchOrders(@Param("keyword")  String        keyword,
+                                @Param("status")   OrderStatus   status,
+                                @Param("fromDate") LocalDateTime fromDate,
+                                @Param("toDate")   LocalDateTime toDate,
                                 Pageable pageable);
 }

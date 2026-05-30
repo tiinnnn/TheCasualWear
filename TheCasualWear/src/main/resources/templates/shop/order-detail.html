@@ -90,14 +90,39 @@
 
             <div class="card mb-3">
                 <div class="card-body">
-                    <h6>Tổng đơn hàng</h6>
-                    <div class="d-flex justify-content-between fw-bold">
+                    <h6 class="mb-3">Tổng đơn hàng</h6>
+
+                    <!-- Tạm tính -->
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Tạm tính:</span>
+                        <span th:if="${order.orderVoucher == null}"
+                              th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></span>
+                        <span th:if="${order.orderVoucher != null}"
+                              th:text="${#numbers.formatInteger(order.totalPrice.add(order.orderVoucher.discountAmount), 0, 'COMMA') + ' đ'}"></span>
+                    </div>
+
+                    <div th:if="${order.orderVoucher != null}"
+                         class="d-flex justify-content-between mb-2">
+                        <span class="text-success">
+                            <i class="bi bi-tag-fill me-1"></i>
+                            Voucher
+                            <small class="text-muted"
+                                   th:text="'(' + ${order.orderVoucher.voucher.code} + ')'"></small>:
+                        </span>
+                        <span class="text-success fw-bold"
+                              th:text="'- ' + ${#numbers.formatInteger(order.orderVoucher.discountAmount, 0, 'COMMA') + ' đ'}"></span>
+                    </div>
+
+                    <hr class="my-2"/>
+
+                    <div class="d-flex justify-content-between fw-bold fs-6">
                         <span>Tổng cộng:</span>
                         <span class="text-danger"
                               th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></span>
                     </div>
-                    <div class="d-flex justify-content-between mt-1">
-                        <span>Thanh toán:</span>
+
+                    <div class="d-flex justify-content-between mt-2">
+                        <span class="text-muted">Thanh toán:</span>
                         <span th:if="${order.paymentMethod == 'VNPAY'}"
                               class="badge bg-success">VNPay ✓</span>
                         <span th:if="${order.paymentMethod == 'COD' and order.isPaid}"

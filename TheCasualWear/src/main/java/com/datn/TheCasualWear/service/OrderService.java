@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -34,12 +35,21 @@ public class OrderService {
 
     // QUERY
 
-    public Page<AppOrder> getAllOrders(String keyword, String status, int page) {
-        String      kw         = (keyword == null || keyword.isBlank()) ? null : keyword;
-        OrderStatus statusEnum = (status  == null || status.isBlank())  ? null
-                : OrderStatus.valueOf(status);
+    public Page<AppOrder> getAllOrders(String keyword, String status,
+                                       String fromDate, String toDate, int page) {
+        String kw = (keyword == null || keyword.isBlank()) ? null : keyword;
+
+        OrderStatus statusEnum = (status == null || status.isBlank())
+                ? null : OrderStatus.valueOf(status);
+
+        LocalDateTime from = (fromDate == null || fromDate.isBlank())
+                ? null : LocalDate.parse(fromDate).atStartOfDay();
+
+        LocalDateTime to = (toDate == null || toDate.isBlank())
+                ? null : LocalDate.parse(toDate).atTime(23, 59, 59);
+
         Pageable pageable = PageRequest.of(page, ADMIN_PAGE_SIZE);
-        return orderRepository.searchOrders(kw, statusEnum, pageable);
+        return orderRepository.searchOrders(kw, statusEnum, from, to, pageable);
     }
 
     public List<AppOrder> getAllOrders() {
