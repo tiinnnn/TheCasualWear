@@ -6,7 +6,6 @@ import com.datn.TheCasualWear.repository.AppOrderRepository;
 import com.datn.TheCasualWear.repository.AppUserRepository;
 import com.datn.TheCasualWear.service.OrderService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -30,10 +29,20 @@ public class DeliveryController {
     }
 
     @GetMapping({"", "/"})
-    public String deliveryPage(Model model) {
-        AppUser currentUser = getCurrentUser(); // bỏ @AuthenticationPrincipal
+    public String deliveryPage(@RequestParam(required = false) String status,
+                               @RequestParam(required = false) String fromDate,
+                               @RequestParam(required = false) String toDate,
+                               Model model) {
+        AppUser currentUser = getCurrentUser();
+        String activeStatus = (status == null) ? "ASSIGNED" : status;
+
         model.addAttribute("myAssignments",
-                orderService.getMyAssignments(currentUser));
+                orderService.getMyAssignments(currentUser,
+                        "ALL".equals(activeStatus) ? null : activeStatus,
+                        fromDate, toDate));
+        model.addAttribute("selectedStatus", activeStatus);
+        model.addAttribute("fromDate", fromDate);
+        model.addAttribute("toDate", toDate);
         model.addAttribute("view", "delivery/orders");
         return "layouts/delivery-layout";
     }

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,4 +31,19 @@ public interface OrderAssignmentRepository extends JpaRepository<OrderAssignment
             "AND a.status NOT IN ('DELIVERED', 'FAILED')")
     List<OrderAssignment> findActiveByDeliveryStaff(
             @Param("deliveryId") Integer deliveryId);
+
+    @Query("""
+    SELECT a FROM OrderAssignment a
+    WHERE a.deliveryStaff.id = :deliveryId
+    AND (:status IS NULL OR a.status = :status)
+    AND a.assignedAt >= :fromDate
+    AND a.assignedAt <= :toDate
+    ORDER BY a.assignedAt DESC
+    """)
+    List<OrderAssignment> findByDeliveryStaffFiltered(
+            @Param("deliveryId") Integer deliveryId,
+            @Param("status")     AssignmentStatus status,
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate")     LocalDateTime toDate
+    );
 }

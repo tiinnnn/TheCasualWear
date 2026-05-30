@@ -369,8 +369,24 @@ public class OrderService {
         return assignmentRepository.findByOrderId(orderId);
     }
 
-    public List<OrderAssignment> getMyAssignments(AppUser currentUser) {
-        return assignmentRepository.findByDeliveryStaffId(currentUser.getId());
+    public List<OrderAssignment> getMyAssignments(AppUser currentUser,
+                                                  String status,
+                                                  String fromDate,
+                                                  String toDate) {
+        AssignmentStatus statusEnum = (status == null || status.isBlank())
+                ? null : AssignmentStatus.valueOf(status);
+
+        // Mặc định: 7 ngày gần nhất
+        LocalDateTime from = (fromDate == null || fromDate.isBlank())
+                ? LocalDateTime.now().minusDays(7).toLocalDate().atStartOfDay()
+                : LocalDate.parse(fromDate).atStartOfDay();
+
+        LocalDateTime to = (toDate == null || toDate.isBlank())
+                ? LocalDateTime.now().toLocalDate().atTime(23, 59, 59)
+                : LocalDate.parse(toDate).atTime(23, 59, 59);
+
+        return assignmentRepository.findByDeliveryStaffFiltered(
+                currentUser.getId(), statusEnum, from, to);
     }
 
     @Transactional
