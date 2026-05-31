@@ -3,7 +3,9 @@ package com.datn.TheCasualWear.controller.Admin;
 import com.datn.TheCasualWear.entity.AppOrder;
 import com.datn.TheCasualWear.entity.AppUser;
 import com.datn.TheCasualWear.repository.AppOrderRepository;
+import com.datn.TheCasualWear.entity.DeliveryProfile;
 import com.datn.TheCasualWear.repository.AppUserRepository;
+import com.datn.TheCasualWear.repository.DeliveryProfileRepository;
 import com.datn.TheCasualWear.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,15 +19,33 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequiredArgsConstructor
 public class DeliveryController {
 
-    private final OrderService orderService;
-    private final AppOrderRepository orderRepository;
-    private final AppUserRepository appUserRepository;
+    private final OrderService              orderService;
+    private final AppOrderRepository        orderRepository;
+    private final AppUserRepository         appUserRepository;
+    private final DeliveryProfileRepository deliveryProfileRepository;
 
     private AppUser getCurrentUser() {
         String username = SecurityContextHolder.getContext()
                 .getAuthentication().getName();
         return appUserRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalStateException("User not found"));
+    }
+
+    @PostMapping("/toggle-available")
+    public String toggleAvailable(RedirectAttributes ra) {
+        AppUser currentUser = getCurrentUser();
+        DeliveryProfile profile = deliveryProfileRepository
+                .findByUserId(currentUser.getId())
+                .orElseGet(() -> DeliveryProfile.builder()
+                        .user(currentUser).isAvailable(true).build());
+        profile.setIsAvailable(!Boolean.TRUE.equals(profile.getIsAvailable()));
+        deliveryProfileRepository.save(profile);
+        ra.addFlashAttribute(
+                Boolean.TRUE.equals(profile.getIsAvailable()) ? "successMessage" : "errorMessage",
+                Boolean.TRUE.equals(profile.getIsAvailable())
+                        ? "Ban dang san sang nhan don!"
+                        : "Ban da tat che do nhan don!");
+        return "redirect:/delivery";
     }
 
     @GetMapping({"", "/"})
@@ -43,10 +63,14 @@ public class DeliveryController {
         model.addAttribute("selectedStatus", activeStatus);
         model.addAttribute("fromDate", fromDate);
         model.addAttribute("toDate", toDate);
+        // Load trang thai available cua delivery
+        deliveryProfileRepository.findByUserId(currentUser.getId())
+                .ifPresent(p -> model.addAttribute("isAvailable", p.getIsAvailable()));
         model.addAttribute("view", "delivery/orders");
         return "layouts/delivery-layout";
     }
 
+    // ← ENDPOINT BỊ MẤT, THÊM LẠI
     @GetMapping("/orders/{id}")
     public String orderDetail(@PathVariable Integer id, Model model) {
         AppUser currentUser = getCurrentUser();

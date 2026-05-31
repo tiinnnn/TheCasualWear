@@ -48,36 +48,6 @@
                               detail.price.doubleValue() * detail.quantity, 0, 'COMMA') + ' đ'}"></span>
                 </div>
                 <hr/>
-
-                <!-- Tạm tính (trước voucher) -->
-                <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted">Tạm tính:</span>
-                    <!-- Nếu có voucher: totalPrice (đã giảm) + discountAmount = giá gốc -->
-                    <span th:if="${order.orderVoucher == null}"
-                          th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></span>
-                    <span th:if="${order.orderVoucher != null}"
-                          th:text="${#numbers.formatInteger(
-                              order.totalPrice.add(order.orderVoucher.discountAmount),
-                              0, 'COMMA') + ' đ'}"></span>
-                </div>
-
-                <!-- Giảm giá voucher -->
-                <div th:if="${order.orderVoucher != null}"
-                     class="d-flex justify-content-between mb-2">
-                    <span class="text-success">
-                        <i class="bi bi-tag-fill me-1"></i>
-                        Voucher
-                        <small class="text-muted"
-                               th:text="'(' + ${order.orderVoucher.voucher.code} + ')'"></small>:
-                    </span>
-                    <span class="text-success fw-bold"
-                          th:text="'- ' + ${#numbers.formatInteger(
-                              order.orderVoucher.discountAmount, 0, 'COMMA') + ' đ'}"></span>
-                </div>
-
-                <hr class="my-2"/>
-
-                <!-- Tổng thực tế phải trả -->
                 <div class="d-flex justify-content-between fw-bold fs-5">
                     <span>Tổng cộng:</span>
                     <span class="text-danger"
@@ -141,11 +111,7 @@
                        class="btn btn-info">
                         <i class="bi bi-check-lg me-1"></i>Xác nhận đơn
                     </a>
-                    <a th:if="${order.status.name() == 'CONFIRMED'}"
-                       th:href="@{'/admin/orders/' + ${order.id} + '/ship'}"
-                       class="btn btn-primary">
-                        <i class="bi bi-truck me-1"></i>Giao hàng
-                    </a>
+
                     <a th:if="${order.status.name() != 'COMPLETED'
                                 and order.status.name() != 'CANCELLED'}"
                        th:href="@{'/admin/orders/' + ${order.id} + '/cancel'}"
@@ -157,95 +123,176 @@
             </div>
         </div>
 
-        <div th:if="${order.status.name() == 'SHIPPING'
-                      or (order.status.name() == 'CANCELLED' and currentAssignment != null)}"
-             class="card border-0 shadow-sm">
+        <!-- Phan cong giao hang -->
+        <div th:if="${order.status.name() == 'CONFIRMED'
+                      or order.status.name() == 'SHIPPING'
+                      or (order.status.name() == 'CANCELLED'
+                          and assignmentHistory != null
+                          and !#lists.isEmpty(assignmentHistory))}"
+             class="card border-0 shadow-sm mb-3">
             <div class="card-body">
                 <h6 class="fw-bold mb-3">
-                    <i class="bi bi-person-badge me-1"></i>Phân công giao hàng
+                    <i class="bi bi-person-badge me-1"></i>Giao hàng
+                    <span th:if="${failCount > 0}"
+                          th:class="${failCount >= 2} ? 'badge bg-danger ms-1' : 'badge bg-warning text-dark ms-1'"
+                          th:text="${failCount + '/3 thất bại'}"></span>
                 </h6>
 
-                <!-- Đã assign → hiển thị thông tin -->
-                <div th:if="${currentAssignment != null}">
-                    <div class="alert alert-success py-2 mb-3">
-                        <i class="bi bi-check-circle-fill me-1"></i>
-                        Đã phân công cho
-                        <strong th:text="${currentAssignment.deliveryStaff.username}"></strong>
+                <!-- Lich su assignment -->
+                <div th:if="${assignmentHistory != null and !#lists.isEmpty(assignmentHistory)}"
+                     class="mb-3">
+                    <div th:each="a, i : ${assignmentHistory}"
+                         class="d-flex justify-content-between align-items-start py-2 border-bottom small">
+                        <div>
+                            <span class="fw-bold"
+                                  th:text="${'Lần ' + (assignmentHistory.size() - i.index)}"></span>
+                            <span class="ms-1 text-muted"
+                                  th:text="${a.deliveryStaff.username}"></span>
+                            <br/>
+                            <span class="text-muted"
+                                  th:text="${#temporals.format(a.assignedAt, 'dd/MM HH:mm')}"></span>
+                            <div th:if="${a.failReason != null}" class="text-danger mt-1">
+                                <i class="bi bi-exclamation-circle me-1"></i>
+                                <span th:text="${a.failReason}"></span>
+                            </div>
+                        </div>
+                        <span th:switch="${a.status.name()}">
+                            <span th:case="'ASSIGNED'"   class="badge bg-warning text-dark">Đang giao</span>
+                            <span th:case="'DELIVERED'"  class="badge bg-success">Đã giao</span>
+                            <span th:case="'FAILED'"     class="badge bg-danger">Thất bại</span>
+                            <span th:case="'CANCELLED'"  class="badge bg-secondary">Đã đổi người</span>
+                        </span>
                     </div>
-                    <table class="table table-sm table-borderless mb-0 small">
-                        <tr>
-                            <td class="text-muted ps-0">Nhân viên</td>
-                            <td class="fw-bold" th:text="${currentAssignment.deliveryStaff.username}"></td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted ps-0">Phân công lúc</td>
-                            <td th:text="${#temporals.format(currentAssignment.assignedAt, 'dd/MM/yyyy HH:mm')}"></td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted ps-0">Giao bởi</td>
-                            <td th:text="${currentAssignment.assignedBy != null
-                                           ? currentAssignment.assignedBy.username : 'N/A'}"></td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted ps-0">Trạng thái</td>
-                            <td>
-                                <span th:switch="${currentAssignment.status.name()}">
-                                    <span th:case="'ASSIGNED'"  class="badge bg-warning text-dark">Đang giao</span>
-                                    <span th:case="'DELIVERED'" class="badge bg-success">Đã giao</span>
-                                    <span th:case="'FAILED'"    class="badge bg-danger">Giao thất bại</span>
-                                </span>
-                            </td>
-                        </tr>
-                        <!-- Lý do thất bại — chỉ hiện khi FAILED -->
-                        <tr th:if="${currentAssignment.status.name() == 'FAILED'
-                                     and currentAssignment.failReason != null}">
-                            <td class="text-muted ps-0">Lý do</td>
-                            <td class="text-danger fw-bold"
-                                th:text="${currentAssignment.failReason}"></td>
-                        </tr>
-                        <tr th:if="${currentAssignment.deliveredAt != null}">
-                            <td class="text-muted ps-0">Thời gian giao</td>
-                            <td th:text="${#temporals.format(currentAssignment.deliveredAt, 'dd/MM/yyyy HH:mm')}"></td>
-                        </tr>
-                    </table>
                 </div>
 
-                <!-- Chưa assign → hiện form chọn nhân viên -->
-                <div th:if="${currentAssignment == null}">
-
-                    <!-- Không có nhân viên delivery nào trong hệ thống -->
+                <!-- Form ASSIGN: CONFIRMED chua du 3 lan -->
+                <div th:if="${order.status.name() == 'CONFIRMED' and failCount < 3}">
                     <div th:if="${deliveryStaffs == null or #lists.isEmpty(deliveryStaffs)}"
                          class="alert alert-warning py-2 mb-0">
                         <i class="bi bi-exclamation-triangle me-1"></i>
-                        Không có nhân viên delivery nào!
+                        Không có nhân viên delivery sẵn sàng!
                     </div>
-
-                    <!-- Có nhân viên → hiện form -->
                     <form th:if="${deliveryStaffs != null and !#lists.isEmpty(deliveryStaffs)}"
                           th:action="@{'/admin/orders/' + ${order.id} + '/assign'}"
                           method="post">
-                        <div class="mb-3">
-                            <label class="form-label small text-muted mb-1">Chọn nhân viên giao hàng</label>
-                            <select name="deliveryId" class="form-select form-select-sm" required>
+                        <label class="form-label small text-muted mb-1">
+                            <span th:if="${failCount == 0}">Chọn nhân viên</span>
+                            <span th:if="${failCount > 0}"
+                                  th:text="${'Giao lại (lần ' + (failCount + 1) + '):'}"></span>
+                        </label>
+                        <div class="input-group input-group-sm mb-0">
+                            <select name="deliveryId" class="form-select" required>
                                 <option value="" disabled selected>-- Chọn nhân viên --</option>
                                 <option th:each="staff : ${deliveryStaffs}"
                                         th:value="${staff.id}"
-                                        th:text="${staff.username
-                                                   + (staff.phone != null ? ' — ' + staff.phone : '')}">
-                                </option>
+                                        th:text="${staff.displayLabel}"></option>
                             </select>
-                        </div>
-                        <div class="d-grid">
                             <button type="submit" class="btn btn-primary btn-sm">
-                                <i class="bi bi-person-check me-1"></i>Xác nhận phân công
+                                <i class="bi bi-person-check"></i> Phân công
                             </button>
                         </div>
                     </form>
                 </div>
 
+                <!-- Form REASSIGN: SHIPPING - doi nguoi, khong tinh fail -->
+                <div th:if="${order.status.name() == 'SHIPPING'}">
+                    <hr class="my-2"/>
+                    <p class="small text-muted mb-2">
+                        <i class="bi bi-arrow-repeat me-1"></i>
+                        Đổi người giao (không tính lần thất bại)
+                    </p>
+                    <div th:if="${deliveryStaffs == null or #lists.isEmpty(deliveryStaffs)}"
+                         class="alert alert-warning py-2 mb-0">
+                        Không có nhân viên khác sẵn sàng!
+                    </div>
+                    <form th:if="${deliveryStaffs != null and !#lists.isEmpty(deliveryStaffs)}"
+                          th:action="@{'/admin/orders/' + ${order.id} + '/reassign'}"
+                          method="post">
+                        <div class="input-group input-group-sm">
+                            <select name="deliveryId" class="form-select" required>
+                                <option value="" disabled selected>-- Chọn người thay --</option>
+                                <option th:each="staff : ${deliveryStaffs}"
+                                        th:value="${staff.id}"
+                                        th:text="${staff.displayLabel}"></option>
+                            </select>
+                            <button type="submit" class="btn btn-warning btn-sm">
+                                <i class="bi bi-arrow-repeat"></i> Đổi người
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Day du 4 lan that bai -->
+                <div th:if="${failCount >= 3}"
+                     class="alert alert-danger mb-0 py-2">
+                    <i class="bi bi-x-octagon-fill me-1"></i>
+                    Đầy 3 lần giao thất bại, không thể giao thêm.
+                </div>
+
             </div>
         </div>
-    </div>
-</div>
+
+        <!-- Nut hoan hang: DELIVERED hoac COMPLETED trong 15 ngay -->
+        <div th:if="${(order.status.name() == 'DELIVERED' or order.status.name() == 'COMPLETED')
+                      and order.deliveredAt != null
+                      and #temporals.createNow().isBefore(order.deliveredAt.plusDays(15))}"
+             class="card border-0 shadow-sm mt-3">
+            <div class="card-body">
+                <h6 class="fw-bold mb-1 text-warning">
+                    <i class="bi bi-arrow-return-left me-1"></i>Hoàn hàng
+                </h6>
+                <small class="text-muted d-block mb-3">
+                    Hạn hoàn hàng:
+                    <strong th:text="${#temporals.format(order.deliveredAt.plusDays(15), 'HH:mm dd/MM/yyyy')}"></strong>
+                </small>
+                <div class="d-grid">
+                    <button type="button" class="btn btn-warning btn-sm"
+                            data-bs-toggle="modal" data-bs-target="#returnModal">
+                        <i class="bi bi-arrow-return-left me-1"></i>Xử lý hoàn hàng
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal hoan hang -->
+        <div class="modal fade" id="returnModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header border-0 pb-0">
+                        <h6 class="modal-title fw-bold text-warning">
+                            <i class="bi bi-arrow-return-left me-2"></i>Xử lý hoàn hàng
+                        </h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form th:action="@{'/admin/orders/' + ${order.id} + '/return'}" method="post">
+                        <div class="modal-body">
+                            <div class="alert alert-warning py-2 mb-3">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Đơn hàng sẽ được chuyển sang trạng thái
+                                <strong>Hủy</strong> do hàng lỗi từ phía shop.
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       name="restock" id="restockCheck" value="true"/>
+                                <label class="form-check-label" for="restockCheck">
+                                    <strong>Restock sản phẩm</strong>
+                                    <small class="text-muted d-block">
+                                        Chỉ tích nếu hàng hoàn về còn dùng được —
+                                        không tích nếu hàng lỗi nặng
+                                    </small>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0 pt-0">
+                            <button type="button" class="btn btn-secondary btn-sm"
+                                    data-bs-dismiss="modal">Hủy bỏ</button>
+                            <button type="submit" class="btn btn-warning btn-sm">
+                                <i class="bi bi-arrow-return-left me-1"></i>Xác nhận hoàn hàng
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
 </body>
 </html>

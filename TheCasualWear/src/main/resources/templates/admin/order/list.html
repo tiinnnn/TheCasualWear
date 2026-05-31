@@ -76,6 +76,7 @@
                 <th>Ngày đặt</th>
                 <th>Tổng tiền</th>
                 <th>Trạng thái</th>
+                <th>Giao hàng</th>
                 <th>Hành động</th>
             </tr>
             </thead>
@@ -89,10 +90,9 @@
                 <td th:text="${order.id}"></td>
                 <td>
                     <p class="mb-0 fw-bold"
-                       th:text="${order.customer.username}"></p>
+                       th:text="${order.customerUsername}"></p>
                     <small class="text-muted"
-                           th:text="${order.shippingAddress != null ?
-                                         order.shippingAddress.phone : ''}"></small>
+                           th:text="${order.customerPhone}"></small>
                 </td>
                 <td th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy HH:mm')}"></td>
                 <td class="text-danger fw-bold"
@@ -106,6 +106,24 @@
                         <span th:case="'COMPLETED'" class="badge bg-success">Hoàn thành</span>
                         <span th:case="'CANCELLED'" class="badge bg-danger">Đã hủy</span>
                     </span>
+                </td>
+                <td>
+                    <!-- Dang giao -->
+                    <span th:if="${order.status.name() == 'SHIPPING' and order.deliveryName != null}"
+                          class="badge bg-primary">
+                        <i class="bi bi-truck me-1"></i>
+                        <span th:text="${order.deliveryName}"></span>
+                    </span>
+                    <!-- Giao that bai, cho assign lai -->
+                    <span th:if="${order.failCounts > 0 and order.status.name() == 'CONFIRMED'}"
+                          th:class="${order.failCounts >= 3} ? 'badge bg-danger' : 'badge bg-warning text-dark'">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        <span th:text="${order.failCounts}"></span>/4 thất bại
+                    </span>
+                    <!-- Chua co assignment -->
+                    <span th:if="${order.failCounts == 0
+                                   and order.status.name() != 'SHIPPING'}"
+                          class="text-muted small">-</span>
                 </td>
                 <td>
                     <a th:href="@{'/admin/orders/' + ${order.id}}"

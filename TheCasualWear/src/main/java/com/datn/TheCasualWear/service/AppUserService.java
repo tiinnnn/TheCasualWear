@@ -2,8 +2,10 @@ package com.datn.TheCasualWear.service;
 
 import com.datn.TheCasualWear.config.ResourceNotFoundException;
 import com.datn.TheCasualWear.entity.AppUser;
+import com.datn.TheCasualWear.entity.DeliveryProfile;
 import com.datn.TheCasualWear.entity.Role;
 import com.datn.TheCasualWear.repository.AppUserRepository;
+import com.datn.TheCasualWear.repository.DeliveryProfileRepository;
 import com.datn.TheCasualWear.repository.RoleRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -16,14 +18,17 @@ import java.util.List;
 @Service
 public class AppUserService {
 
-    private final AppUserRepository appUserRepository;
-    private final RoleRepository roleRepository;
+    private final AppUserRepository      appUserRepository;
+    private final RoleRepository          roleRepository;
+    private final DeliveryProfileRepository deliveryProfileRepository;
     private static final int ADMIN_PAGE_SIZE = 10;
 
     public AppUserService(AppUserRepository appUserRepository,
-                          RoleRepository roleRepository) {
-        this.appUserRepository = appUserRepository;
-        this.roleRepository = roleRepository;
+                          RoleRepository roleRepository,
+                          DeliveryProfileRepository deliveryProfileRepository) {
+        this.appUserRepository       = appUserRepository;
+        this.roleRepository          = roleRepository;
+        this.deliveryProfileRepository = deliveryProfileRepository;
     }
 
     public Page<AppUser> getAllUsers(String keyword, int page) {
@@ -32,7 +37,7 @@ public class AppUserService {
                 Sort.by("id").ascending());
         return appUserRepository.searchUsers(kw, pageable);
     }
-//validation
+    //validation
     private boolean isValidEmail(String email) {
         return email != null && email.toLowerCase().endsWith("@gmail.com");
     }
@@ -123,6 +128,16 @@ public class AppUserService {
 
         user.getRoles().add(role);
         appUserRepository.save(user);
+
+        // Tu dong tao delivery_profile khi cap ROLE_DELIVERY
+        if ("ROLE_DELIVERY".equals(roleName)
+                && deliveryProfileRepository.findByUserId(id).isEmpty()) {
+            DeliveryProfile profile = DeliveryProfile.builder()
+                    .user(user)
+                    .isAvailable(true)
+                    .build();
+            deliveryProfileRepository.save(profile);
+        }
     }
 
     public void removeRole(Integer id, String roleName) {
@@ -140,6 +155,12 @@ public class AppUserService {
 
         user.getRoles().remove(role);
         appUserRepository.save(user);
+
+        // Xoa delivery_profile khi xoa ROLE_DELIVERY
+        if ("ROLE_DELIVERY".equals(roleName)) {
+            deliveryProfileRepository.findByUserId(id)
+                    .ifPresent(deliveryProfileRepository::delete);
+        }
     }
 
     public List<Role> getAllRoles() {

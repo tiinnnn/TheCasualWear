@@ -1,6 +1,8 @@
 package com.datn.TheCasualWear.controller.Admin;
 
 import com.datn.TheCasualWear.entity.AppUser;
+import com.datn.TheCasualWear.entity.DeliveryProfile;
+import com.datn.TheCasualWear.repository.DeliveryProfileRepository;
 import com.datn.TheCasualWear.service.AppUserService;
 import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
@@ -13,10 +15,13 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequestMapping("/admin/users")
 public class AdminUserController {
 
-    private final AppUserService appUserService;
+    private final AppUserService           appUserService;
+    private final DeliveryProfileRepository deliveryProfileRepository;
 
-    public AdminUserController(AppUserService appUserService) {
-        this.appUserService = appUserService;
+    public AdminUserController(AppUserService appUserService,
+                               DeliveryProfileRepository deliveryProfileRepository) {
+        this.appUserService           = appUserService;
+        this.deliveryProfileRepository = deliveryProfileRepository;
     }
 
     @GetMapping
@@ -33,6 +38,11 @@ public class AdminUserController {
         boolean isOwner = auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_OWNER"));
         model.addAttribute("isOwner", isOwner);
+        // Map userId -> DeliveryProfile de hien thi area trong list
+        java.util.Map<Integer, DeliveryProfile> profileMap = new java.util.HashMap<>();
+        deliveryProfileRepository.findAll()
+                .forEach(p -> profileMap.put(p.getUser().getId(), p));
+        model.addAttribute("profileMap", profileMap);
         model.addAttribute("view", "admin/user/list");
         return "layouts/admin-layout";
     }
@@ -92,4 +102,25 @@ public class AdminUserController {
         redirectAttributes.addFlashAttribute("successMessage", "Đã xóa role!");
         return "redirect:/admin/users";
     }
+    @PostMapping("/{id}/delivery/area")
+    public String updateDeliveryArea(@PathVariable Integer id,
+                                     @RequestParam(required = false) String area,
+                                     @RequestParam(required = false) Boolean isAvailable,
+                                     RedirectAttributes redirectAttributes) {
+        DeliveryProfile profile = deliveryProfileRepository.findByUserId(id)
+                .orElseThrow(() -> new com.datn.TheCasualWear.config.ResourceNotFoundException(
+                        "Không tìm thấy delivery profile!"));
+
+        if (area != null) {
+            profile.setArea(area.isBlank() ? null : area.trim());
+        }
+        if (isAvailable != null) {
+            profile.setIsAvailable(isAvailable);
+        }
+        deliveryProfileRepository.save(profile);
+        redirectAttributes.addFlashAttribute("successMessage",
+                "Cập nhật thông tin delivery thành công!");
+        return "redirect:/admin/users";
+    }
+
 }

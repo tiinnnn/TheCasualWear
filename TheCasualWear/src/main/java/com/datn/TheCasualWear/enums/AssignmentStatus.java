@@ -3,5 +3,6 @@ package com.datn.TheCasualWear.enums;
 public enum AssignmentStatus {
     ASSIGNED,
     DELIVERED,
-    FAILED
+    FAILED,
+    CANCELLED    // Admin reassign, khong tinh fail
 }

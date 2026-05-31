@@ -7,6 +7,15 @@
         Đơn hàng của tôi
         <small class="text-muted fs-6" th:text="'(' + ${#lists.size(myAssignments)} + ' đơn)'"></small>
     </h4>
+
+    <!-- Toggle nhan don -->
+    <form th:action="@{/delivery/toggle-available}" method="post">
+        <button type="submit"
+                th:class="${isAvailable} ? 'btn btn-success btn-sm' : 'btn btn-secondary btn-sm'">
+            <i th:class="${isAvailable} ? 'bi bi-toggle-on me-1' : 'bi bi-toggle-off me-1'"></i>
+            <span th:text="${isAvailable} ? 'Sẵn sàng nhận đơn' : 'Đang tắt nhận đơn'"></span>
+        </button>
+    </form>
 </div>
 
 <!-- Bo loc -->
@@ -67,10 +76,12 @@
     </div>
 </form>
 
+<!-- Khong co don nao -->
 <div th:if="${#lists.isEmpty(myAssignments)}" class="text-muted">
     Bạn chưa được phân công đơn nào.
 </div>
 
+<!-- Danh sách assignment -->
 <div th:each="assignment : ${myAssignments}" class="card border-0 shadow-sm mb-3">
     <div class="card-body d-flex justify-content-between align-items-center">
         <div>
