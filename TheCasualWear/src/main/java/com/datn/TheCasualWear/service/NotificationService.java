@@ -34,7 +34,6 @@ public class NotificationService {
         return notificationRepository.countByUserIdAndIsReadFalse(userId);
     }
 
-    // Đánh dấu đã đọc tất cả
     public void markAllRead(Integer userId) {
         List<Notification> unread = notificationRepository
                 .findByUserIdAndIsReadFalse(userId);

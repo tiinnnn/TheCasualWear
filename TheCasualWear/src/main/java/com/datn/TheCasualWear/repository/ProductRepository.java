@@ -27,7 +27,6 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
             "ORDER BY p.createdAt DESC")
     List<Product> findTop8Newest(Pageable pageable);
 
-    // Admin: search không lọc stock
     @Query("SELECT p FROM Product p WHERE p.isDeleted = false " +
             "AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%',:keyword,'%')))")
     Page<Product> searchProductsForAdmin(@Param("keyword") String keyword, Pageable pageable);

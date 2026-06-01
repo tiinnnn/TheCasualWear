@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title th:text="${collection.name}"></title></head>
+<body>
+
+<!-- Anh bia + ten collection -->
+<div class="position-relative mb-5"
+     th:if="${collection.coverImage != null}">
+    <img th:src="${collection.coverImage}"
+         class="w-100"
+         style="height:320px;object-fit:cover;filter:brightness(0.7)"/>
+    <div class="position-absolute top-50 start-50 translate-middle text-center text-white">
+        <h2 class="fw-bold" th:text="${collection.name}"></h2>
+        <p th:text="${collection.description}"></p>
+        <div th:if="${collection.endDate != null}" class="small opacity-75"></div>
+    </div>
+</div>
+
+<!-- Tieu de khi khong co anh -->
+<div th:unless="${collection.coverImage != null}" class="mb-4 text-center">
+    <h2 class="fw-bold" th:text="${collection.name}"></h2>
+    <p class="text-muted" th:text="${collection.description}"></p>
+</div>
+
+<div class="container">
+    <!-- Breadcrumb -->
+    <nav class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a th:href="@{/}">Trang chủ</a></li>
+            <li class="breadcrumb-item"><a th:href="@{/collections}">Collections</a></li>
+            <li class="breadcrumb-item active" th:text="${collection.name}"></li>
+        </ol>
+    </nav>
+
+    <!-- So luong san pham -->
+    <p class="text-muted mb-4">
+        <span th:text="${products.size()}"></span> sản phẩm
+    </p>
+
+    <!-- Danh sach san pham -->
+    <div th:if="${#lists.isEmpty(products)}"
+         class="text-muted text-center py-5">
+        Collection này chưa có sản phẩm.
+    </div>
+
+    <div class="row g-4">
+        <div th:each="p : ${products}" class="col-6 col-md-3">
+            <a th:href="@{'/product/' + ${p.id}}"
+               class="text-decoration-none text-dark">
+                <div class="card border-0 shadow-sm h-100">
+                    <img th:if="${p.images != null and !p.images.isEmpty()}"
+                         th:src="${p.images[0].imageUrl}"
+                         class="card-img-top"
+                         style="height:220px;object-fit:cover"/>
+                    <img th:unless="${p.images != null and !p.images.isEmpty()}"
+                         src="/images/no-image.png"
+                         class="card-img-top"
+                         style="height:220px;object-fit:cover"/>
+                    <div class="card-body p-2">
+                        <p class="mb-1 small fw-bold"
+                           th:text="${p.name}"></p>
+                        <span class="text-danger fw-bold small"
+                              th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></span>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

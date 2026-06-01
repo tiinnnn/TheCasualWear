@@ -1,53 +1,290 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head><title>Trang chủ</title></head>
+<head>
+    <title>Trang chủ</title>
+    <style>
+        /* ── HERO ── */
+        .hero {
+            position: relative;
+            height: 88vh;
+            min-height: 480px;
+            display: flex;
+            align-items: flex-end;
+            overflow: hidden;
+        }
+        .hero__bg {
+            position: absolute; inset: 0;
+            background: url('/images/banner2.jpg') center/cover no-repeat;
+        }
+        .hero__overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,.62) 38%, rgba(0,0,0,.08) 100%);
+        }
+        .hero__content {
+            position: relative;
+            padding: 0 5vw 6vh;
+        }
+        .hero__label {
+            font-size: .7rem;
+            letter-spacing: .22em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,.6);
+            margin-bottom: .75rem;
+        }
+        .hero__title {
+            font-size: clamp(2.6rem, 6vw, 5rem);
+            font-weight: 700;
+            color: #fff;
+            line-height: 1.08;
+            margin: 0 0 1.2rem;
+            letter-spacing: -.5px;
+        }
+        .hero__sub {
+            color: rgba(255,255,255,.65);
+            font-size: .95rem;
+            margin-bottom: 1.8rem;
+        }
+        .hero__btn {
+            display: inline-block;
+            padding: .7rem 2.2rem;
+            background: #fff;
+            color: #111;
+            font-size: .8rem;
+            font-weight: 600;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            text-decoration: none;
+            border-radius: 2px;
+            transition: background .2s, color .2s, transform .2s;
+        }
+        .hero__btn:hover {
+            background: #111;
+            color: #fff;
+            transform: translateY(-2px);
+        }
+
+        /* ── SECTION SHARED ── */
+        .home-section { padding: 3.5rem 0; }
+        .section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #111;
+            padding-bottom: .6rem;
+        }
+        .section-head h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+            margin: 0;
+        }
+        .section-head a {
+            font-size: .72rem;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: #555;
+            text-decoration: none;
+            border-bottom: 1px solid #bbb;
+            padding-bottom: 1px;
+            transition: color .2s, border-color .2s;
+        }
+        .section-head a:hover { color: #111; border-color: #111; }
+
+        /* ── PRODUCT CARD ── */
+        .p-card {
+            display: block;
+            text-decoration: none;
+            color: #111;
+        }
+        .p-card__img-wrap {
+            overflow: hidden;
+            background: #f4f2ef;
+            aspect-ratio: 3/4;
+        }
+        .p-card__img-wrap img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform .45s ease;
+        }
+        .p-card:hover .p-card__img-wrap img { transform: scale(1.04); }
+        .p-card__body { padding: .65rem .1rem .2rem; }
+        .p-card__cat {
+            font-size: .68rem;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: #888;
+            margin-bottom: .2rem;
+        }
+        .p-card__name {
+            font-size: .88rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: .25rem;
+        }
+        .p-card__price {
+            font-size: .9rem;
+            font-weight: 700;
+            color: #c0392b;
+        }
+
+        /* ── COLLECTION CARD ── */
+        .col-card {
+            display: block;
+            text-decoration: none;
+            color: #111;
+            position: relative;
+            overflow: hidden;
+            background: #eee;
+        }
+        .col-card__img-wrap {
+            aspect-ratio: 4/3;
+            overflow: hidden;
+        }
+        .col-card__img-wrap img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform .5s ease;
+        }
+        .col-card:hover .col-card__img-wrap img { transform: scale(1.05); }
+        .col-card__placeholder {
+            aspect-ratio: 4/3;
+            background: #e8e5e0;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .col-card__body {
+            padding: .8rem .2rem .3rem;
+        }
+        .col-card__name {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: .2rem;
+        }
+        .col-card__meta {
+            font-size: .72rem;
+            color: #888;
+            letter-spacing: .06em;
+        }
+    </style>
+</head>
 <body>
 
-<!-- Banner -->
-<div class="text-white text-center mb-4"
-     style="background-image: url('/images/banner2.jpg');
-            background-size: cover;
-            background-position: center;
-            min-height: 300px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;">
-    <h1 class="fw-bold display-4">THE CASUAL WEAR</h1>
-    <p class="fs-5">Thời trang nam phong cách</p>
-    <a th:href="@{/shop}" class="btn btn-light btn-lg px-5">Mua ngay</a>
+<!-- ═══ HERO ═══ -->
+<div class="hero">
+    <div class="hero__bg"></div>
+    <div class="hero__overlay"></div>
+    <div class="hero__content">
+        <p class="hero__label">The Casual Wear · 2025</p>
+        <h1 class="hero__title">Thời trang nam<br/>phong cách</h1>
+        <p class="hero__sub">Chất lượng – Tối giản – Bền vững</p>
+        <a th:href="@{/shop}" class="hero__btn">Mua ngay</a>
+    </div>
 </div>
 
-<!-- Sản phẩm mới nhất -->
-<div class="container">
-<h2 class="mb-4">Sản phẩm mới nhất</h2>
-    <div class="row row-cols-2 row-cols-md-4 g-4">
-        <div class="col" th:each="p : ${newestProducts}">
-            <a th:href="@{'/product/' + ${p.id}}" class="text-decoration-none text-dark">
-                <div class="card h-100 border-0 shadow-sm" style="cursor:pointer;transition:transform 0.2s"
-                     onmouseover="this.style.transform='translateY(-4px)'"
-                     onmouseout="this.style.transform='translateY(0)'">
-                    <img th:if="${p.images != null and !p.images.isEmpty()}"
-                         th:src="${p.images[0].imageUrl}"
-                         class="card-img-top" style="height:280px;object-fit:cover"/>
-                    <img th:unless="${p.images != null and !p.images.isEmpty()}"
-                         src="/images/no-image.png"
-                         class="card-img-top" style="height:280px;object-fit:cover"/>
-                    <div class="card-body">
-                        <h6 class="card-title" th:text="${p.name}"></h6>
-                        <p class="text-muted small mb-1"
+<div class="container py-2">
+
+    <!-- ═══ MỚI NHẤT ═══ -->
+    <div class="home-section"
+         th:if="${newestProducts != null and !#lists.isEmpty(newestProducts)}">
+        <div class="section-head">
+            <h2>Mới nhất</h2>
+            <a th:href="@{/shop(sort='newest')}">Xem tất cả</a>
+        </div>
+        <div class="row row-cols-2 row-cols-md-4 g-3">
+            <div class="col" th:each="p : ${newestProducts}">
+                <a th:href="@{'/product/' + ${p.id}}" class="p-card">
+                    <div class="p-card__img-wrap">
+                        <img th:if="${p.images != null and !p.images.isEmpty()}"
+                             th:src="${p.images[0].imageUrl}" th:alt="${p.name}"/>
+                        <img th:unless="${p.images != null and !p.images.isEmpty()}"
+                             src="/images/no-image.png" alt=""/>
+                    </div>
+                    <div class="p-card__body">
+                        <p class="p-card__cat"
                            th:text="${p.category != null ? p.category.name : ''}"></p>
-                        <p class="text-danger fw-bold mb-0"
+                        <p class="p-card__name" th:text="${p.name}"></p>
+                        <p class="p-card__price"
                            th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></p>
                     </div>
-                </div>
-            </a>
+                </a>
+            </div>
         </div>
     </div>
 
-<div class="text-center mt-4">
-    <a th:href="@{/shop}" class="btn btn-outline-dark">Xem tất cả</a>
-</div>
+    <!-- ═══ THEO DANH MỤC ═══ -->
+    <th:block th:if="${productsByCategory != null}"
+              th:each="entry : ${productsByCategory}">
+        <div class="home-section" style="padding-top:0">
+            <div class="section-head">
+                <h2 th:text="${entry.key}"></h2>
+                <!-- lấy category id từ sản phẩm đầu tiên -->
+                <a th:if="${!#lists.isEmpty(entry.value)}"
+                   th:href="@{/shop(category=${entry.value[0].category.id})}"
+                   th:text="'Xem thêm ' + ${entry.key}"></a>
+            </div>
+            <div class="row row-cols-2 row-cols-md-4 g-3">
+                <div class="col" th:each="p : ${entry.value}">
+                    <a th:href="@{'/product/' + ${p.id}}" class="p-card">
+                        <div class="p-card__img-wrap">
+                            <img th:if="${p.images != null and !p.images.isEmpty()}"
+                                 th:src="${p.images[0].imageUrl}" th:alt="${p.name}"/>
+                            <img th:unless="${p.images != null and !p.images.isEmpty()}"
+                                 src="/images/no-image.png" alt=""/>
+                        </div>
+                        <div class="p-card__body">
+                            <p class="p-card__cat"
+                               th:text="${p.category != null ? p.category.name : ''}"></p>
+                            <p class="p-card__name" th:text="${p.name}"></p>
+                            <p class="p-card__price"
+                               th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </th:block>
+
+    <!-- ═══ BỘ SƯU TẬP ═══ -->
+    <div class="home-section"
+         th:if="${collections != null and !#lists.isEmpty(collections)}"
+         style="padding-top:0">
+        <div class="section-head">
+            <h2>Bộ sưu tập</h2>
+            <a th:href="@{/collections}">Tất cả collections</a>
+        </div>
+        <div class="row row-cols-1 row-cols-md-3 g-3">
+            <div class="col" th:each="c : ${collections}">
+                <a th:href="@{'/collections/' + ${c.id}}" class="col-card">
+                    <div class="col-card__img-wrap" th:if="${c.coverImage != null}">
+                        <img th:src="${c.coverImage}" th:alt="${c.name}"/>
+                    </div>
+                    <div class="col-card__placeholder" th:unless="${c.coverImage != null}">
+                        <i class="bi bi-image fs-1 text-muted"></i>
+                    </div>
+                    <div class="col-card__body">
+                        <p class="col-card__name" th:text="${c.name}"></p>
+                        <span class="col-card__meta">
+                            <span th:text="${c.products.size()}"></span> sản phẩm
+                            <span th:if="${c.startDate != null or c.endDate != null}">
+                                &nbsp;·&nbsp;
+                                <span th:if="${c.startDate != null}"
+                                      th:text="${#temporals.format(c.startDate,'dd/MM/yyyy')}"></span>
+                                <span th:if="${c.startDate != null and c.endDate != null}"> – </span>
+                                <span th:if="${c.endDate != null}"
+                                      th:text="${#temporals.format(c.endDate,'dd/MM/yyyy')}"></span>
+                            </span>
+                        </span>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+
 </div>
 </body>
 </html>

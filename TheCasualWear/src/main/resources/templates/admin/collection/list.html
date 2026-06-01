@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Quản lý Collection</title></head>
+<body>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold">Quản lý Collection</h4>
+    <a th:href="@{/admin/collections/new}" class="btn btn-dark btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Tạo mới
+    </a>
+</div>
+
+<div th:if="${#lists.isEmpty(collections)}"
+     class="text-muted text-center py-5">
+    Chưa có collection nào.
+</div>
+
+<div class="row g-3">
+    <div th:each="c : ${collections}" class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <!-- Anh bia -->
+            <img th:if="${c.coverImage != null}"
+                 th:src="${c.coverImage}"
+                 class="card-img-top"
+                 style="height:180px;object-fit:cover"/>
+            <div th:unless="${c.coverImage != null}"
+                 class="bg-light d-flex align-items-center justify-content-center"
+                 style="height:180px">
+                <i class="bi bi-image text-muted fs-1"></i>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <h6 class="fw-bold mb-1" th:text="${c.name}"></h6>
+                    <span th:if="${c.isActive}" class="badge bg-success">Active</span>
+                    <span th:unless="${c.isActive}" class="badge bg-secondary">Ẩn</span>
+                </div>
+                <p class="small text-muted mb-1"
+                   th:text="${c.description}"></p>
+                <small class="text-muted">
+                    <i class="bi bi-box-seam me-1"></i>
+                    <span th:text="${c.products.size()}"></span> sản phẩm
+                </small>
+                <div th:if="${c.startDate != null or c.endDate != null}"
+                     class="small text-muted mt-1">
+                    <i class="bi bi-calendar me-1"></i>
+                    <span th:if="${c.startDate != null}"
+                          th:text="${#temporals.format(c.startDate, 'dd/MM/yyyy')}"></span>
+                    <span th:if="${c.startDate != null and c.endDate != null}"> — </span>
+                    <span th:if="${c.endDate != null}"
+                          th:text="${#temporals.format(c.endDate, 'dd/MM/yyyy')}"></span>
+                </div>
+            </div>
+            <div class="card-footer bg-white border-0 d-flex gap-2">
+                <a th:href="@{'/admin/collections/' + ${c.id}}"
+                   class="btn btn-sm btn-outline-dark flex-grow-1">
+                    <i class="bi bi-pencil me-1"></i>Quản lý
+                </a>
+                <a th:href="@{'/admin/collections/' + ${c.id} + '/toggle'}"
+                   th:class="${c.isActive} ? 'btn btn-sm btn-outline-secondary' : 'btn btn-sm btn-outline-success'">
+                    <i th:class="${c.isActive} ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+                </a>
+                <a th:href="@{'/admin/collections/' + ${c.id} + '/delete'}"
+                   class="btn btn-sm btn-outline-danger"
+                   onclick="return confirm('Xóa collection này?')">
+                    <i class="bi bi-trash"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

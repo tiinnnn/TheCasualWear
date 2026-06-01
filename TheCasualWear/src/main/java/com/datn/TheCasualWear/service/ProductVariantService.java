@@ -17,12 +17,8 @@ public class ProductVariantService {
     private final ProductVariantRepository variantRepository;
     private final CartItemRepository       cartItemRepository;
     private final OrderDetailRepository    orderDetailRepository;
-    private final ProductRepository        productRepository;
     private final VariantImageService      variantImageService;
-
     private static final OrderStatus CANCELLED = OrderStatus.CANCELLED;
-
-    //DÙNG CHUNG
 
     public ProductVariant getVariantById(Integer id) {
         return variantRepository.findById(id)
@@ -118,7 +114,7 @@ public class ProductVariantService {
         variantRepository.delete(variant);
     }
 
-    // ==================== THỐNG KÊ ====================
+    //THỐNG KÊ
 
     public List<ProductVariant> getLowStockVariants() {
         return variantRepository.findByStockGreaterThanAndStockLessThan(0, 5);

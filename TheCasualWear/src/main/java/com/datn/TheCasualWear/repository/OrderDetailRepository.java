@@ -14,7 +14,6 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, Intege
 
     List<OrderDetail> findByOrderId(Integer orderId);
 
-    // ✅ Kiểm tra product còn trong đơn hàng active không — qua variant.product
     @Query("SELECT CASE WHEN COUNT(od) > 0 THEN true ELSE false END " +
             "FROM OrderDetail od WHERE od.variant.product.id = :productId " +
             "AND od.order.status != :status")

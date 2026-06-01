@@ -33,10 +33,6 @@ public class CartService {
         return cartItemRepository.findByCartId(cart.getId());
     }
 
-    /**
-     * Thêm sản phẩm vào giỏ.
-     * Chỉ cần variantId — product được lấy qua variant.getProduct().
-     */
     @Transactional
     public void addToCart(AppUser user, Integer variantId, Integer quantity) {
         ProductVariant variant = variantRepository.findById(variantId)
@@ -78,7 +74,6 @@ public class CartService {
                 );
     }
 
-    // Cập nhật số lượng
     @Transactional
     public void updateQuantity(AppUser user, Integer cartItemId, Integer quantity) {
         CartItem item = cartItemRepository.findById(cartItemId)
@@ -105,7 +100,6 @@ public class CartService {
         cartItemRepository.save(item);
     }
 
-    // Xóa 1 item khỏi giỏ
     public void removeItem(AppUser user, Integer cartItemId) {
         CartItem item = cartItemRepository.findById(cartItemId)
                 .orElseThrow(() -> new ResourceNotFoundException(

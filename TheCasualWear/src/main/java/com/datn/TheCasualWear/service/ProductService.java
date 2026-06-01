@@ -25,7 +25,6 @@ public class ProductService {
     private static final int SHOP_PAGE_SIZE  = 12;
     private static final int ADMIN_PAGE_SIZE = 15;
 
-    // ==================== DÙNG CHUNG ====================
 
     public Product getProductById(Integer id) {
         return productRepository.findByIdAndIsDeletedFalse(id)
@@ -33,7 +32,7 @@ public class ProductService {
                         "Không tìm thấy sản phẩm với id: " + id));
     }
 
-    // ==================== PHÍA USER ====================
+    //USER
 
     public Page<Product> getShopProducts(String keyword, String sort,
                                          Integer categoryId, int page) {
@@ -51,7 +50,7 @@ public class ProductService {
         return productRepository.findTop8Newest(PageRequest.of(0, 8));
     }
 
-    // ==================== PHÍA ADMIN ====================
+    //ADMIN
 
     public Page<Product> getAdminProducts(String keyword, int page) {
         String kw = (keyword == null || keyword.isBlank()) ? null : keyword;
@@ -68,7 +67,7 @@ public class ProductService {
         return productRepository.findByIsDeletedTrue();
     }
 
-    // ==================== CRUD PRODUCT ====================
+    // CRUD PRODUCT
 
     @Transactional
     public Product createProduct(Product product) {
@@ -102,10 +101,6 @@ public class ProductService {
         return productRepository.save(product);
     }
 
-    /**
-     * Soft delete — ẩn sản phẩm + xóa khỏi cart.
-     * ✅ Xóa cart item qua từng variantId thay vì productId.
-     */
     @Transactional
     public void deleteProduct(Integer id) {
         Product product = getProductById(id);
@@ -125,10 +120,6 @@ public class ProductService {
         productRepository.save(product);
     }
 
-    /**
-     * Hard delete — xóa hoàn toàn, chỉ cho phép khi không còn đơn active.
-     * ✅ Xóa cart item qua variantId, check order qua variant.product.
-     */
     @Transactional
     public void hardDeleteProduct(Integer id) throws Exception {
         Product product = productRepository.findById(id)

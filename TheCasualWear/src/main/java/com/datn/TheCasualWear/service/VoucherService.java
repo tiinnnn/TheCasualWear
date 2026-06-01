@@ -43,7 +43,6 @@ public class VoucherService {
             throw new IllegalStateException("Mã giảm giá đã bị vô hiệu hóa!");
         }
 
-        // Kiểm tra thời hạn
         LocalDateTime now = LocalDateTime.now();
         if (voucher.getStartDate() != null && now.isBefore(voucher.getStartDate())) {
             throw new IllegalStateException("Mã giảm giá chưa đến thời gian sử dụng!");

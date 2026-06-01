@@ -95,7 +95,7 @@ public class AdminDashboardController {
         model.addAttribute("weekProfit",  weekRevenue - weekCost);
         model.addAttribute("weekOrders",  weekOrders.size());
 
-        // ==================== SẢN PHẨM BÁN CHẠY ====================
+        //SẢN PHẨM BÁN CHẠY
         Map<Product, Integer> soldMap = new LinkedHashMap<>();
         orderDetailRepository.findAll().stream()
                 .filter(od -> od != null

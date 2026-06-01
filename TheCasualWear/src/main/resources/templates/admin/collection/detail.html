@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Chi tiết Collection</title></head>
+<body>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold">
+        <span th:text="${collection.name}"></span>
+        <span th:if="${collection.isActive}" class="badge bg-success ms-2 fs-6">Active</span>
+        <span th:unless="${collection.isActive}" class="badge bg-secondary ms-2 fs-6">Ẩn</span>
+    </h4>
+    <div class="d-flex gap-2">
+        <a th:href="@{'/admin/collections/' + ${collection.id} + '/edit'}"
+           class="btn btn-outline-dark btn-sm">
+            <i class="bi bi-pencil me-1"></i>Sửa thông tin
+        </a>
+        <a th:href="@{/admin/collections}" class="btn btn-outline-secondary btn-sm">← Quay lại</a>
+    </div>
+</div>
+
+<div class="row g-4">
+
+    <!-- Danh sach san pham trong collection -->
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">
+                    Sản phẩm trong collection
+                    <span class="badge bg-dark ms-1"
+                          th:text="${collectionProducts.size()}"></span>
+                </h6>
+
+                <div th:if="${#sets.isEmpty(collectionProducts)}"
+                     class="text-muted text-center py-3">
+                    Chưa có sản phẩm nào.
+                </div>
+
+                <div th:each="p : ${collectionProducts}"
+                     class="d-flex justify-content-between align-items-center
+                            py-2 border-bottom">
+                    <div class="d-flex align-items-center gap-3">
+                        <img th:if="${p.images != null and !p.images.isEmpty()}"
+                             th:src="${p.images[0].imageUrl}"
+                             style="width:50px;height:50px;object-fit:cover"
+                             class="rounded"/>
+                        <img th:unless="${p.images != null and !p.images.isEmpty()}"
+                             src="/images/no-image.png"
+                             style="width:50px;height:50px;object-fit:cover"
+                             class="rounded"/>
+                        <div>
+                            <p class="mb-0 fw-bold small" th:text="${p.name}"></p>
+                            <small class="text-muted"
+                                   th:text="${p.category != null ? p.category.name : ''}"></small>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-danger small fw-bold"
+                              th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></span>
+                        <a th:href="@{'/admin/collections/' + ${collection.id}
+                                       + '/products/' + ${p.id} + '/remove'}"
+                           class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('Xóa sản phẩm này khỏi collection?')">
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Them san pham + thong tin collection -->
+    <div class="col-md-4">
+
+        <!-- Thong tin -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="fw-bold mb-2">Thông tin</h6>
+                <p class="small text-muted mb-1"
+                   th:text="${collection.description}"></p>
+                <div th:if="${collection.startDate != null or collection.endDate != null}"
+                     class="small text-muted">
+                    <i class="bi bi-calendar me-1"></i>
+                    <span th:if="${collection.startDate != null}"
+                          th:text="${#temporals.format(collection.startDate, 'dd/MM/yyyy')}"></span>
+                    <span th:if="${collection.startDate != null and collection.endDate != null}"> — </span>
+                    <span th:if="${collection.endDate != null}"
+                          th:text="${#temporals.format(collection.endDate, 'dd/MM/yyyy')}"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form them san pham -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">
+                    <i class="bi bi-plus-circle me-1"></i>Thêm sản phẩm
+                </h6>
+
+                <div th:if="${#lists.isEmpty(availableProducts)}"
+                     class="text-muted small">
+                    Tất cả sản phẩm đã có trong collection.
+                </div>
+
+                <form th:if="${!#lists.isEmpty(availableProducts)}"
+                      th:action="@{'/admin/collections/' + ${collection.id} + '/products/add'}"
+                      method="post">
+                    <div class="mb-2">
+                        <input type="text" id="searchProduct"
+                               class="form-control form-control-sm mb-2"
+                               placeholder="Tìm sản phẩm..."/>
+                        <div style="max-height:250px;overflow-y:auto"
+                             class="border rounded p-2">
+                            <div th:each="p : ${availableProducts}"
+                                 class="form-check product-item">
+                                <input class="form-check-input" type="checkbox"
+                                       name="productIds"
+                                       th:value="${p.id}"
+                                       th:id="'p' + ${p.id}"/>
+                                <label class="form-check-label small"
+                                       th:for="'p' + ${p.id}"
+                                       th:text="${p.name}"></label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-dark btn-sm flex-grow-1">
+                            <i class="bi bi-plus-lg me-1"></i>Thêm vào
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                onclick="selectAll()">Tất cả</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Tim kiem san pham trong danh sach
+document.getElementById('searchProduct')?.addEventListener('input', function () {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('.product-item').forEach(item => {
+        const name = item.querySelector('label').textContent.toLowerCase();
+        item.style.display = name.includes(q) ? '' : 'none';
+    });
+});
+
+function selectAll() {
+    document.querySelectorAll('input[name="productIds"]').forEach(cb => {
+        if (cb.closest('.product-item').style.display !== 'none') {
+            cb.checked = true;
+        }
+    });
+}
+</script>
+</body>
+</html>

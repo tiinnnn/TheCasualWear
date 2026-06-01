@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Collection</title></head>
+<body>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold"
+        th:text="${collection.id != null} ? 'Sửa Collection' : 'Tạo Collection mới'"></h4>
+    <a th:href="@{/admin/collections}" class="btn btn-outline-secondary btn-sm">← Quay lại</a>
+</div>
+
+<div class="card border-0 shadow-sm" style="max-width:600px">
+    <div class="card-body">
+        <form th:action="${collection.id != null}
+                          ? @{'/admin/collections/' + ${collection.id} + '/edit'}
+                          : @{/admin/collections/new}"
+              method="post"
+              enctype="multipart/form-data">
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Tên Collection <span class="text-danger">*</span></label>
+                <input type="text" name="name" th:value="${collection.name}"
+                       class="form-control" required placeholder="VD: Summer 2025"/>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Mô tả</label>
+                <textarea name="description" class="form-control" rows="3"
+                          th:text="${collection.description}"
+                          placeholder="Mô tả ngắn về collection..."></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Ảnh bìa</label>
+                <input type="file" name="coverFile" accept="image/*"
+                       class="form-control" id="coverFileInput"
+                       onchange="previewCover(this)"/>
+                <img id="coverPreview"
+                     th:if="${collection.coverImage != null}"
+                     th:src="${collection.coverImage}"
+                     class="mt-2 rounded" style="height:120px;object-fit:cover"/>
+                <img id="coverPreview"
+                     th:unless="${collection.coverImage != null}"
+                     src="" class="mt-2 rounded d-none"
+                     style="height:120px;object-fit:cover"/>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col">
+                    <label class="form-label fw-bold">Ngày bắt đầu</label>
+                    <input type="date" name="startDate" class="form-control"
+                           th:value="${collection.startDate}"/>
+                </div>
+                <div class="col">
+                    <label class="form-label fw-bold">Ngày kết thúc</label>
+                    <input type="date" name="endDate" class="form-control"
+                           th:value="${collection.endDate}"/>
+                </div>
+            </div>
+
+            <div class="form-check mb-4">
+                <input class="form-check-input" type="checkbox"
+                       name="isActive" id="isActive" value="true"
+                       th:checked="${collection.isActive != false}"/>
+                <label class="form-check-label" for="isActive">
+                    Hiển thị (Active)
+                </label>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-dark">
+                    <i class="bi bi-check-lg me-1"></i>Lưu
+                </button>
+                <a th:href="@{/admin/collections}" class="btn btn-outline-secondary">Hủy</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function previewCover(input) {
+        const preview = document.getElementById('coverPreview');
+        if (input.files && input.files[0]) {
+            preview.src = URL.createObjectURL(input.files[0]);
+            preview.classList.remove('d-none');
+        }
+    }
+</script>
+</body>
+</html>

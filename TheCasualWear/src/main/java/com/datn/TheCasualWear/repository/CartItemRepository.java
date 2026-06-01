@@ -10,9 +10,7 @@ public interface CartItemRepository extends JpaRepository<CartItem, Integer> {
     List<CartItem> findByCartId(Integer cartId);
     void deleteByCartId(Integer cartId);
 
-    // ✅ Tìm item trùng theo variantId (không cần productId nữa)
     Optional<CartItem> findByCartIdAndVariantId(Integer cartId, Integer variantId);
 
-    // ✅ Xóa cart item khi variant bị xóa
     void deleteByVariantId(Integer variantId);
 }

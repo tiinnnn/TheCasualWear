@@ -26,17 +26,13 @@ public class AdminProductController {
     private final SizeService           sizeService;
     private final ColorService          colorService;
     private final CloudinaryService     cloudinaryService;
-    private final VariantImageService   variantImageService; // ✅ thêm mới
+    private final VariantImageService   variantImageService;
 
     private void addFormData(Model model) {
         model.addAttribute("categories", categoryService.getAllCategories());
         model.addAttribute("sizes",      sizeService.getAllSizes());
         model.addAttribute("colors",     colorService.getAllColors());
     }
-
-    // =========================================================
-    // DANH SÁCH
-    // =========================================================
 
     @GetMapping
     public String listProducts(@RequestParam(required = false) String keyword,
@@ -58,10 +54,6 @@ public class AdminProductController {
         model.addAttribute("view", "admin/product/deleted");
         return "layouts/admin-layout";
     }
-
-    // =========================================================
-    // FORM TẠO / SỬA PRODUCT
-    // =========================================================
 
     @GetMapping("/add")
     public String addProductPage(Model model) {
@@ -241,10 +233,6 @@ public class AdminProductController {
         return "redirect:/admin/products/" + productId + "/variants";
     }
 
-    /**
-     * Xóa 1 ảnh variant.
-     * GET /admin/products/{productId}/variants/{variantId}/images/delete/{imageId}
-     */
     @GetMapping("/{productId}/variants/{variantId}/images/delete/{imageId}")
     public String deleteVariantImage(
             @PathVariable Integer productId,

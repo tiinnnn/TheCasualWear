@@ -2,8 +2,10 @@ package com.datn.TheCasualWear.service;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import com.datn.TheCasualWear.entity.Collection;
 import com.datn.TheCasualWear.entity.Product;
 import com.datn.TheCasualWear.entity.ProductImage;
+import com.datn.TheCasualWear.repository.CollectionRepository;
 import com.datn.TheCasualWear.repository.ProductImageRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,13 +17,16 @@ import java.util.Map;
 @Service
 public class CloudinaryService {
 
-    private final Cloudinary cloudinary;
-    private final ProductImageRepository productImageRepository;
+    private final Cloudinary              cloudinary;
+    private final ProductImageRepository  productImageRepository;
+    private final CollectionRepository    collectionRepository;
 
     public CloudinaryService(Cloudinary cloudinary,
-                             ProductImageRepository productImageRepository) {
-        this.cloudinary = cloudinary;
+                             ProductImageRepository productImageRepository,
+                             CollectionRepository collectionRepository) {
+        this.cloudinary             = cloudinary;
         this.productImageRepository = productImageRepository;
+        this.collectionRepository   = collectionRepository;
     }
 
     @SuppressWarnings("unchecked")
@@ -95,5 +100,25 @@ public class CloudinaryService {
             image.setProduct(product);
             productImageRepository.save(image);
         }
+    }
+
+    // Upload ảnh bìa cho collection, xóa ảnh cũ và lưu URL mới vào entity
+    public void uploadCollectionCover(Collection collection,
+                                      MultipartFile file) throws IOException {
+        if (file == null || file.isEmpty()) return;
+
+        // Xóa ảnh cũ trên Cloudinary nếu có
+        if (collection.getCoverImage() != null
+                && !collection.getCoverImage().isBlank()) {
+            try {
+                deleteImage(collection.getCoverImage());
+            } catch (Exception ignored) {
+                // Không dừng lại nếu xóa ảnh cũ thất bại
+            }
+        }
+
+        String url = uploadFile(file, "collections");
+        collection.setCoverImage(url);
+        collectionRepository.save(collection);
     }
 }

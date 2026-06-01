@@ -3,6 +3,8 @@ package com.datn.TheCasualWear.controller;
 import com.datn.TheCasualWear.entity.Product;
 import com.datn.TheCasualWear.entity.ProductVariant;
 import com.datn.TheCasualWear.entity.VariantImage;
+import com.datn.TheCasualWear.repository.CategoryRepository;
+import com.datn.TheCasualWear.service.CollectionService;
 import com.datn.TheCasualWear.service.ProductService;
 import com.datn.TheCasualWear.service.ProductVariantService;
 import com.datn.TheCasualWear.service.WishlistService;
@@ -22,10 +24,30 @@ public class ShopController {
     private final ProductService        productService;
     private final ProductVariantService variantService;
     private final WishlistService       wishlistService;
+    private final CollectionService     collectionService;
+    private final CategoryRepository    categoryRepository;
 
     @GetMapping("/")
     public String homePage(Model model) {
+        // San pham moi nhat
         model.addAttribute("newestProducts", productService.getNewestProducts());
+
+        // Collections dang active
+        model.addAttribute("collections", collectionService.getActiveCollections());
+
+        // San pham theo tung danh muc (moi danh muc lay toi da 8 san pham)
+        var categories = categoryRepository.findAll();
+        var productsByCategory = new java.util.LinkedHashMap<String, java.util.List<Product>>();
+        for (var cat : categories) {
+            var products = productService
+                    .getShopProducts(null, "newest", cat.getId(), 0)
+                    .getContent().stream().limit(8).toList();
+            if (!products.isEmpty()) {
+                productsByCategory.put(cat.getName(), products);
+            }
+        }
+        model.addAttribute("productsByCategory", productsByCategory);
+
         model.addAttribute("view", "shop/home");
         return "layouts/shop-layout";
     }

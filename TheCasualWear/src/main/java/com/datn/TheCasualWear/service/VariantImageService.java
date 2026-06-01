@@ -18,10 +18,6 @@ public class VariantImageService {
     private final VariantImageRepository variantImageRepository;
     private final CloudinaryService      cloudinaryService;
 
-    /**
-     * Upload nhiều ảnh cho 1 variant.
-     * sort_order tự tăng theo số ảnh hiện có.
-     */
     @Transactional
     public void uploadImages(ProductVariant variant, List<MultipartFile> files) throws Exception {
         if (files == null || files.isEmpty()) return;
@@ -41,9 +37,6 @@ public class VariantImageService {
         }
     }
 
-    /**
-     * Xóa 1 ảnh variant — xóa trên Cloudinary và trong DB.
-     */
     @Transactional
     public void deleteImage(Integer imageId) throws Exception {
         VariantImage image = variantImageRepository.findById(imageId)
@@ -53,9 +46,6 @@ public class VariantImageService {
         variantImageRepository.delete(image);
     }
 
-    /**
-     * Xóa tất cả ảnh của 1 variant (dùng khi xóa variant).
-     */
     @Transactional
     public void deleteAllByVariant(Integer variantId) throws Exception {
         List<VariantImage> images = variantImageRepository

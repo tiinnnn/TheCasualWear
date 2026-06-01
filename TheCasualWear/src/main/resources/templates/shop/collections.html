@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Collections</title></head>
+<body>
+
+<div class="container py-4">
+    <h3 class="fw-bold mb-4">Collections</h3>
+
+    <div th:if="${#lists.isEmpty(collections)}"
+         class="text-muted text-center py-5">
+        Chưa có collection nào.
+    </div>
+
+    <div class="row g-4">
+        <div th:each="c : ${collections}" class="col-md-4">
+            <a th:href="@{'/collections/' + ${c.id}}"
+               class="text-decoration-none text-dark">
+                <div class="card border-0 shadow-sm overflow-hidden h-100
+                            hover-shadow">
+                    <!-- Anh bia -->
+                    <div class="position-relative">
+                        <img th:if="${c.coverImage != null}"
+                             th:src="${c.coverImage}"
+                             class="card-img-top"
+                             style="height:220px;object-fit:cover"/>
+                        <div th:unless="${c.coverImage != null}"
+                             class="bg-light d-flex align-items-center
+                                    justify-content-center"
+                             style="height:220px">
+                            <i class="bi bi-image text-muted fs-1"></i>
+                        </div>
+                        <!-- Badge so luong san pham -->
+                        <span class="position-absolute bottom-0 end-0
+                                     m-2 badge bg-dark opacity-75">
+                            <span th:text="${c.products.size()}"></span> sản phẩm
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="fw-bold mb-1" th:text="${c.name}"></h5>
+                        <p class="text-muted small mb-0"
+                           th:text="${c.description}"></p>
+                        <div th:if="${c.startDate != null or c.endDate != null}"
+                             class="small text-muted mt-2">
+                            <i class="bi bi-calendar me-1"></i>
+                            <span th:if="${c.startDate != null}"
+                                  th:text="${#temporals.format(c.startDate, 'dd/MM/yyyy')}"></span>
+                            <span th:if="${c.startDate != null and c.endDate != null}"> — </span>
+                            <span th:if="${c.endDate != null}"
+                                  th:text="${#temporals.format(c.endDate, 'dd/MM/yyyy')}"></span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

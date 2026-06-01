@@ -32,11 +32,6 @@ public class CartController {
         return "layouts/shop-layout";
     }
 
-    /**
-     * Thêm vào giỏ — form product-detail chỉ cần gửi variantId.
-     * <input type="hidden" name="variantId" th:value="${selectedVariant.id}">
-     * Không cần productId nữa.
-     */
     @PostMapping("/add")
     public String addToCart(@RequestParam Integer variantId,
                             @RequestParam(defaultValue = "1") Integer quantity,

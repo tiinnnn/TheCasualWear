@@ -10,14 +10,6 @@
         <a th:href="@{/admin/products}" class="btn btn-outline-secondary btn-sm">← Quay lại</a>
     </div>
 
-    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show">
-        <span th:text="${successMessage}"></span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show">
-        <span th:text="${errorMessage}"></span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
 
     <form th:action="@{/admin/products/save}" method="post" enctype="multipart/form-data">
         <input type="hidden" th:if="${product.id != null}" name="id" th:value="${product.id}"/>

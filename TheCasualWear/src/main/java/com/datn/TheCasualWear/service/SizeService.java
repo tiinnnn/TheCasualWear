@@ -41,7 +41,6 @@ public class SizeService {
 
     public void deleteSize(Integer id) {
         Size size = getSizeById(id);
-        // ✅ Check trong variant thay vì product (size nằm ở product_variant)
         if (variantRepository.existsBySizeId(id)) {
             throw new IllegalStateException(
                     "Không thể xóa size đang được dùng bởi biến thể sản phẩm!");

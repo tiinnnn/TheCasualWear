@@ -43,8 +43,6 @@ public class AdminOrderController {
                 .orElseThrow(() -> new IllegalStateException("User not found"));
     }
 
-    // ── Danh sach ─────────────────────────────────────────
-
     @GetMapping
     public String listOrders(@RequestParam(required = false) String keyword,
                              @RequestParam(required = false) String status,
@@ -67,7 +65,7 @@ public class AdminOrderController {
         return "layouts/admin-layout";
     }
 
-    // ── Chi tiet ──────────────────────────────────────────
+    // Chi tiet
 
     @GetMapping("/{id}")
     public String orderDetail(@PathVariable Integer id, Model model) {
@@ -109,7 +107,6 @@ public class AdminOrderController {
         return "layouts/admin-layout";
     }
 
-    // ── Trang thai ────────────────────────────────────────
 
     @GetMapping("/{id}/confirm")
     public String confirmOrder(@PathVariable Integer id,
@@ -127,7 +124,7 @@ public class AdminOrderController {
         return "redirect:/admin/orders/" + id;
     }
 
-    // ── Hoan hang (DELIVERED/COMPLETED trong 15 ngay) ────
+    // Hoan hang (DELIVERED/COMPLETED trong 15 ngay)
 
     @PostMapping("/{id}/return")
     public String returnOrder(@PathVariable Integer id,
@@ -144,7 +141,7 @@ public class AdminOrderController {
         return "redirect:/admin/orders/" + id;
     }
 
-    // ── Phan cong delivery ────────────────────────────────
+    //Phan cong delivery
 
     @PostMapping("/{id}/assign")
     public String assignOrder(@PathVariable Integer id,

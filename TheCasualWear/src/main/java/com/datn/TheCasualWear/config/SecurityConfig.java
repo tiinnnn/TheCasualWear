@@ -59,11 +59,12 @@ public class SecurityConfig {
                                 "/auth/**",
                                 "/lien-he",
                                 "/chinh-sach-doi-tra","/forgot-password", "/forgot-password/reset",
-                                "/css/**", "/js/**", "/images/**", "/webjars/**"
+                                "/css/**", "/js/**", "/images/**", "/webjars/**", "/collections/**"
                         ).permitAll()
 
                         // Chỉ ADMIN
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN", "OWNER")
+                        .requestMatchers("/admin/collections/**").hasAnyRole("ADMIN", "OWNER")
 
                         // Chỉ DELIVERY
                         .requestMatchers("/delivery/**").hasRole("DELIVERY")
