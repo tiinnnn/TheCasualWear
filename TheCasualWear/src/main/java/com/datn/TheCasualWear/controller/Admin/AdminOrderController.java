@@ -2,7 +2,6 @@ package com.datn.TheCasualWear.controller.Admin;
 
 import com.datn.TheCasualWear.dto.OrderListDTO;
 import com.datn.TheCasualWear.dto.DeliveryStaffDTO;
-import com.datn.TheCasualWear.entity.DeliveryProfile;
 import com.datn.TheCasualWear.repository.DeliveryProfileRepository;
 import com.datn.TheCasualWear.entity.AppOrder;
 import com.datn.TheCasualWear.entity.AppUser;

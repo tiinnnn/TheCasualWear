@@ -149,6 +149,11 @@
                 <a th:href="@{/cart}" class="text-dark position-relative"
                    sec:authorize="isAuthenticated()">
                     <i class="bi bi-cart3 fs-5"></i>
+                    <span th:if="${cartCount != null and cartCount > 0}"
+                          class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                          style="font-size:0.6rem;"
+                          th:text="${cartCount > 9} ? '9+' : ${cartCount}">
+                    </span>
                 </a>
                 <a th:href="@{/auth/login}" class="text-dark"
                    sec:authorize="!isAuthenticated()">

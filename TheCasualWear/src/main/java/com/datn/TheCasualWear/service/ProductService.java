@@ -132,8 +132,6 @@ public class ProductService {
             throw new IllegalStateException(
                     "Không thể xóa! Sản phẩm đang có trong đơn hàng chưa hủy.");
         }
-
-        // ✅ Xóa cart items qua variantId
         variantRepository.findByProductId(id)
                 .forEach(v -> cartItemRepository.deleteByVariantId(v.getId()));
 

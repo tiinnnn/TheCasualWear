@@ -4,23 +4,19 @@
 <body>
 <div class="container">
     <div class="row">
-        <!-- ==================== ẢNH SẢN PHẨM ==================== -->
         <div class="col-md-6">
-            <!-- Slideshow — Thymeleaf render tất cả ảnh (product + variant) -->
             <div id="productCarousel" class="carousel slide mb-2" data-bs-ride="false">
                 <div class="carousel-inner">
 
-                    <!-- ✅ Ảnh chung của product trước (index 0, 1, 2...) -->
                     <div th:each="img, i : ${product.images}"
                          th:classappend="${i.index == 0} ? 'active'"
                          class="carousel-item"
                          th:attr="data-type='product'">
                         <img th:src="${img.imageUrl}"
-                             class="d-block w-100 rounded"
-                             style="height:450px;object-fit:cover"/>
+                             class="d-block w-100 rounded carousel-zoomable"
+                             style="height:450px;object-fit:cover;cursor:zoom-in"/>
                     </div>
 
-                    <!-- ✅ Ảnh riêng từng variant theo sau -->
                     <th:block th:each="v : ${variants}">
                         <div th:each="img : ${v.images}"
                              class="carousel-item"
@@ -28,8 +24,8 @@
                                       data-color-id=${v.color != null ? v.color.id : 0},
                                       data-variant-id=${v.id}">
                             <img th:src="${img.imageUrl}"
-                                 class="d-block w-100 rounded"
-                                 style="height:450px;object-fit:cover"/>
+                                 class="d-block w-100 rounded carousel-zoomable"
+                                 style="height:450px;object-fit:cover;cursor:zoom-in"/>
                         </div>
                     </th:block>
 
@@ -52,17 +48,45 @@
                 </button>
             </div>
 
-            <!-- Thumbnails — JS render -->
-            <div class="d-flex gap-2 flex-wrap" id="thumbnailRow"></div>
+            <!-- Thumbnails — JS render, horizontal scroll -->
+            <div style="position:relative;padding:0 18px">
+                <button id="thumb-prev" onclick="scrollThumbs(-1)"
+                        style="display:none;position:absolute;left:0;top:50%;transform:translateY(-50%);
+                               z-index:2;background:#fff;border:1px solid #ddd;border-radius:50%;
+                               width:28px;height:28px;cursor:pointer;font-size:.8rem;
+                               align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.12)">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+                <div id="thumbnailRow"
+                     style="display:flex;gap:8px;overflow-x:auto;scroll-behavior:smooth;
+                            scrollbar-width:none;-ms-overflow-style:none;padding-bottom:2px"></div>
+                <button id="thumb-next" onclick="scrollThumbs(1)"
+                        style="display:none;position:absolute;right:0;top:50%;transform:translateY(-50%);
+                               z-index:2;background:#fff;border:1px solid #ddd;border-radius:50%;
+                               width:28px;height:28px;cursor:pointer;font-size:.8rem;
+                               align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.12)">
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+            </div>
+            <style>#thumbnailRow::-webkit-scrollbar{display:none}</style>
         </div>
-
-        <!-- ==================== THÔNG TIN SẢN PHẨM ==================== -->
         <div class="col-md-6">
             <nav aria-label="breadcrumb" class="mb-3">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a th:href="@{/}">Trang chủ</a></li>
-                    <li class="breadcrumb-item"><a th:href="@{/shop}">Shop</a></li>
-                    <li class="breadcrumb-item active" th:text="${product.name}"></li>
+                <ol class="breadcrumb align-items-center" style="font-size:0.82rem">
+                    <li class="breadcrumb-item">
+                        <a th:href="@{/}" class="text-decoration-none text-secondary"
+                           style="transition:color .15s" onmouseover="this.style.color='#000'" onmouseout="this.style.color=''">
+                            Trang chủ
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a th:href="@{/shop}" class="text-decoration-none text-secondary"
+                           style="transition:color .15s" onmouseover="this.style.color='#000'" onmouseout="this.style.color=''">
+                            Shop
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active fw-semibold" aria-current="page"
+                        th:text="${product.name}"></li>
                 </ol>
             </nav>
 
@@ -82,7 +106,6 @@
                     </button>
                 </form>
 
-                <!-- Chưa đăng nhập → redirect login -->
                 <a sec:authorize="!isAuthenticated()"
                    th:href="@{/auth/login}"
                    class="btn btn-light border rounded-circle p-2 flex-shrink-0"
@@ -100,24 +123,20 @@
 
             <hr/>
 
-            <!-- CHỌN MÀU -->
             <div class="mb-3" id="colorSection">
                 <small class="text-muted d-block mb-2 fw-bold">Màu sắc:</small>
                 <div id="colorBtns" class="d-flex gap-2 flex-wrap"></div>
             </div>
 
-            <!-- CHỌN SIZE -->
             <div class="mb-3" id="sizeSection">
                 <small class="text-muted d-block mb-2 fw-bold">Kích thước:</small>
                 <div id="sizeBtns" class="d-flex gap-2 flex-wrap"></div>
             </div>
 
-            <!-- Tồn kho -->
             <div class="mb-3">
                 <span id="stockBadge" class="badge bg-secondary">Chọn size và màu</span>
             </div>
 
-            <p class="text-muted" th:text="${product.description}"></p>
 
             <hr/>
 
@@ -149,7 +168,11 @@
             </div>
         </div>
     </div>
+    <div class="product-description-container mt-5 pt-4 border-top">
+        <span id="rawDescription" th:text="${product.description}" style="display:none;"></span>
 
+        <div id="formattedDescription" class="product-description-content"></div>
+    </div>
     <!-- SẢN PHẨM LIÊN QUAN -->
     <div th:if="${relatedProducts != null and !relatedProducts.isEmpty()}" class="mt-5">
         <h4 class="mb-3 fw-bold">Sản phẩm liên quan</h4>
@@ -202,13 +225,29 @@
         return map;
     }
 
+    function scrollThumbs(dir) {
+        const row = document.getElementById('thumbnailRow');
+        row.scrollBy({ left: dir * 220, behavior: 'smooth' });
+    }
+    window.scrollThumbs = scrollThumbs;
+
+    function updateThumbArrows() {
+        const row  = document.getElementById('thumbnailRow');
+        const prev = document.getElementById('thumb-prev');
+        const next = document.getElementById('thumb-next');
+        if (!prev || !next) return;
+        const scrollable = row.scrollWidth > row.clientWidth + 4;
+        prev.style.display = scrollable ? 'flex' : 'none';
+        next.style.display = scrollable ? 'flex' : 'none';
+    }
+
     // Khởi tạo thumbnails từ carousel items
     function buildThumbnails() {
         const items    = document.querySelectorAll('#productCarousel .carousel-item');
         const thumbRow = document.getElementById('thumbnailRow');
         thumbRow.innerHTML = '';
 
-        if (items.length <= 1) return;  // không cần thumbnail nếu chỉ 1 ảnh
+        if (items.length <= 1) return;
 
         items.forEach((el, idx) => {
             const img = el.querySelector('img');
@@ -217,13 +256,14 @@
             thumb.src               = img.src;
             thumb.dataset.index     = idx;
             thumb.className         = 'rounded border border-2 thumb-img';
-            thumb.style.cssText     = 'width:70px;height:70px;object-fit:cover;cursor:pointer;opacity:0.6';
+            thumb.style.cssText     = 'width:70px;height:70px;object-fit:cover;cursor:pointer;opacity:0.6;flex-shrink:0';
             thumb.addEventListener('click', function () {
                 carousel.to(idx);
                 highlightThumb(idx);
             });
             thumbRow.appendChild(thumb);
         });
+        setTimeout(updateThumbArrows, 50);
     }
 
     function highlightThumb(index) {
@@ -240,9 +280,7 @@
         }
     }
 
-    //Khởi tạo
     function init() {
-        // Carousel
         const carouselEl = document.getElementById('productCarousel');
         carousel = new bootstrap.Carousel(carouselEl, { ride: false });
         buildThumbnails();
@@ -316,7 +354,6 @@
         updateUI();
     }
 
-    // ── Thứ tự size chuẩn ─────────────────────────────────────────
     const SIZE_ORDER = ['None', 'Free Size', 'XS', 'S', 'M', 'L', 'XL', 'XXL',
                         '3XL', '4XL', '5XL'];
     function sizeRank(name) {
@@ -341,7 +378,6 @@
         }
         document.getElementById('sizeSection').style.display = '';
 
-        // Sort theo SIZE_ORDER
         const sorted = [...allSizeMap.entries()]
             .sort((a, b) => sizeRank(a[1]) - sizeRank(b[1]));
 
@@ -367,7 +403,6 @@
         });
     }
 
-    // Helper: áp trạng thái cho 1 nút size theo colorId hiện tại
     function _applySizeState(btn, sizeId, sizeName, colorId) {
         // Tìm variant khớp color + size
         const match = colorId
@@ -411,7 +446,6 @@
         }
     }
 
-    // ── Chọn size ─────────────────────────────────────────────────
     function selectSize(sizeId, btn) {
         selectedSizeId = sizeId;
 
@@ -426,9 +460,6 @@
             (!selectedColorId || (v.color && v.color.id === selectedColorId)) &&
             (v.size && v.size.id === selectedSizeId)
         ) || null;
-
-        //  Khi chọn size + đã có màu → nhảy đến ảnh của variant đó
-        // Khi chỉ chọn size (chưa chọn màu) → giữ nguyên slideshow
         if (selectedColorId && selectedVariant) {
             goToVariantImage(selectedColorId, selectedVariant.id);
         }
@@ -436,11 +467,6 @@
         updateUI();
     }
 
-    /**
-     * Nhảy carousel đến ảnh của variant cụ thể.
-     * Ưu tiên: tìm carousel-item có data-variant-id khớp trước,
-     * fallback về ảnh đầu tiên của màu (data-color-id).
-     */
     function goToVariantImage(colorId, variantId) {
         const items = document.querySelectorAll('#productCarousel .carousel-item');
         let targetIdx = -1;
@@ -451,7 +477,6 @@
                 targetIdx = idx;
             }
         });
-
         // Ưu tiên 2: fallback về ảnh đầu tiên của màu
         if (targetIdx === -1) {
             items.forEach((el, idx) => {
@@ -468,8 +493,6 @@
             highlightThumb(targetIdx);
         }
     }
-
-    // ── Cập nhật UI ───────────────────────────────────────────────
     function updateUI() {
         const stockBadge   = document.getElementById('stockBadge');
         const addBtn       = document.getElementById('addToCartBtn');
@@ -525,6 +548,433 @@
     }
 
     document.addEventListener('DOMContentLoaded', init);
+</script>
+<!-- ==================== LIGHTBOX ==================== -->
+<style>
+    /* Breadcrumb separator */
+    .breadcrumb-item + .breadcrumb-item::before {
+      content: "›";
+      font-size: 1rem;
+      color: #bbb;
+      padding-right: 6px;
+    }
+
+    /* ── Overlay ── */
+    #lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: rgba(0,0,0,.88);
+      align-items: center;
+      justify-content: center;
+    }
+    #lightbox.open { display: flex; }
+
+    /* ── Image area (click outside = close) ── */
+    #lb-backdrop {
+      position: absolute;
+      inset: 0;
+      cursor: default;
+    }
+
+    /* ── Image wrapper ── */
+    #lb-img-wrap {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      max-width: 88vw;
+      max-height: 88vh;
+      overflow: hidden;
+      cursor: grab;
+      user-select: none;
+      border-radius: 6px;
+    }
+    #lb-img-wrap.dragging { cursor: grabbing; }
+
+    #lb-img {
+      max-width: 88vw;
+      max-height: 88vh;
+      object-fit: contain;
+      transform-origin: center center;
+      transition: transform .15s ease, opacity .2s ease;
+      pointer-events: none;
+      display: block;
+      border-radius: 4px;
+      box-shadow: 0 12px 48px rgba(0,0,0,.7);
+    }
+
+    /* ── Prev / Next arrows ── */
+    .lb-arrow {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 2;
+      background: rgba(255,255,255,.12);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,.18);
+      color: #fff;
+      border-radius: 50%;
+      width: 48px; height: 48px;
+      font-size: 1.3rem;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .lb-arrow:hover { background: rgba(255,255,255,.28); }
+    #lb-prev { left: 20px; }
+    #lb-next { right: 20px; }
+    .lb-arrow.hidden { display: none; }
+
+    /* ── Close ── */
+    #lb-close {
+      position: fixed;
+      top: 18px; right: 22px;
+      z-index: 2;
+      background: rgba(255,255,255,.12);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,.2);
+      color: #fff;
+      border-radius: 50%;
+      width: 42px; height: 42px;
+      font-size: 1.2rem;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    #lb-close:hover { background: rgba(255,255,255,.28); }
+
+    /* ── Bottom controls ── */
+    #lb-controls {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,.1);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 40px;
+      padding: 6px 14px;
+    }
+    .lb-btn {
+      background: none; border: none;
+      color: #fff; font-size: 1rem;
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .lb-btn:hover { background: rgba(255,255,255,.2); }
+    #lb-zoom-level {
+      color: rgba(255,255,255,.7);
+      font-size: .78rem;
+      min-width: 40px;
+      text-align: center;
+      font-family: monospace;
+    }
+    #lb-counter {
+      color: rgba(255,255,255,.55);
+      font-size: .78rem;
+      min-width: 44px;
+      text-align: center;
+    }
+    .lb-sep {
+      width: 1px; height: 18px;
+      background: rgba(255,255,255,.2);
+      margin: 0 2px;
+    }
+
+    /* ── Hint ── */
+    #lb-hint {
+      position: fixed;
+      top: 20px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+      color: rgba(255,255,255,.38);
+      font-size: .72rem;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+</style>
+
+<!-- Lightbox HTML -->
+<div id="lightbox" role="dialog" aria-modal="true" aria-label="Phóng to ảnh">
+    <div id="lb-backdrop"></div>
+    <div id="lb-img-wrap">
+        <img id="lb-img" src="" alt=""/>
+    </div>
+    <div id="lb-hint">Cuộn để zoom · Kéo để di chuyển · ESC để đóng</div>
+    <button id="lb-close"  title="Đóng"><i class="bi bi-x-lg"></i></button>
+    <button id="lb-prev"   class="lb-arrow" title="Ảnh trước"><i class="bi bi-chevron-left"></i></button>
+    <button id="lb-next"   class="lb-arrow" title="Ảnh tiếp theo"><i class="bi bi-chevron-right"></i></button>
+    <div id="lb-controls">
+        <button class="lb-btn" id="lb-reset" title="Reset zoom"><i class="bi bi-arrow-counterclockwise"></i></button>
+        <button class="lb-btn" id="lb-out"   title="Thu nhỏ"><i class="bi bi-dash-lg"></i></button>
+        <span   id="lb-zoom-level">100%</span>
+        <button class="lb-btn" id="lb-in"    title="Phóng to"><i class="bi bi-plus-lg"></i></button>
+        <div class="lb-sep"></div>
+        <span id="lb-counter">1 / 1</span>
+    </div>
+</div>
+
+<script>
+    (function () {
+      const lb        = document.getElementById('lightbox');
+      const lbImg     = document.getElementById('lb-img');
+      const lbWrap    = document.getElementById('lb-img-wrap');
+      const lbLevel   = document.getElementById('lb-zoom-level');
+      const lbCounter = document.getElementById('lb-counter');
+      const lbPrev    = document.getElementById('lb-prev');
+      const lbNext    = document.getElementById('lb-next');
+
+      let allSrcs   = [];   // danh sách src từ tất cả carousel-item
+      let curIdx    = 0;
+      let scale     = 1;
+      let tx = 0, ty = 0;
+      let dragging  = false, dragSX, dragSY, dragTX, dragTY;
+      let maxScale  = 5;
+
+      /* ── Collect all carousel image srcs ── */
+      function collectSrcs() {
+        allSrcs = [];
+        document.querySelectorAll('#productCarousel .carousel-item img').forEach(img => {
+          allSrcs.push(img.src);
+        });
+      }
+
+      /* ── Open ── */
+      function openLightbox(startIdx) {
+        collectSrcs();
+        curIdx = startIdx;
+        scale = 1; tx = 0; ty = 0;
+        showSlide(curIdx, false);
+        lb.classList.add('open');
+        document.body.style.overflow = 'hidden';
+      }
+
+      /* ── Close ── */
+      function closeLightbox() {
+        lb.classList.remove('open');
+        document.body.style.overflow = '';
+        // Sync bootstrap carousel to current lightbox slide
+        if (window._lbCarousel) window._lbCarousel.to(curIdx);
+        const thumbs = document.querySelectorAll('.thumb-img');
+        if (typeof highlightThumb === 'function') highlightThumb(curIdx);
+      }
+
+      /* ── Show slide (with optional fade) ── */
+      function showSlide(idx, animate) {
+        if (animate) {
+          lbImg.style.opacity = '0';
+          setTimeout(() => {
+            lbImg.src = allSrcs[idx];
+            scale = 1; tx = 0; ty = 0;
+            applyTransform();
+            lbImg.style.opacity = '1';
+          }, 120);
+        } else {
+          lbImg.src = allSrcs[idx];
+          applyTransform();
+        }
+        lbCounter.textContent = (idx + 1) + ' / ' + allSrcs.length;
+        lbPrev.classList.toggle('hidden', allSrcs.length <= 1);
+        lbNext.classList.toggle('hidden', allSrcs.length <= 1);
+      }
+
+      /* ── Navigate ── */
+      lbPrev.onclick = e => {
+        e.stopPropagation();
+        curIdx = (curIdx - 1 + allSrcs.length) % allSrcs.length;
+        showSlide(curIdx, true);
+      };
+      lbNext.onclick = e => {
+        e.stopPropagation();
+        curIdx = (curIdx + 1) % allSrcs.length;
+        showSlide(curIdx, true);
+      };
+
+      /* ── Transform ── */
+      function applyTransform() {
+        lbImg.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+        lbLevel.textContent   = Math.round(scale * 100) + '%';
+      }
+
+      function clampTranslate() {
+        const maxTX = Math.max(0, (scale - 1) * lbImg.offsetWidth  / 2 + 40);
+        const maxTY = Math.max(0, (scale - 1) * lbImg.offsetHeight / 2 + 40);
+        tx = Math.max(-maxTX, Math.min(maxTX, tx));
+        ty = Math.max(-maxTY, Math.min(maxTY, ty));
+      }
+
+      function changeScale(delta, cx, cy) {
+        const prev = scale;
+        scale = Math.max(1, Math.min(maxScale, scale + delta));
+        if (cx !== undefined && prev !== scale) {
+          const r    = scale / prev;
+          const rect = lbWrap.getBoundingClientRect();
+          const ox   = cx - rect.left - rect.width  / 2;
+          const oy   = cy - rect.top  - rect.height / 2;
+          tx = ox + (tx - ox) * r;
+          ty = oy + (ty - oy) * r;
+        }
+        if (scale === 1) { tx = 0; ty = 0; }
+        clampTranslate();
+        applyTransform();
+      }
+
+      /* ── Wheel zoom ── */
+      lbWrap.addEventListener('wheel', e => {
+        e.preventDefault();
+        changeScale(e.deltaY < 0 ? 0.2 : -0.2, e.clientX, e.clientY);
+      }, { passive: false });
+
+      /* ── Button controls ── */
+      document.getElementById('lb-in').onclick    = e => { e.stopPropagation(); changeScale(0.3); };
+      document.getElementById('lb-out').onclick   = e => { e.stopPropagation(); changeScale(-0.3); };
+      document.getElementById('lb-reset').onclick = e => {
+        e.stopPropagation();
+        scale = 1; tx = 0; ty = 0; applyTransform();
+      };
+
+      /* ── Drag (only when zoomed) ── */
+      lbWrap.addEventListener('mousedown', e => {
+        if (scale <= 1) return;
+        dragging = true;
+        dragSX = e.clientX; dragSY = e.clientY;
+        dragTX = tx;        dragTY = ty;
+        lbWrap.classList.add('dragging');
+        e.preventDefault();
+      });
+      window.addEventListener('mousemove', e => {
+        if (!dragging) return;
+        tx = dragTX + (e.clientX - dragSX);
+        ty = dragTY + (e.clientY - dragSY);
+        clampTranslate();
+        applyTransform();
+      });
+      window.addEventListener('mouseup', () => {
+        dragging = false;
+        lbWrap.classList.remove('dragging');
+      });
+
+      /* ── Touch pinch zoom ── */
+      let lastDist = null;
+      lbWrap.addEventListener('touchstart', e => {
+        if (e.touches.length === 2)
+          lastDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX,
+                                e.touches[0].clientY - e.touches[1].clientY);
+      }, { passive: true });
+      lbWrap.addEventListener('touchmove', e => {
+        if (e.touches.length !== 2) return;
+        e.preventDefault();
+        const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX,
+                                e.touches[0].clientY - e.touches[1].clientY);
+        if (lastDist) changeScale((dist - lastDist) * 0.012);
+        lastDist = dist;
+      }, { passive: false });
+      lbWrap.addEventListener('touchend', () => { lastDist = null; });
+
+      /* ── Keyboard ── */
+      document.addEventListener('keydown', e => {
+        if (!lb.classList.contains('open')) return;
+        if (e.key === 'Escape')     closeLightbox();
+        if (e.key === 'ArrowRight') lbNext.click();
+        if (e.key === 'ArrowLeft')  lbPrev.click();
+        if (e.key === '+')          changeScale(0.3);
+        if (e.key === '-')          changeScale(-0.3);
+      });
+
+      /* ── Close triggers ── */
+      document.getElementById('lb-close').onclick    = e => { e.stopPropagation(); closeLightbox(); };
+      document.getElementById('lb-backdrop').onclick = () => closeLightbox();
+
+      /* ── Attach to carousel (DOMContentLoaded) ── */
+      document.addEventListener('DOMContentLoaded', () => {
+        // Save reference to Bootstrap carousel instance (set in init())
+        const carouselEl = document.getElementById('productCarousel');
+        carouselEl.addEventListener('click', e => {
+          const img = e.target.closest('.carousel-zoomable');
+          if (!img) return;
+          // Figure out which index this img is in our list
+          collectSrcs();
+          const items = [...document.querySelectorAll('#productCarousel .carousel-item img')];
+          const idx   = items.indexOf(img);
+          openLightbox(idx >= 0 ? idx : 0);
+        });
+        // Expose carousel instance so closeLightbox can sync
+        carouselEl.addEventListener('slid.bs.carousel', e => {
+          window._lbCarousel = bootstrap.Carousel.getInstance(carouselEl);
+        });
+        window._lbCarousel = null;
+        // Wait for init() to create the carousel instance
+        setTimeout(() => {
+          window._lbCarousel = bootstrap.Carousel.getInstance(carouselEl);
+        }, 300);
+      });
+    })();
+
+    document.addEventListener('DOMContentLoaded', function() {
+    const rawTextEl = document.getElementById('rawDescription');
+    const outputEl = document.getElementById('formattedDescription');
+
+    if (rawTextEl && outputEl) {
+        const rawText = rawTextEl.textContent;
+        const lines = rawText.split('\n');
+        let htmlResult = '';
+        let inList = false;
+
+        lines.forEach(line => {
+            let trimmed = line.trim();
+            if (!trimmed) return; // Bỏ qua dòng trống
+
+            // Kiểm tra nếu dòng bắt đầu bằng các dấu gạch ngang, dấu chấm tròn, hoặc dấu sao
+            if (trimmed.startsWith('-') || trimmed.startsWith('•') || trimmed.startsWith('*')) {
+                if (!inList) {
+                    htmlResult += '<ul class="ps-3 mb-3" style="list-style-type: disc;">';
+                    inList = true;
+                }
+
+                // Cắt bỏ ký tự dấu chấm/gạch ở đầu dòng
+                let content = trimmed.substring(1).trim();
+
+                // Tự động tìm dấu hai chấm ":" để in đậm phần nhãn (Ví dụ: Chất liệu:)
+                if (content.includes(':')) {
+                    let parts = content.split(':');
+                    let label = parts[0].trim();
+                    let rest = parts.slice(1).join(':').trim();
+                    content = `<strong>${label}:</strong> ${rest}`;
+                }
+
+                htmlResult += `<li class="mb-2" style="line-height: 1.6; color: #1a1a1a;">${content}</li>`;
+            } else {
+                // Nếu đang ở trong list mà gặp dòng thường thì đóng list lại
+                if (inList) {
+                    htmlResult += '</ul>';
+                    inList = false;
+                }
+
+                // Nếu dòng viết hoa toàn bộ hoặc kết thúc bằng dấu hai chấm -> Biến thành Tiêu đề in đậm
+                if (trimmed.endsWith(':') || trimmed === trimmed.toUpperCase()) {
+                    htmlResult += `<h5 class="fw-bold text-uppercase mt-4 mb-2" style="color: #000; letter-spacing: 0.5px;">${trimmed}</h5>`;
+                } else {
+                    htmlResult += `<p class="mb-2" style="line-height: 1.6; color: #1a1a1a;">${trimmed}</p>`;
+                }
+            }
+        });
+
+        if (inList) htmlResult += '</ul>';
+
+        // Đổ toàn bộ cấu trúc HTML đẹp đẽ vào giao diện
+        outputEl.innerHTML = htmlResult;
+    }
+});
 </script>
 </body>
 </html>
