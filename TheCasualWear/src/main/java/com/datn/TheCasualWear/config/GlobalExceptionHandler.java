@@ -16,7 +16,7 @@ public class GlobalExceptionHandler {
         return "error/404";
     }
 
-    // Lỗi nghiệp vụ (xóa category còn sản phẩm, SKU trùng...) → redirect về trang trước
+    // Lỗi nghiệp vụ → redirect về trang trước
     @ExceptionHandler(IllegalStateException.class)
     public String handleIllegalState(IllegalStateException e,
                                      RedirectAttributes redirectAttributes,

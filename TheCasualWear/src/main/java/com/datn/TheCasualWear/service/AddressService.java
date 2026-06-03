@@ -36,10 +36,9 @@ public class AddressService {
         return address;
     }
 
-    // Lấy địa chỉ mặc định
     public Address getDefaultAddress(AppUser user) {
         return addressRepository.findByUserIdAndIsDefaultTrue(user.getId())
-                .orElse(null); // chưa có địa chỉ mặc định thì trả null
+                .orElse(null);
     }
 
     // Thêm địa chỉ mới
@@ -48,18 +47,19 @@ public class AddressService {
         if (!isValidPhone(address.getPhone())) {
             throw new IllegalArgumentException("Số điện thoại phải đúng 10 chữ số!");
         }
-        // Nếu là địa chỉ đầu tiên → tự động set làm mặc định
         List<Address> existing = addressRepository.findByUserId(user.getId());
+        if (existing.size() >= 3) {
+            throw new IllegalStateException("Bạn chỉ có thể lưu tối đa 3 địa chỉ!");
+        }
+        // Nếu là địa chỉ đầu tiên → tự động set làm mặc định
         if (existing.isEmpty()) {
             address.setIsDefault(true);
         } else {
             address.setIsDefault(false);
         }
-
         return addressRepository.save(address);
     }
 
-    // Sửa địa chỉ
     public Address updateAddress(Integer id, AppUser user, Address details) {
         Address address = getAddressById(id, user);
         address.setFullName(details.getFullName());
@@ -75,7 +75,6 @@ public class AddressService {
         return addressRepository.save(address);
     }
 
-    // Xóa địa chỉ
     public void deleteAddress(Integer id, AppUser user) {
         Address address = getAddressById(id, user);
 
@@ -86,7 +85,6 @@ public class AddressService {
         addressRepository.delete(address);
     }
 
-    // Đặt địa chỉ mặc định
     public void setDefaultAddress(Integer id, AppUser user) {
         // Bỏ mặc định của địa chỉ cũ
         addressRepository.findByUserIdAndIsDefaultTrue(user.getId())
