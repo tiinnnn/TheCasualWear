@@ -76,7 +76,7 @@
 		<dependency>
 			<groupId>com.microsoft.sqlserver</groupId>
 			<artifactId>mssql-jdbc</artifactId>
-			<version>13.2.1.jre11</version> <!-- hoặc bản phù hợp với JDK bạn dùng -->
+			<version>13.2.1.jre11</version>
 			<scope>runtime</scope>
 		</dependency>
 

@@ -17,7 +17,7 @@ import java.util.List;
 public class OrderScheduler {
 
     private final OrderService          orderService;
-    private final ProductVariantService variantService;       // ✅ thay ProductRepository
+    private final ProductVariantService variantService;
     private final NotificationRepository notificationRepository;
     private final NotificationService   notificationService;
 
@@ -40,10 +40,7 @@ public class OrderScheduler {
                 LocalDateTime.now().minusDays(3));
     }
 
-    /**
-     * 8h sáng mỗi 3 ngày — cảnh báo variant sắp hết hàng (0 < stock < 5).
-     * Hiển thị tên sản phẩm + size + màu để admin biết chính xác cần nhập gì.
-     */
+
     @Scheduled(cron = "0 0 8 */3 * ?")
     public void notifyLowStock() {
         List<ProductVariant> lowStock = variantService.getLowStockVariants();
@@ -63,9 +60,8 @@ public class OrderScheduler {
                 "/admin/products");
     }
 
-    /**
-     * 8h sáng mỗi 3 ngày — cảnh báo variant hết hàng (stock = 0).
-     */
+
+     // 8h sáng mỗi 3 ngày — cảnh báo variant hết hàng (stock = 0).
     @Scheduled(cron = "0 0 8 */3 * ?")
     public void notifyOutOfStock() {
         List<ProductVariant> outOfStock = variantService.getOutOfStockVariants();
