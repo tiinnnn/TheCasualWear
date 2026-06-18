@@ -279,6 +279,7 @@ public class OrderService {
             restoreVariantStock(order);
         }
 
+        removeOrderVoucher(order, orderId);
         order.setStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
 
@@ -540,7 +541,6 @@ public class OrderService {
     }
 
     //HELPER
-
     @Transactional
     protected void restoreVariantStock(AppOrder order) {
         List<OrderDetail> details = orderDetailRepository.findByOrderId(order.getId());
