@@ -110,6 +110,11 @@ public class ProductService {
         // Xóa cart item của tất cả variant thuộc product này
         variantRepository.findByProductId(id)
                 .forEach(v -> cartItemRepository.deleteByVariantId(v.getId()));
+
+        // Xóa sản phẩm khỏi tất cả collection đang chứa nó (nếu có)
+        for (Collection collection : product.getCollections()) {
+            collection.getProducts().remove(product);
+        }
     }
 
     public void restoreProduct(Integer id) {
@@ -134,6 +139,11 @@ public class ProductService {
         }
         variantRepository.findByProductId(id)
                 .forEach(v -> cartItemRepository.deleteByVariantId(v.getId()));
+
+        // Xóa sản phẩm khỏi tất cả collection đang chứa nó (nếu có)
+        for (Collection collection : product.getCollections()) {
+            collection.getProducts().remove(product);
+        }
 
         // Xóa order_detail của đơn CANCELLED
         orderDetailRepository.deleteByProductId(id);
