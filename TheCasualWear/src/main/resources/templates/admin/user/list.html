@@ -10,13 +10,44 @@
     </h4>
 </div>
 
-<!-- Search -->
-<form th:action="@{/admin/users}" method="get" class="d-flex gap-2 mb-3">
-    <input type="text" name="keyword" th:value="${keyword}"
-           class="form-control" placeholder="Tìm theo tên đăng nhập..."/>
-    <button type="submit" class="btn btn-dark">Tìm</button>
-    <a th:if="${keyword != null}"
-       th:href="@{/admin/users}" class="btn btn-outline-secondary">✕</a>
+<!-- Search + Filter -->
+<form th:action="@{/admin/users}" method="get" class="mb-3">
+    <div class="d-flex flex-wrap gap-2 align-items-end">
+
+        <!-- Keyword: username / email / phone -->
+        <div>
+            <label class="form-label small text-muted mb-1">Tìm kiếm</label>
+            <input type="text" name="keyword" th:value="${keyword}"
+                   class="form-control form-control-sm"
+                   style="min-width:220px"
+                   placeholder="Tên đăng nhập, email hoặc SĐT..."/>
+        </div>
+
+        <!-- Role -->
+        <div>
+            <label class="form-label small text-muted mb-1">Role</label>
+            <select name="roleName" class="form-select form-select-sm" style="min-width:160px">
+                <option value="">Tất cả</option>
+                <option th:each="r : ${allRoles}"
+                        th:value="${r.name}"
+                        th:selected="${selectedRole == r.name}"
+                        th:text="${r.name.replace('ROLE_', '')}"></option>
+            </select>
+        </div>
+
+        <!-- Buttons -->
+        <div class="d-flex gap-2 align-self-end">
+            <button type="submit" class="btn btn-dark btn-sm">
+                <i class="bi bi-search me-1"></i>Tìm
+            </button>
+            <a th:if="${keyword != null or selectedRole != null}"
+               th:href="@{/admin/users}"
+               class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-x-lg me-1"></i>Xóa lọc
+            </a>
+        </div>
+
+    </div>
 </form>
 
 <div class="card border-0 shadow-sm">
@@ -29,14 +60,13 @@
                 <th>Email</th>
                 <th>Phone</th>
                 <th>Role</th>
-                <th>Khu vực giao hàng</th>
                 <th>Trạng thái</th>
                 <th>Hành động</th>
             </tr>
             </thead>
             <tbody>
             <tr th:if="${#lists.isEmpty(users)}">
-                <td colspan="8" class="text-center text-muted py-4">
+                <td colspan="7" class="text-center text-muted py-4">
                     Không tìm thấy người dùng nào!
                 </td>
             </tr>
@@ -49,33 +79,6 @@
                     <span th:each="r : ${u.roles}"
                           class="badge bg-secondary me-1"
                           th:text="${r.name.replace('ROLE_', '')}"></span>
-                </td>
-
-                <!-- Khu vuc - chi hien voi ROLE_DELIVERY -->
-                <td>
-                    <div th:if="${#lists.contains(u.roles.![name], 'ROLE_DELIVERY')}"
-                         class="d-flex flex-column gap-1" style="min-width:160px">
-                        <form th:action="@{'/admin/users/' + ${u.id} + '/delivery/area'}"
-                              method="post" class="input-group input-group-sm">
-                            <input type="text" name="area"
-                                   th:value="${profileMap[u.id] != null ? profileMap[u.id].area : ''}"
-                                   class="form-control" placeholder="Khu vực..."/>
-                            <button type="submit" class="btn btn-outline-secondary" title="Lưu">
-                                <i class="bi bi-check-lg"></i>
-                            </button>
-                        </form>
-                        <form th:action="@{'/admin/users/' + ${u.id} + '/delivery/area'}" method="post">
-                            <input type="hidden" name="isAvailable"
-                                   th:value="${profileMap[u.id] != null and profileMap[u.id].isAvailable ? 'false' : 'true'}"/>
-                            <button type="submit"
-                                    th:class="${profileMap[u.id] != null and profileMap[u.id].isAvailable} ? 'btn btn-success btn-sm w-100' : 'btn btn-secondary btn-sm w-100'">
-                                <i th:class="${profileMap[u.id] != null and profileMap[u.id].isAvailable} ? 'bi bi-toggle-on me-1' : 'bi bi-toggle-off me-1'"></i>
-                                <span th:text="${profileMap[u.id] != null and profileMap[u.id].isAvailable} ? 'Sẵn sàng' : 'Tắt nhận'"></span>
-                            </button>
-                        </form>
-                    </div>
-                    <span th:unless="${#lists.contains(u.roles.![name], 'ROLE_DELIVERY')}"
-                          class="text-muted small">-</span>
                 </td>
 
                 <td>
@@ -143,20 +146,22 @@
                 th:classappend="${currentPage == 0} ? 'disabled'">
                 <a class="page-link"
                    th:href="@{/admin/users(page=${currentPage-1},
-                                          keyword=${keyword})}">&#x2190;</a>
+                                          keyword=${keyword},
+                                          roleName=${selectedRole})}">&#x2190;</a>
             </li>
             <li th:each="i : ${#numbers.sequence(0, totalPages-1)}"
                 class="page-item"
                 th:classappend="${i == currentPage} ? 'active'">
                 <a class="page-link"
-                   th:href="@{/admin/users(page=${i}, keyword=${keyword})}"
+                   th:href="@{/admin/users(page=${i}, keyword=${keyword}, roleName=${selectedRole})}"
                    th:text="${i + 1}"></a>
             </li>
             <li class="page-item"
                 th:classappend="${currentPage == totalPages-1} ? 'disabled'">
                 <a class="page-link"
                    th:href="@{/admin/users(page=${currentPage+1},
-                                          keyword=${keyword})}">&#x2192;</a>
+                                          keyword=${keyword},
+                                          roleName=${selectedRole})}">&#x2192;</a>
             </li>
         </ul>
     </nav>

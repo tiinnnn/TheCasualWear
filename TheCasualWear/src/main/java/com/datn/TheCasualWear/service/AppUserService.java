@@ -47,11 +47,12 @@ public class AppUserService {
     // QUERY
     // ─────────────────────────────────────────────────────────────
 
-    public Page<AppUser> getAllUsers(String keyword, int page) {
-        String kw = (keyword == null || keyword.isBlank()) ? null : keyword;
+    public Page<AppUser> getAllUsers(String keyword, String roleName, int page) {
+        String kw   = (keyword == null  || keyword.isBlank())  ? null : keyword.trim();
+        String role = (roleName == null || roleName.isBlank()) ? null : roleName;
         Pageable pageable = PageRequest.of(page, ADMIN_PAGE_SIZE,
                 Sort.by("id").ascending());
-        return appUserRepository.searchUsers(kw, pageable);
+        return appUserRepository.searchUsers(kw, role, pageable);
     }
 
     public List<AppUser> getAllUsers() {

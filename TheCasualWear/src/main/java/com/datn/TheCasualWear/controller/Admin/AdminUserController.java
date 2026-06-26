@@ -21,14 +21,17 @@ public class AdminUserController {
 
     @GetMapping
     public String listUsers(@RequestParam(required = false) String keyword,
+                            @RequestParam(required = false) String roleName,
                             @RequestParam(defaultValue = "0") int page,
                             Authentication auth, Model model) {
-        Page<AppUser> userPage = appUserService.getAllUsers(keyword, page);
+        Page<AppUser> userPage = appUserService.getAllUsers(keyword, roleName, page);
         model.addAttribute("users",       userPage.getContent());
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages",  userPage.getTotalPages());
         model.addAttribute("totalItems",  userPage.getTotalElements());
         model.addAttribute("keyword",     keyword);
+        model.addAttribute("selectedRole", roleName);
+        model.addAttribute("allRoles",    appUserService.getAllRoles());
 
         boolean isOwner = auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_OWNER"));

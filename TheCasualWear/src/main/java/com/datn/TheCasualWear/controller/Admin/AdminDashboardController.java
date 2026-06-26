@@ -38,7 +38,7 @@ public class AdminDashboardController {
         model.addAttribute("totalProducts",
                 productService.getAdminProducts(null, 0).getTotalElements());
         model.addAttribute("totalUsers",
-                appUserService.getAllUsers(null, 0).getTotalElements());
+                appUserService.getAllUsers(null, null, 0).getTotalElements());
         model.addAttribute("totalOrders", allOrders.size());
 
         // Doanh thu (COMPLETED)
