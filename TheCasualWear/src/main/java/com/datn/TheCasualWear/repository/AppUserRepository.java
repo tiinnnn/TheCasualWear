@@ -16,9 +16,15 @@ public interface AppUserRepository extends JpaRepository<AppUser, Integer> {
     Optional<AppUser> findByEmail(String email);
     boolean existsByUsername(String username);
     boolean existsByEmail(String email);
-    @Query("SELECT u FROM AppUser u WHERE " +
-            ":keyword IS NULL OR LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-    Page<AppUser> searchUsers(@Param("keyword") String keyword, Pageable pageable);
+    @Query("SELECT DISTINCT u FROM AppUser u LEFT JOIN u.roles r WHERE " +
+            "(:keyword IS NULL OR " +
+            " LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            " LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            " u.phone LIKE CONCAT('%', :keyword, '%')) " +
+            "AND (:roleName IS NULL OR r.name = :roleName)")
+    Page<AppUser> searchUsers(@Param("keyword") String keyword,
+                              @Param("roleName") String roleName,
+                              Pageable pageable);
 
     @Query("SELECT u FROM AppUser u WHERE u.username = :value " +
             "OR u.email = :value OR u.phone = :value")

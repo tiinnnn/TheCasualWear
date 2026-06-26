@@ -57,5 +57,13 @@ public class AppOrder {
     private String paymentMethod = "COD"; // COD hoặc VNPAY
 
     @Column(name = "is_paid")
-    private Boolean isPaid = false; // VNPay → true ngay, COD → true khi delivery xác nhận
+    private Boolean isPaid = false; // VNPay → true ngay, COD → true khi delivered
+
+    // ── MỚI: tích hợp bên thứ 3 (GHN / GHTK ...) ──────────────────────────
+
+    @Column(name = "tracking_code", length = 50)
+    private String trackingCode;   // Mã vận đơn GHN nhân viên nhập thủ công
+
+    @Column(name = "shipped_at")
+    private LocalDateTime shippedAt; // Thời điểm admin xác nhận gửi hàng cho GHN
 }

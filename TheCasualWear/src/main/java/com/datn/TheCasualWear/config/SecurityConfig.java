@@ -22,16 +22,15 @@ public class SecurityConfig {
         this.appUserRepository = appUserRepository;
     }
 
-    // Load user từ DB cho Spring Security
     @Bean
     public UserDetailsService userDetailsService() {
         return value -> {
-            var user = appUserRepository.findByUsernameOrEmailOrPhone(value).orElseThrow(() -> new UsernameNotFoundException(
-                    "Không tìm thấy tài khoản!"));
+            var user = appUserRepository.findByUsernameOrEmailOrPhone(value)
+                    .orElseThrow(() -> new UsernameNotFoundException(
+                            "Không tìm thấy tài khoản!"));
             if (!user.getEnabled()) {
                 throw new UsernameNotFoundException("Tài khoản đã bị khóa!");
             }
-
             return new org.springframework.security.core.userdetails.User(
                     user.getUsername(),
                     user.getPassword(),
@@ -58,26 +57,27 @@ public class SecurityConfig {
                                 "/product/**",
                                 "/auth/**",
                                 "/lien-he",
-                                "/chinh-sach-doi-tra","/forgot-password", "/forgot-password/reset",
-                                "/css/**", "/js/**", "/images/**", "/webjars/**", "/collections/**"
+                                "/chinh-sach-doi-tra",
+                                "/forgot-password",
+                                "/forgot-password/reset",
+                                "/css/**", "/js/**", "/images/**",
+                                "/webjars/**", "/collections/**"
                         ).permitAll()
 
-                        // Chỉ ADMIN
+                        // Chỉ ADMIN / OWNER
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN", "OWNER")
                         .requestMatchers("/admin/collections/**").hasAnyRole("ADMIN", "OWNER")
-
-                        // Chỉ DELIVERY
-                        .requestMatchers("/delivery/**").hasRole("DELIVERY")
 
                         // Chỉ OWNER
                         .requestMatchers("/admin/users/*/role/**").hasRole("OWNER")
 
+                        // Khách đăng nhập
                         .requestMatchers(
                                 "/cart/**",
                                 "/order/**",
                                 "/account/**",
                                 "/wishlist/**"
-                        ).hasAnyRole("CUSTOMER", "ADMIN","DELIVERY")
+                        ).hasAnyRole("CUSTOMER", "ADMIN", "OWNER")
 
                         .anyRequest().authenticated()
                 )
@@ -90,7 +90,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
 
                 .formLogin(form -> form
-                        .loginPage("/auth/login")           // trang login tự lam
+                        .loginPage("/auth/login")
                         .loginProcessingUrl("/auth/login")
                         .usernameParameter("username")
                         .passwordParameter("password")
@@ -107,7 +107,6 @@ public class SecurityConfig {
                         .permitAll()
                 )
 
-                // Xử lý khi không có quyền truy cập
                 .exceptionHandling(ex -> ex
                         .accessDeniedPage("/error/403")
                 );

@@ -16,10 +16,9 @@ public class OrderListDTO {
     private final LocalDateTime orderDate;
     private final BigDecimal    totalPrice;
     private final OrderStatus   status;
-    private final int           failCounts;   // so lan giao that bai
-    private final String        deliveryName; // ten nv dang giao (neu co)
+    private final String        trackingCode; // mã vận đơn GHN (nếu có)
 
-    public OrderListDTO(AppOrder order, int failCounts, String deliveryName) {
+    public OrderListDTO(AppOrder order) {
         this.id               = order.getId();
         this.customerUsername = order.getCustomer().getUsername();
         this.customerPhone    = order.getShippingAddress() != null
@@ -27,7 +26,6 @@ public class OrderListDTO {
         this.orderDate        = order.getOrderDate();
         this.totalPrice       = order.getTotalPrice();
         this.status           = order.getStatus();
-        this.failCounts       = failCounts;
-        this.deliveryName     = deliveryName;
+        this.trackingCode     = order.getTrackingCode();
     }
 }
