@@ -1,6 +1,7 @@
 package com.datn.TheCasualWear.entity;
 
 import com.datn.TheCasualWear.enums.OrderStatus;
+import com.datn.TheCasualWear.enums.OrderType;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -66,4 +67,14 @@ public class AppOrder {
 
     @Column(name = "shipped_at")
     private LocalDateTime shippedAt; // Thời điểm admin xác nhận gửi hàng cho GHN
+
+    // ── MỚI: bán hàng tại quầy (Cashier / POS) ────────────────────────────
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "order_type", length = 20, nullable = false)
+    private OrderType orderType = OrderType.ONLINE;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cashier_id")
+    private AppUser cashier; // Nhân viên thu ngân tạo đơn (chỉ có khi order_type = COUNTER)
 }

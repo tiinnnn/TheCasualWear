@@ -61,6 +61,10 @@
                           class="badge bg-success">COD - Đã thu tiền ✓</span>
                     <span th:if="${order.paymentMethod == 'COD' and !order.isPaid}"
                           class="badge bg-warning text-dark">COD - Chưa thu tiền</span>
+                    <span th:if="${order.paymentMethod == 'CASH'}"
+                          class="badge bg-success">Tiền mặt ✓</span>
+                    <span th:if="${order.paymentMethod == 'TRANSFER'}"
+                          class="badge bg-success">Chuyển khoản ✓</span>
                 </div>
             </div>
         </div>
@@ -73,7 +77,15 @@
                 <h6 class="fw-bold mb-3">Thông tin đơn hàng</h6>
                 <p class="mb-1">
                     <strong>Khách hàng:</strong>
-                    <span th:text="${order.customer.username}"></span>
+                    <span th:if="${order.customer != null}" th:text="${order.customer.username}"></span>
+                    <span th:if="${order.customer == null}">Khách lẻ</span>
+                </p>
+                <p class="mb-1" th:if="${order.orderType != null and order.orderType.name() == 'COUNTER'}">
+                    <strong>Loại đơn:</strong>
+                    <span class="badge bg-success">Bán tại quầy</span>
+                    <span th:if="${order.cashier != null}" class="text-muted small">
+                        (Thu ngân: <span th:text="${order.cashier.username}"></span>)
+                    </span>
                 </p>
                 <p class="mb-1">
                     <strong>Ngày đặt:</strong>
@@ -100,12 +112,17 @@
                 </p>
                 <hr/>
                 <h6 class="fw-bold">Địa chỉ giao hàng</h6>
-                <p class="mb-1"      th:text="${order.shippingAddress.fullName}"></p>
-                <p class="mb-1 text-muted" th:text="${order.shippingAddress.phone}"></p>
-                <p class="mb-0 small"
-                   th:text="${order.shippingAddress.street + ', ' +
-                              order.shippingAddress.district + ', ' +
-                              order.shippingAddress.city}"></p>
+                <div th:if="${order.shippingAddress != null}">
+                    <p class="mb-1"      th:text="${order.shippingAddress.fullName}"></p>
+                    <p class="mb-1 text-muted" th:text="${order.shippingAddress.phone}"></p>
+                    <p class="mb-0 small"
+                       th:text="${order.shippingAddress.street + ', ' +
+                                  order.shippingAddress.district + ', ' +
+                                  order.shippingAddress.city}"></p>
+                </div>
+                <p class="mb-0 small text-muted" th:if="${order.shippingAddress == null}">
+                    Không có (khách nhận hàng trực tiếp tại quầy)
+                </p>
             </div>
         </div>
 

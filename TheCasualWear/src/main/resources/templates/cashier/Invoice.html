@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Hóa đơn #<span th:text="${order.id}"></span></title>
+    <style>
+        @media print {
+            @page { size: 80mm auto; margin: 0; }
+            body { margin: 0; }
+            .no-print { display: none !important; }
+        }
+        body {
+            font-family: 'Courier New', monospace;
+            width: 280px;
+            margin: 20px auto;
+            font-size: 13px;
+            color: #000;
+        }
+        .center { text-align: center; }
+        .line { border-top: 1px dashed #000; margin: 8px 0; }
+        table { width: 100%; border-collapse: collapse; }
+        td { padding: 2px 0; vertical-align: top; }
+        .qty { text-align: center; width: 30px; }
+        .price { text-align: right; }
+        .total-row td { font-weight: bold; font-size: 15px; }
+        .btn-print {
+            display: block; margin: 16px auto; padding: 8px 20px;
+            font-size: 14px; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="center">
+    <strong>THE CASUAL WEAR</strong><br>
+    Hóa đơn bán hàng tại quầy<br>
+</div>
+<div class="line"></div>
+
+<div>
+    Mã đơn: #<span th:text="${order.id}"></span><br>
+    Ngày: <span th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy HH:mm')}"></span><br>
+    Thu ngân: <span th:text="${order.cashier != null ? order.cashier.username : '-'}"></span><br>
+    Khách hàng:
+    <span th:if="${order.customer != null}" th:text="${order.customer.username}"></span>
+    <span th:if="${order.customer == null}">Khách lẻ</span>
+</div>
+<div class="line"></div>
+
+<table>
+    <tr>
+        <td>SP</td>
+        <td class="qty">SL</td>
+        <td class="price">T.Tiền</td>
+    </tr>
+    <tr th:each="d : ${order.orderDetails}">
+        <td>
+            <span th:text="${d.variant.product.name}"></span><br>
+            <small th:text="${d.variant.size != null ? d.variant.size.name : ''} + ' / ' + ${d.variant.color != null ? d.variant.color.name : ''}"></small>
+        </td>
+        <td class="qty" th:text="${d.quantity}"></td>
+        <td class="price" th:text="${#numbers.formatDecimal(d.price * d.quantity, 0, 'COMMA', 0, 'POINT')}"></td>
+    </tr>
+</table>
+<div class="line"></div>
+
+<table>
+    <tr class="total-row">
+        <td>TỔNG CỘNG</td>
+        <td class="price" th:text="${#numbers.formatDecimal(order.totalPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+    </tr>
+</table>
+<div>
+    Thanh toán: <span th:text="${order.paymentMethod == 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}"></span>
+</div>
+<div class="line"></div>
+
+<div class="center">
+    Cảm ơn quý khách đã mua hàng!<br>
+    Hẹn gặp lại.
+</div>
+
+<button class="btn-print no-print" onclick="window.print()">In hóa đơn</button>
+<button class="btn-print no-print" onclick="window.location.href='/cashier'">Quay lại bán hàng</button>
+
+</body>
+</html>

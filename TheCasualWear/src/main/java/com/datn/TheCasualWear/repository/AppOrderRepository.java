@@ -30,8 +30,8 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
             "END ASC, o.orderDate DESC")
     List<AppOrder> findAllOrderedByStatus();
 
-    @Query("SELECT o FROM AppOrder o WHERE " +
-            "(:keyword  IS NULL OR LOWER(o.customer.username) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+    @Query("SELECT o FROM AppOrder o LEFT JOIN o.customer c WHERE " +
+            "(:keyword  IS NULL OR LOWER(c.username) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
             "AND (:status   IS NULL OR o.status     = :status) " +
             "AND (:fromDate IS NULL OR o.orderDate >= :fromDate) " +
             "AND (:toDate   IS NULL OR o.orderDate <= :toDate) " +
@@ -48,4 +48,11 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
                                 @Param("fromDate") LocalDateTime fromDate,
                                 @Param("toDate")   LocalDateTime toDate,
                                 Pageable pageable);
+
+    // ── MỚI: đơn bán tại quầy của 1 cashier trong khoảng thời gian gần đây ──
+    @Query("SELECT o FROM AppOrder o WHERE o.orderType = com.datn.TheCasualWear.enums.OrderType.COUNTER " +
+            "AND o.cashier.id = :cashierId AND o.orderDate >= :fromDate " +
+            "ORDER BY o.orderDate DESC")
+    List<AppOrder> findRecentCounterOrdersByCashier(@Param("cashierId") Integer cashierId,
+                                                    @Param("fromDate") LocalDateTime fromDate);
 }

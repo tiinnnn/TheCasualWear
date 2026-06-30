@@ -71,6 +71,9 @@ public class SecurityConfig {
                         // Chỉ OWNER
                         .requestMatchers("/admin/users/*/role/**").hasRole("OWNER")
 
+                        // Cashier bán hàng tại quầy (admin/owner cũng được phép vào để hỗ trợ)
+                        .requestMatchers("/cashier/**").hasAnyRole("CASHIER", "ADMIN", "OWNER")
+
                         // Khách đăng nhập
                         .requestMatchers(
                                 "/cart/**",

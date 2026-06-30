@@ -1,0 +1,74 @@
+<div xmlns:th="http://www.thymeleaf.org">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold">Đơn hàng #<span th:text="${order.id}"></span></h4>
+        <div class="d-flex gap-2">
+            <a th:href="@{'/cashier/invoice/' + ${order.id}}" class="btn btn-outline-dark btn-sm" target="_blank">
+                <i class="bi bi-printer"></i> In hóa đơn
+            </a>
+            <a th:href="@{/cashier/orders}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left"></i> Quay lại danh sách
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">Sản phẩm</h6>
+                    <div th:each="detail : ${order.orderDetails}"
+                         class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                        <div>
+                            <p class="mb-1 fw-bold" th:text="${detail.variant.product.name}"></p>
+                            <div class="d-flex gap-1 flex-wrap mb-1">
+                                <span th:if="${detail.variant.size != null}"
+                                      class="badge bg-dark" th:text="'Size ' + ${detail.variant.size.name}"></span>
+                                <span th:if="${detail.variant.color != null}"
+                                      class="badge bg-secondary" th:text="${detail.variant.color.name}"></span>
+                                <span th:if="${detail.variant.sku != null}"
+                                      class="badge bg-light text-dark border" th:text="'SKU: ' + ${detail.variant.sku}"></span>
+                            </div>
+                            <small class="text-muted"
+                                   th:text="${#numbers.formatInteger(detail.price, 0, 'COMMA') + ' đ  ×  ' + detail.quantity}"></small>
+                        </div>
+                        <span class="fw-bold"
+                              th:text="${#numbers.formatInteger(detail.price.doubleValue() * detail.quantity, 0, 'COMMA') + ' đ'}"></span>
+                    </div>
+                    <hr/>
+                    <div class="d-flex justify-content-between fw-bold fs-5">
+                        <span>Tổng cộng:</span>
+                        <span class="text-danger"
+                              th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">Thông tin đơn hàng</h6>
+                    <p class="mb-1">
+                        <strong>Khách hàng:</strong>
+                        <span th:if="${order.customer != null}" th:text="${order.customer.username}"></span>
+                        <span th:if="${order.customer == null}">Khách lẻ</span>
+                    </p>
+                    <p class="mb-1">
+                        <strong>Thời gian:</strong>
+                        <span th:text="${#temporals.format(order.orderDate, 'HH:mm dd/MM/yyyy')}"></span>
+                    </p>
+                    <p class="mb-1">
+                        <strong>Thu ngân:</strong>
+                        <span th:text="${order.cashier != null ? order.cashier.username : '-'}"></span>
+                    </p>
+                    <p class="mb-1">
+                        <strong>Thanh toán:</strong>
+                        <span class="badge bg-success" th:if="${order.paymentMethod == 'CASH'}">Tiền mặt</span>
+                        <span class="badge bg-info text-dark" th:if="${order.paymentMethod == 'TRANSFER'}">Chuyển khoản</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

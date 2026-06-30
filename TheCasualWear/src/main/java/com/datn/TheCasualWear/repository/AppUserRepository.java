@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -16,6 +17,7 @@ public interface AppUserRepository extends JpaRepository<AppUser, Integer> {
     Optional<AppUser> findByEmail(String email);
     boolean existsByUsername(String username);
     boolean existsByEmail(String email);
+
     @Query("SELECT DISTINCT u FROM AppUser u LEFT JOIN u.roles r WHERE " +
             "(:keyword IS NULL OR " +
             " LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
@@ -29,4 +31,13 @@ public interface AppUserRepository extends JpaRepository<AppUser, Integer> {
     @Query("SELECT u FROM AppUser u WHERE u.username = :value " +
             "OR u.email = :value OR u.phone = :value")
     Optional<AppUser> findByUsernameOrEmailOrPhone(@Param("value") String value);
+
+    // Tìm khách hàng theo username/email/sđt cho màn hình POS (autocomplete).
+    // Nếu entity AppUser có field tên hiển thị riêng (vd fullName), thêm điều
+    // kiện "OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :keyword, '%'))" vào đây.
+    @Query("SELECT DISTINCT u FROM AppUser u LEFT JOIN u.roles r WHERE r.name = 'ROLE_CUSTOMER' AND (" +
+            "LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "u.phone LIKE CONCAT('%', :keyword, '%'))")
+    List<AppUser> searchCustomersByKeyword(@Param("keyword") String keyword);
 }

@@ -1,0 +1,68 @@
+<div xmlns:th="http://www.thymeleaf.org">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold">
+            Đơn đã bán tại quầy
+            <small class="text-muted fs-6" th:text="'(' + ${#lists.size(orders)} + ' đơn)'"></small>
+        </h4>
+        <a th:href="@{/cashier}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Quay lại bán hàng
+        </a>
+    </div>
+
+    <!-- Bộ lọc số ngày -->
+    <form th:action="@{/cashier/orders}" method="get" class="mb-3 d-flex align-items-end gap-2">
+        <div>
+            <label class="form-label small text-muted mb-1">Xem trong</label>
+            <select name="days" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="1"  th:selected="${days == 1}">Hôm nay</option>
+                <option value="3"  th:selected="${days == 3}">3 ngày gần đây</option>
+                <option value="7"  th:selected="${days == 7}">7 ngày gần đây</option>
+                <option value="30" th:selected="${days == 30}">30 ngày gần đây</option>
+            </select>
+        </div>
+    </form>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0 table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Thời gian</th>
+                    <th>Khách hàng</th>
+                    <th>Thanh toán</th>
+                    <th class="text-end">Tổng tiền</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${#lists.isEmpty(orders)}">
+                    <td colspan="6" class="text-center text-muted py-4">
+                        Chưa có đơn nào trong khoảng thời gian này
+                    </td>
+                </tr>
+                <tr th:each="o : ${orders}">
+                    <td th:text="${o.id}"></td>
+                    <td th:text="${#temporals.format(o.orderDate, 'HH:mm dd/MM/yyyy')}"></td>
+                    <td>
+                        <span th:if="${o.customer != null}" th:text="${o.customer.username}"></span>
+                        <span th:if="${o.customer == null}" class="text-muted">Khách lẻ</span>
+                    </td>
+                    <td>
+                        <span class="badge bg-success" th:if="${o.paymentMethod == 'CASH'}">Tiền mặt</span>
+                        <span class="badge bg-info text-dark" th:if="${o.paymentMethod == 'TRANSFER'}">Chuyển khoản</span>
+                    </td>
+                    <td class="text-end fw-semibold"
+                        th:text="${#numbers.formatDecimal(o.totalPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                    <td>
+                        <a th:href="@{'/cashier/orders/' + ${o.id}}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye"></i> Xem
+                        </a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
