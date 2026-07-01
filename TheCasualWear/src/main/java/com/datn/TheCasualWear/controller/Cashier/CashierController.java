@@ -11,6 +11,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,9 +51,9 @@ public class CashierController {
     @GetMapping
     public String posPage(Model model, HttpSession session) {
         List<CounterCartItemDTO> cart = getCart(session);
-        java.math.BigDecimal grandTotal = cart.stream()
+        BigDecimal grandTotal = cart.stream()
                 .map(CounterCartItemDTO::getLineTotal)
-                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         model.addAttribute("cartItems", cart);
         model.addAttribute("grandTotal", grandTotal);
@@ -60,9 +61,10 @@ public class CashierController {
         return "layouts/cashier-layout";
     }
 
-    // Tìm sản phẩm để hiển thị gợi ý (trả JSON, gọi bằng AJAX từ trang pos)
-    // Lưu ý: trả DTO chứ không trả thẳng entity, tránh lỗi serialize lazy
-    // proxy (đã từng gặp ở trang product detail trước đây).
+    // ─────────────────────────────────────────────────────────────
+    // TÌM SẢN PHẨM (autocomplete)
+    // ─────────────────────────────────────────────────────────────
+
     @GetMapping("/search-variants")
     @ResponseBody
     public List<VariantSearchResultDTO> searchVariants(@RequestParam String keyword) {
@@ -75,25 +77,25 @@ public class CashierController {
                         v.getColor() != null ? v.getColor().getName() : null,
                         v.getSku(),
                         v.getProduct().getPrice()
-                                .add(v.getPriceAdjustment() != null ? v.getPriceAdjustment() : java.math.BigDecimal.ZERO),
+                                .add(v.getPriceAdjustment() != null
+                                        ? v.getPriceAdjustment() : BigDecimal.ZERO),
                         v.getStock()
                 ))
                 .toList();
     }
 
-    // DTO nội bộ cho kết quả tìm kiếm sản phẩm — record gọn cho mục đích này
     public record VariantSearchResultDTO(
             Integer variantId,
             String productName,
             String sizeName,
             String colorName,
             String sku,
-            java.math.BigDecimal price,
+            BigDecimal price,
             Integer stock
     ) {}
 
     // ─────────────────────────────────────────────────────────────
-    // TÌM KHÁCH HÀNG THEO TÊN / EMAIL / SĐT (autocomplete cho POS)
+    // TÌM KHÁCH HÀNG THEO TÊN / EMAIL / SĐT (autocomplete)
     // ─────────────────────────────────────────────────────────────
 
     @GetMapping("/search-customers")
@@ -110,7 +112,6 @@ public class CashierController {
                 .toList();
     }
 
-    // DTO nội bộ cho kết quả tìm kiếm khách hàng
     public record CustomerSearchResultDTO(
             Integer id,
             String username,
@@ -119,7 +120,24 @@ public class CashierController {
     ) {}
 
     // ─────────────────────────────────────────────────────────────
-    // THÊM SẢN PHẨM VÀO GIỎ TẠM (chưa trừ kho)
+    // VALIDATE VOUCHER (AJAX preview — không trừ lượt dùng)
+    //
+    // Gọi trước khi submit để hiển thị số tiền được giảm ngay trên màn hình.
+    // orderTotal được tính ở client từ giỏ tạm hiện tại.
+    // customerId bắt buộc có giá trị — khách vãng lai không được dùng voucher.
+    // ─────────────────────────────────────────────────────────────
+
+    @GetMapping("/validate-voucher")
+    @ResponseBody
+    public CashierService.VoucherPreviewDTO validateVoucher(
+            @RequestParam String code,
+            @RequestParam BigDecimal orderTotal,
+            @RequestParam(required = false) Integer customerId) {
+        return cashierService.validateVoucher(code, orderTotal, customerId);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // THÊM / XÓA / XÓA HẾT GIỎ TẠM (chưa trừ kho)
     // ─────────────────────────────────────────────────────────────
 
     @PostMapping("/cart/add")
@@ -129,8 +147,6 @@ public class CashierController {
                             RedirectAttributes ra) {
         try {
             List<CounterCartItemDTO> cart = getCart(session);
-
-            // Nếu variant đã có trong giỏ thì cộng dồn số lượng
             for (CounterCartItemDTO item : cart) {
                 if (item.getVariantId().equals(variantId)) {
                     CounterCartItemDTO updated = cashierService.buildCartItem(
@@ -140,9 +156,7 @@ public class CashierController {
                     return "redirect:/cashier";
                 }
             }
-
-            CounterCartItemDTO newItem = cashierService.buildCartItem(variantId, quantity);
-            cart.add(newItem);
+            cart.add(cashierService.buildCartItem(variantId, quantity));
             session.setAttribute(SESSION_CART_KEY, cart);
         } catch (Exception e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());
@@ -165,22 +179,20 @@ public class CashierController {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // THANH TOÁN — trừ kho + tạo AppOrder
-    // customerId giờ được gán tự động qua JS sau khi người dùng chọn
-    // khách hàng từ danh sách gợi ý (search-customers), không nhập tay nữa.
+    // THANH TOÁN — trừ kho + áp voucher (nếu có) + tạo AppOrder
+    // voucherCode chỉ có tác dụng khi customerId != null (check lại trong service)
     // ─────────────────────────────────────────────────────────────
 
     @PostMapping("/checkout")
     public String checkout(@RequestParam(required = false) Integer customerId,
                            @RequestParam String paymentMethod,
+                           @RequestParam(required = false) String voucherCode,
                            HttpSession session,
                            RedirectAttributes ra) {
         try {
             List<CounterCartItemDTO> cart = getCart(session);
-            AppOrder order = cashierService.checkout(customerId, cart, paymentMethod);
-
-            session.removeAttribute(SESSION_CART_KEY); // xóa giỏ tạm sau khi thanh toán xong
-
+            AppOrder order = cashierService.checkout(customerId, cart, paymentMethod, voucherCode);
+            session.removeAttribute(SESSION_CART_KEY);
             return "redirect:/cashier/invoice/" + order.getId();
         } catch (Exception e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());
@@ -189,18 +201,17 @@ public class CashierController {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // HÓA ĐƠN — trang để in (window.print())
+    // HÓA ĐƠN — trang in (window.print())
     // ─────────────────────────────────────────────────────────────
 
     @GetMapping("/invoice/{orderId}")
     public String invoice(@PathVariable Integer orderId, Model model) {
-        AppOrder order = cashierService.getOrderForInvoice(orderId);
-        model.addAttribute("order", order);
-        return "cashier/invoice"; // trang riêng, KHÔNG dùng layout chung (để in gọn)
+        model.addAttribute("order", cashierService.getOrderForInvoice(orderId));
+        return "cashier/invoice";
     }
 
     // ─────────────────────────────────────────────────────────────
-    // DANH SÁCH ĐƠN ĐÃ BÁN TẠI QUẦY (mặc định 3 ngày gần đây)
+    // DANH SÁCH ĐƠN ĐÃ BÁN TẠI QUẦY
     // ─────────────────────────────────────────────────────────────
 
     @GetMapping("/orders")

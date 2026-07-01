@@ -16,7 +16,7 @@
             </div>
         </div>
 
-        <!-- ───────────── CỘT PHẢI: GIỎ HÀNG TẠM ───────────── -->
+        <!-- ───────────── CỘT PHẢI: GIỎ HÀNG + THANH TOÁN ───────────── -->
         <div class="col-md-5">
             <div class="card shadow-sm">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
@@ -68,9 +68,24 @@
                 </div>
 
                 <div class="card-footer bg-white" th:if="${!#lists.isEmpty(cartItems)}">
+
+                    <!-- Tổng hàng (trước giảm) -->
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted small">Tạm tính:</span>
+                        <span class="small"
+                              th:text="${#numbers.formatDecimal(grandTotal, 0, 'COMMA', 0, 'POINT')} + ' đ'"></span>
+                    </div>
+
+                    <!-- Dòng giảm giá — ẩn cho đến khi voucher hợp lệ -->
+                    <div class="d-flex justify-content-between mb-1" id="discountRow" style="display:none !important">
+                        <span class="text-success small"><i class="bi bi-tag-fill"></i> Giảm giá:</span>
+                        <span class="text-success small" id="discountDisplay">0 đ</span>
+                    </div>
+
+                    <!-- Tổng thực trả -->
                     <div class="d-flex justify-content-between mb-3">
                         <strong>Tổng cộng:</strong>
-                        <strong class="fs-5 text-danger"
+                        <strong class="fs-5 text-danger" id="finalTotalDisplay"
                                 th:text="${#numbers.formatDecimal(grandTotal, 0, 'COMMA', 0, 'POINT')} + ' đ'"></strong>
                     </div>
 
@@ -78,16 +93,17 @@
                     <form th:action="@{/cashier/checkout}" method="post" id="checkoutForm"
                           onsubmit="return validateCheckoutForm()">
 
+                        <!-- ── Chọn loại khách ── -->
                         <div class="mb-2">
                             <label class="form-label small">Khách hàng</label>
                             <select class="form-select form-select-sm" id="customerType"
                                     onchange="toggleCustomerType()">
-                                <option value="guest">Khách vãng lai (không cần thông tin)</option>
+                                <option value="guest">Khách vãng lai</option>
                                 <option value="account">Khách có tài khoản</option>
                             </select>
                         </div>
 
-                        <!-- Tìm khách hàng theo tên / email / sđt thay vì nhập ID thủ công -->
+                        <!-- ── Tìm khách có tài khoản ── -->
                         <div id="accountFields" class="mb-2" style="display:none">
                             <input type="text" id="customerSearchInput" class="form-control form-control-sm"
                                    placeholder="Tìm theo tên đăng nhập / email / sđt..." autocomplete="off">
@@ -99,13 +115,35 @@
                                  class="alert alert-success py-1 px-2 mt-2 small d-flex justify-content-between align-items-center"
                                  style="display:none">
                                 <span id="selectedCustomerLabel"></span>
-                                <button type="button" class="btn-close btn-sm" onclick="clearSelectedCustomer()"></button>
+                                <button type="button" class="btn-close btn-sm"
+                                        onclick="clearSelectedCustomer()"></button>
                             </div>
 
-                            <!-- Input thật sự gửi lên server sau khi đã chọn khách hàng -->
                             <input type="hidden" name="customerId" id="customerIdInput">
                         </div>
 
+                        <!-- ── Voucher — chỉ hiện sau khi đã chọn được khách ── -->
+                        <div id="voucherSection" class="mb-2" style="display:none">
+                            <label class="form-label small">
+                                <i class="bi bi-ticket-perforated"></i> Mã voucher
+                                <span class="text-muted">(không bắt buộc)</span>
+                            </label>
+                            <div class="input-group input-group-sm">
+                                <input type="text" id="voucherInput" class="form-control text-uppercase"
+                                       placeholder="Nhập mã voucher..." autocomplete="off"
+                                       oninput="this.value = this.value.toUpperCase(); resetVoucher()">
+                                <button type="button" class="btn btn-outline-secondary"
+                                        onclick="applyVoucher()">
+                                    Kiểm tra
+                                </button>
+                            </div>
+                            <!-- Kết quả validate voucher -->
+                            <div id="voucherMsg" class="mt-1 small" style="display:none"></div>
+                            <!-- Input ẩn — gửi lên server khi checkout -->
+                            <input type="hidden" name="voucherCode" id="voucherCodeInput">
+                        </div>
+
+                        <!-- ── Phương thức thanh toán ── -->
                         <div class="mb-3">
                             <label class="form-label small">Phương thức thanh toán</label>
                             <select class="form-select form-select-sm" name="paymentMethod" required>
@@ -130,6 +168,9 @@
     </form>
 
     <script th:inline="javascript">
+        // Tổng tiền hàng gốc từ server (BigDecimal → number)
+        const GRAND_TOTAL = /*[[${grandTotal}]]*/ 0;
+
         // ───────────── TÌM SẢN PHẨM ─────────────
         const searchInput   = document.getElementById('searchInput');
         const searchResults = document.getElementById('searchResults');
@@ -138,10 +179,7 @@
         searchInput.addEventListener('input', function () {
             clearTimeout(debounceTimer);
             const keyword = this.value.trim();
-            if (keyword.length < 2) {
-                searchResults.innerHTML = '';
-                return;
-            }
+            if (keyword.length < 2) { searchResults.innerHTML = ''; return; }
             debounceTimer = setTimeout(() => doSearch(keyword), 300);
         });
 
@@ -159,7 +197,6 @@
                 searchResults.innerHTML = '<div class="text-muted small p-2">Không tìm thấy sản phẩm</div>';
                 return;
             }
-
             searchResults.innerHTML = items.map(item => `
                 <div class="list-group-item d-flex justify-content-between align-items-center">
                     <div>
@@ -186,7 +223,7 @@
             document.getElementById('addToCartForm').submit();
         }
 
-        // ───────────── TÌM KHÁCH HÀNG (thay cho nhập ID thủ công) ─────────────
+        // ───────────── TÌM KHÁCH HÀNG ─────────────
         const customerSearchInput   = document.getElementById('customerSearchInput');
         const customerSearchResults = document.getElementById('customerSearchResults');
         let customerDebounceTimer;
@@ -194,10 +231,7 @@
         customerSearchInput.addEventListener('input', function () {
             clearTimeout(customerDebounceTimer);
             const keyword = this.value.trim();
-            if (keyword.length < 2) {
-                customerSearchResults.innerHTML = '';
-                return;
-            }
+            if (keyword.length < 2) { customerSearchResults.innerHTML = ''; return; }
             customerDebounceTimer = setTimeout(() => doCustomerSearch(keyword), 300);
         });
 
@@ -230,11 +264,19 @@
             document.getElementById('selectedCustomer').style.display = 'flex';
             customerSearchInput.value = '';
             customerSearchResults.innerHTML = '';
+
+            // Hiện ô voucher sau khi đã chọn được khách có tài khoản
+            document.getElementById('voucherSection').style.display = 'block';
         }
 
         function clearSelectedCustomer() {
             document.getElementById('customerIdInput').value = '';
             document.getElementById('selectedCustomer').style.display = 'none';
+
+            // Ẩn + reset ô voucher khi bỏ chọn khách
+            document.getElementById('voucherSection').style.display = 'none';
+            resetVoucher();
+            document.getElementById('voucherInput').value = '';
         }
 
         function toggleCustomerType() {
@@ -247,9 +289,74 @@
             }
         }
 
-        // Bắt buộc phải chọn khách hàng từ danh sách gợi ý nếu chọn "Khách có tài khoản"
+        // ───────────── VOUCHER ─────────────
+
+        function applyVoucher() {
+            const code       = document.getElementById('voucherInput').value.trim();
+            const customerId = document.getElementById('customerIdInput').value;
+            const msgEl      = document.getElementById('voucherMsg');
+
+            if (!code) {
+                showVoucherMsg('Vui lòng nhập mã voucher.', false);
+                return;
+            }
+
+            const url = '/cashier/validate-voucher'
+                + '?code='       + encodeURIComponent(code)
+                + '&orderTotal=' + GRAND_TOTAL
+                + (customerId ? '&customerId=' + customerId : '');
+
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.valid) {
+                        // Gán mã vào hidden input để submit
+                        document.getElementById('voucherCodeInput').value = code;
+                        showVoucherMsg('✓ ' + data.message + ' → giảm ' + formatMoney(data.discountAmount) + ' đ', true);
+                        updateTotals(data.discountAmount);
+                    } else {
+                        resetVoucher();
+                        showVoucherMsg('✗ ' + data.message, false);
+                    }
+                })
+                .catch(() => showVoucherMsg('Lỗi kết nối, thử lại.', false));
+        }
+
+        function showVoucherMsg(text, success) {
+            const el = document.getElementById('voucherMsg');
+            el.textContent  = text;
+            el.className    = 'mt-1 small ' + (success ? 'text-success' : 'text-danger');
+            el.style.display = 'block';
+        }
+
+        /** Cập nhật dòng giảm giá + tổng cộng cuối */
+        function updateTotals(discountAmount) {
+            const discount  = Number(discountAmount) || 0;
+            const finalTotal = Math.max(GRAND_TOTAL - discount, 0);
+
+            const discountRow = document.getElementById('discountRow');
+            if (discount > 0) {
+                discountRow.style.display = 'flex';
+                document.getElementById('discountDisplay').textContent = '- ' + formatMoney(discount) + ' đ';
+            } else {
+                discountRow.style.display = 'none';
+            }
+            document.getElementById('finalTotalDisplay').textContent = formatMoney(finalTotal) + ' đ';
+        }
+
+        /** Xóa trạng thái voucher đã áp (khi người dùng sửa lại ô nhập) */
+        function resetVoucher() {
+            document.getElementById('voucherCodeInput').value = '';
+            document.getElementById('discountRow').style.display = 'none';
+            document.getElementById('finalTotalDisplay').textContent = formatMoney(GRAND_TOTAL) + ' đ';
+            const msgEl = document.getElementById('voucherMsg');
+            msgEl.textContent  = '';
+            msgEl.style.display = 'none';
+        }
+
+        // ───────────── VALIDATE TRƯỚC KHI SUBMIT ─────────────
         function validateCheckoutForm() {
-            const type = document.getElementById('customerType').value;
+            const type       = document.getElementById('customerType').value;
             const customerId = document.getElementById('customerIdInput').value;
             if (type === 'account' && !customerId) {
                 alert('Vui lòng tìm và chọn khách hàng trước khi thanh toán!');
@@ -263,7 +370,6 @@
             return Number(value).toLocaleString('vi-VN');
         }
 
-        // Tránh XSS khi render dữ liệu trả về từ search vào innerHTML
         function escapeHtml(str) {
             const div = document.createElement('div');
             div.textContent = str;

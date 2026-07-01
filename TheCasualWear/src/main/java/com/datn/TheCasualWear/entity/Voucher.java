@@ -44,4 +44,10 @@ public class Voucher {
 
     @Column(name = "max_discount", precision = 18, scale = 2)
     private BigDecimal maxDiscount; // null = không giới hạn
+
+    @Column(name = "usage_limit")
+    private Integer usageLimit;
+
+    @Column(name = "used_count", nullable = false)
+    private Integer usedCount = 0;
 }

@@ -5,12 +5,15 @@ import com.datn.TheCasualWear.dto.CounterCartItemDTO;
 import com.datn.TheCasualWear.entity.AppOrder;
 import com.datn.TheCasualWear.entity.AppUser;
 import com.datn.TheCasualWear.entity.OrderDetail;
+import com.datn.TheCasualWear.entity.OrderVoucher;
 import com.datn.TheCasualWear.entity.ProductVariant;
+import com.datn.TheCasualWear.entity.Voucher;
 import com.datn.TheCasualWear.enums.OrderStatus;
 import com.datn.TheCasualWear.enums.OrderType;
 import com.datn.TheCasualWear.repository.AppOrderRepository;
 import com.datn.TheCasualWear.repository.AppUserRepository;
 import com.datn.TheCasualWear.repository.ProductVariantRepository;
+import com.datn.TheCasualWear.repository.VoucherRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
@@ -18,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -28,25 +32,39 @@ public class CashierService {
     private final AppOrderRepository       orderRepository;
     private final AppUserRepository        appUserRepository;
     private final ProductVariantRepository variantRepository;
+    private final VoucherRepository        voucherRepository;
 
-    /**
-     * Lấy user hiện tại đăng nhập (cashier) — theo đúng pattern dùng
-     * SecurityContextHolder như các service khác trong dự án, tránh lỗi
-     * @AuthenticationPrincipal trả về null.
-     * Dùng findByUsernameOrEmailOrPhone vì đó là method UserDetailsService
-     * trong SecurityConfig đang dùng để load user.
-     */
+    // ─────────────────────────────────────────────────────────────
+    // INTERNAL HELPERS
+    // ─────────────────────────────────────────────────────────────
+
     private AppUser getCurrentUser() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = ((User) auth.getPrincipal()).getUsername();
-        return appUserRepository.findByUsernameOrEmailOrPhone(username)
+        if (auth == null || !(auth.getPrincipal() instanceof User principal)) {
+            throw new ResourceNotFoundException("Không tìm thấy tài khoản đăng nhập");
+        }
+        return appUserRepository.findByUsernameOrEmailOrPhone(principal.getUsername())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản đăng nhập"));
     }
 
     /**
-     * Lấy thông tin 1 variant để hiển thị/thêm vào giỏ tạm (CHƯA trừ kho —
-     * kho chỉ bị trừ thật sự lúc checkout()).
+     * Tính số tiền được giảm từ voucher dựa trên tổng đơn hàng.
+     * discountPercent% của orderTotal, không vượt quá maxDiscount (nếu có).
      */
+    private BigDecimal calcDiscount(Voucher v, BigDecimal orderTotal) {
+        BigDecimal discount = orderTotal
+                .multiply(v.getDiscountPercent())
+                .divide(BigDecimal.valueOf(100), 0, RoundingMode.DOWN);
+        if (v.getMaxDiscount() != null && discount.compareTo(v.getMaxDiscount()) > 0) {
+            discount = v.getMaxDiscount();
+        }
+        return discount;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // XÂY DỰNG ITEM GIỎ TẠM
+    // ─────────────────────────────────────────────────────────────
+
     public CounterCartItemDTO buildCartItem(Integer variantId, int quantity) {
         ProductVariant variant = variantRepository.findById(variantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm"));
@@ -77,19 +95,89 @@ public class CashierService {
         );
     }
 
-    /**
-     * Tạo đơn hàng tại quầy. Kho chỉ bị trừ tại đây (lúc thanh toán xong),
-     * không trừ khi thêm vào giỏ tạm — theo yêu cầu nghiệp vụ đã thống nhất.
-     *
-     * @param customerId    id khách hàng có tài khoản; null = khách vãng lai
-     *                      (không lưu tên/sđt, hóa đơn hiển thị "Khách lẻ")
-     * @param items         danh sách sản phẩm trong giỏ tạm
-     * @param paymentMethod "CASH" hoặc "TRANSFER"
-     */
+    // ─────────────────────────────────────────────────────────────
+    // VALIDATE VOUCHER (preview trước khi checkout — không trừ lượt dùng)
+    //
+    // Quy tắc bảo vệ:
+    //   • Voucher chỉ áp dụng khi khách có tài khoản (customerId != null).
+    //     Không cho khách vãng lai dùng voucher để tránh bị lợi dụng.
+    //   • Kiểm tra isActive, thời hạn, usageLimit, minOrderValue.
+    //   • Trả VoucherPreviewDTO để JS hiển thị số tiền giảm ngay trên màn hình.
+    // ─────────────────────────────────────────────────────────────
+
+    public VoucherPreviewDTO validateVoucher(String code,
+                                             BigDecimal orderTotal,
+                                             Integer customerId) {
+        // Voucher chỉ dành cho khách có tài khoản
+        if (customerId == null) {
+            return VoucherPreviewDTO.fail("Voucher chỉ áp dụng cho khách có tài khoản.");
+        }
+
+        Voucher v = voucherRepository.findByCode(code.trim().toUpperCase())
+                .orElse(null);
+        if (v == null) {
+            return VoucherPreviewDTO.fail("Mã voucher không tồn tại.");
+        }
+
+        if (Boolean.FALSE.equals(v.getIsActive())) {
+            return VoucherPreviewDTO.fail("Mã voucher đã bị vô hiệu hóa.");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        if (v.getStartDate() != null && now.isBefore(v.getStartDate())) {
+            return VoucherPreviewDTO.fail("Mã voucher chưa đến ngày áp dụng.");
+        }
+        if (v.getEndDate() != null && now.isAfter(v.getEndDate())) {
+            return VoucherPreviewDTO.fail("Mã voucher đã hết hạn.");
+        }
+
+        // Kiểm tra số lượng còn lại
+        if (v.getUsageLimit() != null && v.getUsedCount() >= v.getUsageLimit()) {
+            return VoucherPreviewDTO.fail("Mã voucher đã hết lượt sử dụng.");
+        }
+
+        if (v.getMinOrderValue() != null && orderTotal.compareTo(v.getMinOrderValue()) < 0) {
+            return VoucherPreviewDTO.fail(
+                    "Đơn tối thiểu " + v.getMinOrderValue().toPlainString() + " đ để dùng mã này.");
+        }
+
+        BigDecimal discount = calcDiscount(v, orderTotal);
+        String msg = "Giảm " + v.getDiscountPercent().stripTrailingZeros().toPlainString() + "%";
+        if (v.getMaxDiscount() != null) {
+            msg += " (tối đa " + v.getMaxDiscount().toPlainString() + " đ)";
+        }
+        // Còn lại bao nhiêu lượt
+        if (v.getUsageLimit() != null) {
+            int remaining = v.getUsageLimit() - v.getUsedCount();
+            msg += " · Còn " + remaining + " lượt";
+        }
+
+        return VoucherPreviewDTO.ok(discount, msg);
+    }
+
+    /** DTO trả về cho endpoint /validate-voucher */
+    public record VoucherPreviewDTO(boolean valid, String message, BigDecimal discountAmount) {
+        static VoucherPreviewDTO ok(BigDecimal discount, String msg) {
+            return new VoucherPreviewDTO(true, msg, discount);
+        }
+        static VoucherPreviewDTO fail(String msg) {
+            return new VoucherPreviewDTO(false, msg, BigDecimal.ZERO);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // CHECKOUT — trừ kho + áp voucher (nếu có) + tạo AppOrder
+    //
+    // Toàn bộ nằm trong 1 @Transactional:
+    //   trừ kho → validate & trừ usedCount voucher → save order
+    // Nếu bất kỳ bước nào fail → rollback toàn bộ, không mất kho / lượt voucher.
+    // ─────────────────────────────────────────────────────────────
+
     @Transactional
     public AppOrder checkout(Integer customerId,
                              List<CounterCartItemDTO> items,
-                             String paymentMethod) {
+                             String paymentMethod,
+                             String voucherCode) {
 
         if (items == null || items.isEmpty()) {
             throw new IllegalStateException("Giỏ hàng đang trống!");
@@ -100,9 +188,9 @@ public class CashierService {
         AppOrder order = new AppOrder();
         order.setOrderType(OrderType.COUNTER);
         order.setCashier(cashier);
-        order.setStatus(OrderStatus.COMPLETED); // bán tại quầy: khách nhận hàng ngay tại chỗ
+        order.setStatus(OrderStatus.COMPLETED);
         order.setPaymentMethod(paymentMethod);
-        order.setIsPaid(true); // thanh toán ngay tại quầy
+        order.setIsPaid(true);
         order.setOrderDate(LocalDateTime.now());
         order.setDeliveredAt(LocalDateTime.now());
 
@@ -111,13 +199,11 @@ public class CashierService {
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khách hàng"));
             order.setCustomer(customer);
         }
-        // customerId == null → khách vãng lai, order.customer giữ null
 
-        BigDecimal total = BigDecimal.ZERO;
+        // ── Tính tổng hàng ──────────────────────────────────────
+        BigDecimal subtotal = BigDecimal.ZERO;
 
         for (CounterCartItemDTO item : items) {
-            // Re-check tồn kho ngay tại thời điểm thanh toán (chống bán trùng
-            // giữa lúc thêm vào giỏ tạm và lúc bấm thanh toán)
             ProductVariant variant = variantRepository.findById(item.getVariantId())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Sản phẩm không tồn tại: " + item.getVariantId()));
@@ -125,7 +211,7 @@ public class CashierService {
             if (variant.getStock() < item.getQuantity()) {
                 throw new IllegalStateException(
                         "Sản phẩm '" + variant.getProduct().getName() + "' chỉ còn "
-                                + variant.getStock() + " trong kho (giỏ hàng yêu cầu "
+                                + variant.getStock() + " trong kho (giỏ yêu cầu "
                                 + item.getQuantity() + ")!");
             }
 
@@ -139,43 +225,66 @@ public class CashierService {
             detail.setPrice(item.getUnitPrice());
             order.getOrderDetails().add(detail);
 
-            total = total.add(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
+            subtotal = subtotal.add(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
         }
 
-        order.setTotalPrice(total);
+        // ── Áp voucher (chỉ khi khách có tài khoản + nhập mã) ──
+        BigDecimal discount = BigDecimal.ZERO;
+
+        if (voucherCode != null && !voucherCode.isBlank() && customerId != null) {
+            // Validate lại lần nữa trong transaction để chống race condition
+            // (ví dụ 2 cashier dùng cùng mã cùng lúc ở 2 tab)
+            VoucherPreviewDTO preview = validateVoucher(voucherCode, subtotal, customerId);
+            if (!preview.valid()) {
+                throw new IllegalStateException("Voucher không hợp lệ: " + preview.message());
+            }
+
+            Voucher voucher = voucherRepository.findByCode(voucherCode.trim().toUpperCase())
+                    .orElseThrow(() -> new IllegalStateException("Voucher không hợp lệ: không tìm thấy mã"));
+            discount = preview.discountAmount();
+            voucher.setUsedCount(voucher.getUsedCount() + 1);
+            voucherRepository.save(voucher);
+
+            AppUser customer = appUserRepository.findById(customerId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khách hàng"));
+
+            OrderVoucher orderVoucher = new OrderVoucher();
+            orderVoucher.setOrder(order);
+            orderVoucher.setVoucher(voucher);
+            orderVoucher.setCustomer(customer);
+            orderVoucher.setDiscountAmount(discount);
+
+            order.setOrderVoucher(orderVoucher);
+        }
+
+        order.setTotalPrice(subtotal.subtract(discount).max(BigDecimal.ZERO));
 
         return orderRepository.save(order);
     }
+
+    // ─────────────────────────────────────────────────────────────
+    // CÁC METHOD KHÁC (giữ nguyên)
+    // ─────────────────────────────────────────────────────────────
 
     public AppOrder getOrderForInvoice(Integer orderId) {
         return orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng"));
     }
 
-    /**
-     * Lấy danh sách đơn bán tại quầy do cashier hiện tại đăng nhập đã tạo,
-     * trong N ngày gần đây (mặc định dùng cho trang "Đơn đã bán").
-     */
     public List<AppOrder> getRecentOrdersByCurrentCashier(int days) {
         AppUser cashier = getCurrentUser();
         LocalDateTime from = LocalDateTime.now().minusDays(days);
         return orderRepository.findRecentCounterOrdersByCashier(cashier.getId(), from);
     }
 
-    /**
-     * Lấy chi tiết 1 đơn quầy. Cashier chỉ xem được đơn do chính mình tạo;
-     * admin/owner xem được tất cả (họ cũng có quyền vào /cashier/**).
-     */
     public AppOrder getOwnOrderDetail(Integer orderId) {
         var auth = SecurityContextHolder.getContext().getAuthentication();
-        boolean isAdminOrOwner = auth.getAuthorities().stream()
+        boolean isAdminOrOwner = auth != null && auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")
                         || a.getAuthority().equals("ROLE_OWNER"));
 
         AppOrder order = getOrderForInvoice(orderId);
-        if (isAdminOrOwner) {
-            return order;
-        }
+        if (isAdminOrOwner) return order;
 
         AppUser cashier = getCurrentUser();
         if (order.getCashier() == null || !order.getCashier().getId().equals(cashier.getId())) {

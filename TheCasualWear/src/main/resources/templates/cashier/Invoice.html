@@ -64,7 +64,18 @@
 </table>
 <div class="line"></div>
 
-<table>
+<table th:with="discount=${order.orderVoucher != null ? order.orderVoucher.discountAmount : 0}, subtotal=${order.totalPrice + discount}">
+    <tr th:if="${order.orderVoucher != null}">
+        <td>Tạm tính</td>
+        <td class="price" th:text="${#numbers.formatDecimal(subtotal, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+    </tr>
+    <tr th:if="${order.orderVoucher != null}">
+        <td>
+            Voucher
+            <small th:text="'(' + ${order.orderVoucher.voucher.code} + ')'"></small>
+        </td>
+        <td class="price" th:text="'- ' + ${#numbers.formatDecimal(discount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+    </tr>
     <tr class="total-row">
         <td>TỔNG CỘNG</td>
         <td class="price" th:text="${#numbers.formatDecimal(order.totalPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>

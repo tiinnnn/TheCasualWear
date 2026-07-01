@@ -159,7 +159,9 @@ CREATE TABLE voucher (
     min_order_value  DECIMAL(18,2),
     start_date       DATETIME,
     end_date         DATETIME,
-    is_active        BIT           NOT NULL DEFAULT 1
+    is_active        BIT           NOT NULL DEFAULT 1,
+    usage_limit      INT           NULL,
+    used_count       INT           NOT NULL DEFAULT 0
 );
 
 -- Voucher được áp dụng vào đơn hàng
