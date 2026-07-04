@@ -1,0 +1,379 @@
+<div xmlns:th="http://www.thymeleaf.org">
+
+    <div class="row g-4">
+        <!-- ───────────── CỘT TRÁI: TÌM SẢN PHẨM ───────────── -->
+        <div class="col-md-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <strong><i class="bi bi-search"></i> Tìm sản phẩm</strong>
+                </div>
+                <div class="card-body">
+                    <input type="text" id="searchInput" class="form-control mb-3"
+                           placeholder="Nhập tên sản phẩm hoặc mã SKU..." autocomplete="off">
+
+                    <div id="searchResults" class="list-group" style="max-height: 480px; overflow-y: auto;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ───────────── CỘT PHẢI: GIỎ HÀNG + THANH TOÁN ───────────── -->
+        <div class="col-md-5">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <strong><i class="bi bi-cart3"></i> Giỏ hàng</strong>
+                    <form th:action="@{/cashier/cart/clear}" method="post"
+                          onsubmit="return confirm('Xóa toàn bộ giỏ hàng?')">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                th:if="${!#lists.isEmpty(cartItems)}">
+                            Xóa hết
+                        </button>
+                    </form>
+                </div>
+
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0" th:if="${!#lists.isEmpty(cartItems)}">
+                        <thead>
+                        <tr>
+                            <th>Sản phẩm</th>
+                            <th class="text-center">SL</th>
+                            <th class="text-end">Tiền</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="item : ${cartItems}">
+                            <td>
+                                <div class="fw-semibold" th:text="${item.productName}"></div>
+                                <small class="text-muted"
+                                       th:text="${item.sizeName} + ' / ' + ${item.colorName}"></small>
+                            </td>
+                            <td class="text-center" th:text="${item.quantity}"></td>
+                            <td class="text-end"
+                                th:text="${#numbers.formatDecimal(item.lineTotal, 0, 'COMMA', 0, 'POINT')}"></td>
+                            <td>
+                                <form th:action="@{/cashier/cart/remove}" method="post">
+                                    <input type="hidden" name="variantId" th:value="${item.variantId}">
+                                    <button type="submit" class="btn btn-sm btn-link text-danger p-0">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+
+                    <p class="text-muted text-center py-4 mb-0" th:if="${#lists.isEmpty(cartItems)}">
+                        Giỏ hàng đang trống
+                    </p>
+                </div>
+
+                <div class="card-footer bg-white" th:if="${!#lists.isEmpty(cartItems)}">
+
+                    <!-- Tổng hàng (trước giảm) -->
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted small">Tạm tính:</span>
+                        <span class="small"
+                              th:text="${#numbers.formatDecimal(grandTotal, 0, 'COMMA', 0, 'POINT')} + ' đ'"></span>
+                    </div>
+
+                    <!-- Dòng giảm giá — ẩn cho đến khi voucher hợp lệ -->
+                    <div class="d-flex justify-content-between mb-1" id="discountRow" style="display:none !important">
+                        <span class="text-success small"><i class="bi bi-tag-fill"></i> Giảm giá:</span>
+                        <span class="text-success small" id="discountDisplay">0 đ</span>
+                    </div>
+
+                    <!-- Tổng thực trả -->
+                    <div class="d-flex justify-content-between mb-3">
+                        <strong>Tổng cộng:</strong>
+                        <strong class="fs-5 text-danger" id="finalTotalDisplay"
+                                th:text="${#numbers.formatDecimal(grandTotal, 0, 'COMMA', 0, 'POINT')} + ' đ'"></strong>
+                    </div>
+
+                    <!-- Form thanh toán -->
+                    <form th:action="@{/cashier/checkout}" method="post" id="checkoutForm"
+                          onsubmit="return validateCheckoutForm()">
+
+                        <!-- ── Chọn loại khách ── -->
+                        <div class="mb-2">
+                            <label class="form-label small">Khách hàng</label>
+                            <select class="form-select form-select-sm" id="customerType"
+                                    onchange="toggleCustomerType()">
+                                <option value="guest">Khách vãng lai</option>
+                                <option value="account">Khách có tài khoản</option>
+                            </select>
+                        </div>
+
+                        <!-- ── Tìm khách có tài khoản ── -->
+                        <div id="accountFields" class="mb-2" style="display:none">
+                            <input type="text" id="customerSearchInput" class="form-control form-control-sm"
+                                   placeholder="Tìm theo tên đăng nhập / email / sđt..." autocomplete="off">
+
+                            <div id="customerSearchResults" class="list-group mt-1"
+                                 style="max-height: 200px; overflow-y: auto;"></div>
+
+                            <div id="selectedCustomer"
+                                 class="alert alert-success py-1 px-2 mt-2 small d-flex justify-content-between align-items-center"
+                                 style="display:none">
+                                <span id="selectedCustomerLabel"></span>
+                                <button type="button" class="btn-close btn-sm"
+                                        onclick="clearSelectedCustomer()"></button>
+                            </div>
+
+                            <input type="hidden" name="customerId" id="customerIdInput">
+                        </div>
+
+                        <!-- ── Voucher — chỉ hiện sau khi đã chọn được khách ── -->
+                        <div id="voucherSection" class="mb-2" style="display:none">
+                            <label class="form-label small">
+                                <i class="bi bi-ticket-perforated"></i> Mã voucher
+                                <span class="text-muted">(không bắt buộc)</span>
+                            </label>
+                            <div class="input-group input-group-sm">
+                                <input type="text" id="voucherInput" class="form-control text-uppercase"
+                                       placeholder="Nhập mã voucher..." autocomplete="off"
+                                       oninput="this.value = this.value.toUpperCase(); resetVoucher()">
+                                <button type="button" class="btn btn-outline-secondary"
+                                        onclick="applyVoucher()">
+                                    Kiểm tra
+                                </button>
+                            </div>
+                            <!-- Kết quả validate voucher -->
+                            <div id="voucherMsg" class="mt-1 small" style="display:none"></div>
+                            <!-- Input ẩn — gửi lên server khi checkout -->
+                            <input type="hidden" name="voucherCode" id="voucherCodeInput">
+                        </div>
+
+                        <!-- ── Phương thức thanh toán ── -->
+                        <div class="mb-3">
+                            <label class="form-label small">Phương thức thanh toán</label>
+                            <select class="form-select form-select-sm" name="paymentMethod" required>
+                                <option value="CASH">Tiền mặt</option>
+                                <option value="TRANSFER">Chuyển khoản</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-check-circle"></i> Hoàn tất thanh toán
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form ẩn dùng để thêm vào giỏ khi bấm vào kết quả tìm kiếm -->
+    <form id="addToCartForm" th:action="@{/cashier/cart/add}" method="post" style="display:none">
+        <input type="hidden" name="variantId" id="addVariantId">
+        <input type="hidden" name="quantity" id="addQuantity" value="1">
+    </form>
+
+    <script th:inline="javascript">
+        // Tổng tiền hàng gốc từ server (BigDecimal → number)
+        const GRAND_TOTAL = /*[[${grandTotal}]]*/ 0;
+
+        // ───────────── TÌM SẢN PHẨM ─────────────
+        const searchInput   = document.getElementById('searchInput');
+        const searchResults = document.getElementById('searchResults');
+        let debounceTimer;
+
+        searchInput.addEventListener('input', function () {
+            clearTimeout(debounceTimer);
+            const keyword = this.value.trim();
+            if (keyword.length < 2) { searchResults.innerHTML = ''; return; }
+            debounceTimer = setTimeout(() => doSearch(keyword), 300);
+        });
+
+        function doSearch(keyword) {
+            fetch('/cashier/search-variants?keyword=' + encodeURIComponent(keyword))
+                .then(res => res.json())
+                .then(data => renderResults(data))
+                .catch(() => {
+                    searchResults.innerHTML = '<div class="text-danger small p-2">Lỗi tìm kiếm</div>';
+                });
+        }
+
+        function renderResults(items) {
+            if (!items || items.length === 0) {
+                searchResults.innerHTML = '<div class="text-muted small p-2">Không tìm thấy sản phẩm</div>';
+                return;
+            }
+            searchResults.innerHTML = items.map(item => `
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-semibold">${escapeHtml(item.productName)}</div>
+                        <small class="text-muted">
+                            ${escapeHtml(item.sizeName || '')} / ${escapeHtml(item.colorName || '')}
+                            &middot; SKU: ${escapeHtml(item.sku || '-')}
+                            &middot; Còn: ${item.stock}
+                        </small>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-semibold">${formatMoney(item.price)} đ</div>
+                        <button type="button" class="btn btn-sm btn-outline-primary mt-1"
+                                onclick="addToCart(${item.variantId})">
+                            Thêm
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addToCart(variantId) {
+            document.getElementById('addVariantId').value = variantId;
+            document.getElementById('addToCartForm').submit();
+        }
+
+        // ───────────── TÌM KHÁCH HÀNG ─────────────
+        const customerSearchInput   = document.getElementById('customerSearchInput');
+        const customerSearchResults = document.getElementById('customerSearchResults');
+        let customerDebounceTimer;
+
+        customerSearchInput.addEventListener('input', function () {
+            clearTimeout(customerDebounceTimer);
+            const keyword = this.value.trim();
+            if (keyword.length < 2) { customerSearchResults.innerHTML = ''; return; }
+            customerDebounceTimer = setTimeout(() => doCustomerSearch(keyword), 300);
+        });
+
+        function doCustomerSearch(keyword) {
+            fetch('/cashier/search-customers?keyword=' + encodeURIComponent(keyword))
+                .then(res => res.json())
+                .then(data => renderCustomerResults(data))
+                .catch(() => {
+                    customerSearchResults.innerHTML = '<div class="text-danger small p-2">Lỗi tìm kiếm</div>';
+                });
+        }
+
+        function renderCustomerResults(items) {
+            if (!items || items.length === 0) {
+                customerSearchResults.innerHTML = '<div class="text-muted small p-2">Không tìm thấy khách hàng</div>';
+                return;
+            }
+            customerSearchResults.innerHTML = items.map(item => `
+                <button type="button" class="list-group-item list-group-item-action py-1 px-2"
+                        onclick='selectCustomer(${item.id}, ${JSON.stringify(item.username)}, ${JSON.stringify(item.phone || "")})'>
+                    <div class="fw-semibold small">${escapeHtml(item.username)}</div>
+                    <small class="text-muted">${escapeHtml(item.phone || '')}${item.email ? ' &middot; ' + escapeHtml(item.email) : ''}</small>
+                </button>
+            `).join('');
+        }
+
+        function selectCustomer(id, username, phone) {
+            document.getElementById('customerIdInput').value = id;
+            document.getElementById('selectedCustomerLabel').textContent = username + (phone ? ' - ' + phone : '');
+            document.getElementById('selectedCustomer').style.display = 'flex';
+            customerSearchInput.value = '';
+            customerSearchResults.innerHTML = '';
+
+            // Hiện ô voucher sau khi đã chọn được khách có tài khoản
+            document.getElementById('voucherSection').style.display = 'block';
+        }
+
+        function clearSelectedCustomer() {
+            document.getElementById('customerIdInput').value = '';
+            document.getElementById('selectedCustomer').style.display = 'none';
+
+            // Ẩn + reset ô voucher khi bỏ chọn khách
+            document.getElementById('voucherSection').style.display = 'none';
+            resetVoucher();
+            document.getElementById('voucherInput').value = '';
+        }
+
+        function toggleCustomerType() {
+            const type = document.getElementById('customerType').value;
+            document.getElementById('accountFields').style.display = (type === 'account') ? 'block' : 'none';
+            if (type === 'guest') {
+                clearSelectedCustomer();
+                customerSearchInput.value = '';
+                customerSearchResults.innerHTML = '';
+            }
+        }
+
+        // ───────────── VOUCHER ─────────────
+
+        function applyVoucher() {
+            const code       = document.getElementById('voucherInput').value.trim();
+            const customerId = document.getElementById('customerIdInput').value;
+            const msgEl      = document.getElementById('voucherMsg');
+
+            if (!code) {
+                showVoucherMsg('Vui lòng nhập mã voucher.', false);
+                return;
+            }
+
+            const url = '/cashier/validate-voucher'
+                + '?code='       + encodeURIComponent(code)
+                + '&orderTotal=' + GRAND_TOTAL
+                + (customerId ? '&customerId=' + customerId : '');
+
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.valid) {
+                        // Gán mã vào hidden input để submit
+                        document.getElementById('voucherCodeInput').value = code;
+                        showVoucherMsg('✓ ' + data.message + ' → giảm ' + formatMoney(data.discountAmount) + ' đ', true);
+                        updateTotals(data.discountAmount);
+                    } else {
+                        resetVoucher();
+                        showVoucherMsg('✗ ' + data.message, false);
+                    }
+                })
+                .catch(() => showVoucherMsg('Lỗi kết nối, thử lại.', false));
+        }
+
+        function showVoucherMsg(text, success) {
+            const el = document.getElementById('voucherMsg');
+            el.textContent  = text;
+            el.className    = 'mt-1 small ' + (success ? 'text-success' : 'text-danger');
+            el.style.display = 'block';
+        }
+
+        /** Cập nhật dòng giảm giá + tổng cộng cuối */
+        function updateTotals(discountAmount) {
+            const discount  = Number(discountAmount) || 0;
+            const finalTotal = Math.max(GRAND_TOTAL - discount, 0);
+
+            const discountRow = document.getElementById('discountRow');
+            if (discount > 0) {
+                discountRow.style.display = 'flex';
+                document.getElementById('discountDisplay').textContent = '- ' + formatMoney(discount) + ' đ';
+            } else {
+                discountRow.style.display = 'none';
+            }
+            document.getElementById('finalTotalDisplay').textContent = formatMoney(finalTotal) + ' đ';
+        }
+
+        /** Xóa trạng thái voucher đã áp (khi người dùng sửa lại ô nhập) */
+        function resetVoucher() {
+            document.getElementById('voucherCodeInput').value = '';
+            document.getElementById('discountRow').style.display = 'none';
+            document.getElementById('finalTotalDisplay').textContent = formatMoney(GRAND_TOTAL) + ' đ';
+            const msgEl = document.getElementById('voucherMsg');
+            msgEl.textContent  = '';
+            msgEl.style.display = 'none';
+        }
+
+        // ───────────── VALIDATE TRƯỚC KHI SUBMIT ─────────────
+        function validateCheckoutForm() {
+            const type       = document.getElementById('customerType').value;
+            const customerId = document.getElementById('customerIdInput').value;
+            if (type === 'account' && !customerId) {
+                alert('Vui lòng tìm và chọn khách hàng trước khi thanh toán!');
+                return false;
+            }
+            return true;
+        }
+
+        // ───────────── TIỆN ÍCH CHUNG ─────────────
+        function formatMoney(value) {
+            return Number(value).toLocaleString('vi-VN');
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+    </script>
+</div>

@@ -24,20 +24,20 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     // Tìm đúng 1 variant (add to cart / validate trùng)
 
     @Query("SELECT v FROM ProductVariant v WHERE v.product.id = :productId " +
-           "AND (:sizeId IS NULL OR v.size.id = :sizeId) " +
-           "AND (:colorId IS NULL OR v.color.id = :colorId)")
+            "AND (:sizeId IS NULL OR v.size.id = :sizeId) " +
+            "AND (:colorId IS NULL OR v.color.id = :colorId)")
     Optional<ProductVariant> findByProductAndSizeAndColor(
             @Param("productId") Integer productId,
             @Param("sizeId")    Integer sizeId,
             @Param("colorId")   Integer colorId);
 
     @Query("SELECT DISTINCT v.color FROM ProductVariant v " +
-           "WHERE v.product.id = :productId AND v.stock > 0")
+            "WHERE v.product.id = :productId AND v.stock > 0")
     List<Color> findAvailableColorsByProduct(@Param("productId") Integer productId);
 
 
     @Query("SELECT v FROM ProductVariant v WHERE v.product.id = :productId " +
-           "AND v.color.id = :colorId AND v.stock > 0")
+            "AND v.color.id = :colorId AND v.stock > 0")
     List<ProductVariant> findByProductAndColor(
             @Param("productId") Integer productId,
             @Param("colorId")   Integer colorId);
@@ -48,4 +48,10 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
     boolean existsBySizeId(Integer sizeId);
     boolean existsByColorId(Integer colorId);
+
+    // ── MỚI: tìm kiếm variant cho màn hình bán hàng tại quầy (Cashier) ────
+    @Query("SELECT v FROM ProductVariant v WHERE v.stock > 0 AND (" +
+            "LOWER(v.product.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+            "OR LOWER(v.sku) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    List<ProductVariant> searchAvailableByKeyword(@Param("keyword") String keyword);
 }

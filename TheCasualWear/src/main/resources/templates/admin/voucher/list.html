@@ -28,6 +28,7 @@
                 <th>Giảm</th>
                 <th>Đơn tối thiểu</th>
                 <th>Giảm tối đa</th>
+                <th>Lượt dùng</th>
                 <th>Hết hạn</th>
                 <th>Trạng thái</th>
                 <th>Hành động</th>
@@ -40,6 +41,12 @@
                 <td th:text="${v.discountPercent + '%'}"></td>
                 <td th:text="${#numbers.formatInteger(v.minOrderValue, 0, 'COMMA') + ' đ'}"></td>
                 <td th:text="${v.maxDiscount != null ? #numbers.formatInteger(v.maxDiscount, 0, 'COMMA') + ' đ' : 'Không giới hạn'}"></td>
+                <td>
+                    <span th:if="${v.usageLimit != null}"
+                          th:text="${v.usedCount} + ' / ' + ${v.usageLimit}"
+                          th:classappend="${v.usedCount >= v.usageLimit} ? ' text-danger fw-bold' : ''"></span>
+                    <span th:unless="${v.usageLimit != null}" th:text="${v.usedCount} + ' / ∞'"></span>
+                </td>
                 <td th:text="${v.endDate != null ? #temporals.format(v.endDate, 'dd/MM/yyyy') : '∞'}"></td>
                 <td>
                     <span th:if="${v.isActive}" class="badge bg-success">Đang hoạt động</span>
