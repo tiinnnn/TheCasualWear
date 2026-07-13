@@ -137,7 +137,7 @@ public class CashierController {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // THÊM / XÓA / XÓA HẾT GIỎ TẠM (chưa trừ kho)
+    // THÊM / SỬA SỐ LƯỢNG / XÓA / XÓA HẾT GIỎ TẠM (chưa trừ kho)
     // ─────────────────────────────────────────────────────────────
 
     @PostMapping("/cart/add")
@@ -157,6 +157,34 @@ public class CashierController {
                 }
             }
             cart.add(cashierService.buildCartItem(variantId, quantity));
+            session.setAttribute(SESSION_CART_KEY, cart);
+        } catch (Exception e) {
+            ra.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/cashier";
+    }
+
+    // ── MỚI: sửa số lượng 1 item đã có trong giỏ (nút +/- hoặc nhập tay) ──
+    @PostMapping("/cart/update")
+    public String updateCartQuantity(@RequestParam Integer variantId,
+                                     @RequestParam Integer quantity,
+                                     HttpSession session,
+                                     RedirectAttributes ra) {
+        try {
+            List<CounterCartItemDTO> cart = getCart(session);
+
+            if (quantity < 1) {
+                cart.removeIf(i -> i.getVariantId().equals(variantId));
+            } else {
+                // Build lại item từ DB để lấy giá/tồn kho mới nhất và validate số lượng mới
+                CounterCartItemDTO updated = cashierService.buildCartItem(variantId, quantity);
+                for (int i = 0; i < cart.size(); i++) {
+                    if (cart.get(i).getVariantId().equals(variantId)) {
+                        cart.set(i, updated);
+                        break;
+                    }
+                }
+            }
             session.setAttribute(SESSION_CART_KEY, cart);
         } catch (Exception e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());

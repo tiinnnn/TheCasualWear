@@ -14,7 +14,7 @@
                 <!-- Form thêm mới -->
                 <form th:action="@{/admin/categories/add}" method="post"
                       th:object="${newCategory}" class="d-flex gap-2 mb-3">
-                    <input type="text" th:field="*{name}"
+                    <input type="text" th:field="*{name}" maxlength="30"
                            class="form-control form-control-sm" placeholder="Tên danh mục" required/>
                     <button type="submit" class="btn btn-dark btn-sm">+</button>
                 </form>
@@ -22,8 +22,9 @@
                 <ul class="list-group list-group-flush">
                     <li th:each="cat : ${categories}"
                         class="list-group-item d-flex justify-content-between align-items-center px-0">
-                        <span th:text="${cat.name}"></span>
-                        <div class="d-flex gap-1">
+                        <span class="text-truncate flex-grow-1 me-2" style="min-width:0;"
+                              th:text="${cat.name}" th:title="${cat.name}"></span>
+                        <div class="d-flex gap-1 flex-shrink-0">
                             <button class="btn btn-sm btn-outline-secondary"
                                     th:data-id="${cat.id}"
                                     th:data-name="${cat.name}"
@@ -51,7 +52,7 @@
 
                 <form th:action="@{/admin/categories/size/add}" method="post"
                       th:object="${newSize}" class="d-flex gap-2 mb-3">
-                    <input type="text" th:field="*{name}"
+                    <input type="text" th:field="*{name}" maxlength="12"
                            class="form-control form-control-sm" placeholder="Tên size" required/>
                     <button type="submit" class="btn btn-dark btn-sm">+</button>
                 </form>
@@ -59,9 +60,10 @@
                 <ul class="list-group list-group-flush">
                     <li th:each="s : ${sizes}"
                         class="list-group-item d-flex justify-content-between align-items-center px-0">
-                        <span th:text="${s.name}"></span>
+                        <span class="text-truncate flex-grow-1 me-2" style="min-width:0;"
+                              th:text="${s.name}" th:title="${s.name}"></span>
                         <a th:href="@{'/admin/categories/size/delete/' + ${s.id}}"
-                           class="btn btn-sm btn-outline-danger"
+                           class="btn btn-sm btn-outline-danger flex-shrink-0"
                            onclick="return confirm('Xóa size này?')">
                             <i class="bi bi-trash"></i>
                         </a>
@@ -79,7 +81,7 @@
 
                 <form th:action="@{/admin/categories/color/add}" method="post"
                       th:object="${newColor}" class="d-flex gap-2 mb-3">
-                    <input type="text" th:field="*{name}"
+                    <input type="text" th:field="*{name}" maxlength="30"
                            class="form-control form-control-sm" placeholder="Tên màu" required/>
                     <button type="submit" class="btn btn-dark btn-sm">+</button>
                 </form>
@@ -87,9 +89,10 @@
                 <ul class="list-group list-group-flush">
                     <li th:each="cl : ${colors}"
                         class="list-group-item d-flex justify-content-between align-items-center px-0">
-                        <span th:text="${cl.name}"></span>
+                        <span class="text-truncate flex-grow-1 me-2" style="min-width:0;"
+                              th:text="${cl.name}" th:title="${cl.name}"></span>
                         <a th:href="@{'/admin/categories/color/delete/' + ${cl.id}}"
-                           class="btn btn-sm btn-outline-danger"
+                           class="btn btn-sm btn-outline-danger flex-shrink-0"
                            onclick="return confirm('Xóa màu này?')">
                             <i class="bi bi-trash"></i>
                         </a>
@@ -110,7 +113,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <input type="text" id="editCategoryName" name="name"
+                    <input type="text" id="editCategoryName" name="name" maxlength="30"
                            class="form-control" required/>
                 </div>
                 <div class="modal-footer">
@@ -124,10 +127,6 @@
 </div>
 
 <script>
-    function editCategory(id, name) {
-        document.getElementById('editCategoryName').value = name;
-        document.getElementById('editCategoryForm').action = '/admin/categories/edit/' + id;
-    }
     function editCategory(btn) {
         const button = btn.closest('button'); // luôn lấy button dù click vào icon
         const id     = button.getAttribute('data-id');

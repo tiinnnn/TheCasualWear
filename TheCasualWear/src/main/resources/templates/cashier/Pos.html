@@ -47,7 +47,21 @@
                                 <small class="text-muted"
                                        th:text="${item.sizeName} + ' / ' + ${item.colorName}"></small>
                             </td>
-                            <td class="text-center" th:text="${item.quantity}"></td>
+                            <td class="text-center" style="width: 110px;">
+                                <form th:action="@{/cashier/cart/update}" method="post"
+                                      class="d-flex align-items-center justify-content-center gap-1 qty-form">
+                                    <input type="hidden" name="variantId" th:value="${item.variantId}">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary px-2 py-0"
+                                            onclick="stepQuantity(this, -1)">−</button>
+                                    <input type="number" name="quantity" th:value="${item.quantity}"
+                                           min="1"
+                                           class="form-control form-control-sm text-center p-0"
+                                           style="width: 42px;"
+                                           onchange="this.form.submit()">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary px-2 py-0"
+                                            onclick="stepQuantity(this, 1)">+</button>
+                                </form>
+                            </td>
                             <td class="text-end"
                                 th:text="${#numbers.formatDecimal(item.lineTotal, 0, 'COMMA', 0, 'POINT')}"></td>
                             <td>
@@ -221,6 +235,18 @@
         function addToCart(variantId) {
             document.getElementById('addVariantId').value = variantId;
             document.getElementById('addToCartForm').submit();
+        }
+
+        // ───────────── SỬA SỐ LƯỢNG TRONG GIỎ ─────────────
+        function stepQuantity(btn, delta) {
+            const form  = btn.closest('form');
+            const input = form.querySelector('input[name="quantity"]');
+            const max   = parseInt(input.max, 10);
+            let val = parseInt(input.value || '1', 10) + delta;
+            if (val < 1) val = 1;
+            if (!isNaN(max) && val > max) val = max;
+            input.value = val;
+            form.submit();
         }
 
         // ───────────── TÌM KHÁCH HÀNG ─────────────
