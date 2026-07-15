@@ -82,7 +82,10 @@
     </tr>
 </table>
 <div>
-    Thanh toán: <span th:text="${order.paymentMethod == 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}"></span>
+    Thanh toán:
+    <span th:if="${order.paymentMethod == 'CASH'}">Tiền mặt</span>
+    <span th:if="${order.paymentMethod == 'TRANSFER'}">Chuyển khoản</span>
+    <span th:if="${order.paymentMethod == 'VNPAY'}">Chuyển khoản QR (VNPay)</span>
 </div>
 <div class="line"></div>
 
@@ -93,6 +96,15 @@
 
 <button class="btn-print no-print" onclick="window.print()">In hóa đơn</button>
 <button class="btn-print no-print" onclick="window.location.href='/cashier'">Quay lại bán hàng</button>
+
+<form th:if="${order.status.name() == 'COMPLETED'}"
+      th:action="@{'/cashier/orders/' + ${order.id} + '/cancel'}"
+      method="post" class="no-print"
+      onsubmit="return confirm('Xác nhận hủy đơn #' + [[${order.id}]] + '? Kho sẽ được hoàn lại.');">
+    <button type="submit" class="btn-print" style="color:#b00020;border-color:#b00020">
+        Hủy đơn này
+    </button>
+</form>
 
 </body>
 </html>

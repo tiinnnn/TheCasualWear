@@ -1,37 +1,61 @@
 package com.datn.TheCasualWear.controller.Cashier;
 
+import com.datn.TheCasualWear.config.VNPayConfig;
 import com.datn.TheCasualWear.dto.CounterCartItemDTO;
 import com.datn.TheCasualWear.entity.AppOrder;
 import com.datn.TheCasualWear.repository.AppUserRepository;
 import com.datn.TheCasualWear.repository.ProductVariantRepository;
 import com.datn.TheCasualWear.service.CashierService;
+import com.datn.TheCasualWear.service.VNPayService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/cashier")
 public class CashierController {
 
     private static final String SESSION_CART_KEY = "COUNTER_CART";
+    private static final String SESSION_PENDING_VNPAY_KEY = "PENDING_VNPAY_CHECKOUT";
 
     private final CashierService           cashierService;
     private final ProductVariantRepository productVariantRepository;
     private final AppUserRepository        appUserRepository;
+    private final VNPayService             vnPayService;
 
     public CashierController(CashierService cashierService,
                              ProductVariantRepository productVariantRepository,
-                             AppUserRepository appUserRepository) {
+                             AppUserRepository appUserRepository,
+                             VNPayService vnPayService) {
         this.cashierService = cashierService;
         this.productVariantRepository = productVariantRepository;
         this.appUserRepository = appUserRepository;
+        this.vnPayService = vnPayService;
     }
+
+    /**
+     * Thông tin giao dịch VNPay đang chờ thanh toán, lưu tạm trong session.
+     * Khi VNPay redirect về /cashier/vnpay-return, mình dùng txnRef để đối chiếu
+     * rồi mới thực sự trừ kho + tạo đơn (gọi lại CashierService.checkout()).
+     */
+    public record PendingVnpayCheckout(
+            String txnRef,
+            Integer customerId,
+            String voucherCode,
+            List<CounterCartItemDTO> items
+    ) implements Serializable {}
 
     @SuppressWarnings("unchecked")
     private List<CounterCartItemDTO> getCart(HttpSession session) {
@@ -79,7 +103,8 @@ public class CashierController {
                         v.getProduct().getPrice()
                                 .add(v.getPriceAdjustment() != null
                                         ? v.getPriceAdjustment() : BigDecimal.ZERO),
-                        v.getStock()
+                        v.getStock(),
+                        cashierService.resolveImageUrl(v)
                 ))
                 .toList();
     }
@@ -91,7 +116,8 @@ public class CashierController {
             String colorName,
             String sku,
             BigDecimal price,
-            Integer stock
+            Integer stock,
+            String imageUrl
     ) {}
 
     // ─────────────────────────────────────────────────────────────
@@ -204,6 +230,112 @@ public class CashierController {
     public String clearCart(HttpSession session) {
         session.removeAttribute(SESSION_CART_KEY);
         return "redirect:/cashier";
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // THANH TOÁN VNPAY (QR) — bước 1: tạo payment URL, KHÔNG trừ kho
+    // ngay. Giỏ hàng + voucher + customerId được lưu tạm trong session
+    // (khớp bằng txnRef) để khi VNPay redirect về /vnpay-return mới
+    // thực sự tạo đơn.
+    //
+    // Frontend: gọi endpoint này bằng fetch/AJAX, nhận về payUrl, rồi
+    // mở payUrl trong modal/iframe ngay trên màn hình POS — trang
+    // VNPay sẽ tự hiển thị mã QR để khách quét bằng app ngân hàng.
+    // ─────────────────────────────────────────────────────────────
+
+    @PostMapping("/checkout/vnpay/init")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> initVnpayCheckout(
+            @RequestParam(required = false) Integer customerId,
+            @RequestParam(required = false) String voucherCode,
+            HttpSession session,
+            HttpServletRequest request) {
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        try {
+            List<CounterCartItemDTO> cart = getCart(session);
+            if (cart.isEmpty()) {
+                body.put("error", "Giỏ hàng đang trống!");
+                return ResponseEntity.badRequest().body(body);
+            }
+
+            BigDecimal total = cashierService.previewCartTotal(cart, voucherCode, customerId);
+            if (total.compareTo(BigDecimal.ZERO) <= 0) {
+                body.put("error", "Số tiền thanh toán không hợp lệ!");
+                return ResponseEntity.badRequest().body(body);
+            }
+
+            // txnRef duy nhất cho giao dịch này (VNPay yêu cầu không trùng trong ngày)
+            String txnRef = System.currentTimeMillis() + "" + VNPayConfig.getRandomNumber(4);
+
+            String returnUrl = UriComponentsBuilder
+                    .fromUriString(request.getRequestURL().toString())
+                    .replacePath(request.getContextPath() + "/cashier/vnpay-return")
+                    .replaceQuery(null)
+                    .toUriString();
+
+            String payUrl = vnPayService.createPaymentUrl(
+                    total.longValue(),
+                    "Thanh toan don POS " + txnRef,
+                    txnRef,
+                    returnUrl,
+                    request);
+
+            // Lưu snapshot giỏ hàng hiện tại (không tham chiếu list gốc trong session)
+            session.setAttribute(SESSION_PENDING_VNPAY_KEY,
+                    new PendingVnpayCheckout(txnRef, customerId, voucherCode, new ArrayList<>(cart)));
+
+            body.put("payUrl", payUrl);
+            body.put("txnRef", txnRef);
+            body.put("amount", total);
+            return ResponseEntity.ok(body);
+
+        } catch (Exception e) {
+            body.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(body);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // THANH TOÁN VNPAY (QR) — bước 2: VNPay redirect về đây sau khi
+    // khách quét QR và thanh toán xong. Xác thực chữ ký + đối chiếu
+    // txnRef với giao dịch đang chờ trong session, rồi mới thực sự
+    // trừ kho / áp voucher / tạo AppOrder (dùng lại CashierService.checkout).
+    // ─────────────────────────────────────────────────────────────
+
+    @GetMapping("/vnpay-return")
+    public String vnpayReturn(HttpServletRequest request, HttpSession session, RedirectAttributes ra) {
+        Object pendingObj = session.getAttribute(SESSION_PENDING_VNPAY_KEY);
+
+        if (!(pendingObj instanceof PendingVnpayCheckout pending)) {
+            ra.addFlashAttribute("errorMessage",
+                    "Không tìm thấy giao dịch VNPay đang chờ (có thể phiên làm việc đã hết hạn).");
+            return "redirect:/cashier";
+        }
+
+        String txnRefFromVnpay = request.getParameter("vnp_TxnRef");
+        boolean signatureValid = vnPayService.validateReturn(request);
+
+        if (!signatureValid || txnRefFromVnpay == null || !txnRefFromVnpay.equals(pending.txnRef())) {
+            session.removeAttribute(SESSION_PENDING_VNPAY_KEY);
+            ra.addFlashAttribute("errorMessage",
+                    "Thanh toán VNPay không thành công hoặc chữ ký không hợp lệ.");
+            return "redirect:/cashier";
+        }
+
+        try {
+            AppOrder order = cashierService.checkout(
+                    pending.customerId(), pending.items(), "VNPAY", pending.voucherCode());
+            session.removeAttribute(SESSION_PENDING_VNPAY_KEY);
+            session.removeAttribute(SESSION_CART_KEY);
+            return "redirect:/cashier/invoice/" + order.getId();
+        } catch (Exception e) {
+            session.removeAttribute(SESSION_PENDING_VNPAY_KEY);
+            ra.addFlashAttribute("errorMessage",
+                    "Thanh toán VNPay đã thành công nhưng tạo đơn thất bại: " + e.getMessage()
+                            + " — vui lòng liên hệ quản trị viên đối soát giao dịch VNPay txnRef=" + pending.txnRef());
+            return "redirect:/cashier";
+        }
     }
 
     // ─────────────────────────────────────────────────────────────

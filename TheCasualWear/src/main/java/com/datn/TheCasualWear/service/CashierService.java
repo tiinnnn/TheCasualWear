@@ -6,6 +6,7 @@ import com.datn.TheCasualWear.entity.AppOrder;
 import com.datn.TheCasualWear.entity.AppUser;
 import com.datn.TheCasualWear.entity.OrderDetail;
 import com.datn.TheCasualWear.entity.OrderVoucher;
+import com.datn.TheCasualWear.entity.Product;
 import com.datn.TheCasualWear.entity.ProductVariant;
 import com.datn.TheCasualWear.entity.Voucher;
 import com.datn.TheCasualWear.enums.OrderStatus;
@@ -91,8 +92,27 @@ public class CashierService {
                 variant.getSku(),
                 unitPrice,
                 quantity,
-                variant.getStock()
+                variant.getStock(),
+                resolveImageUrl(variant)
         );
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // ẢNH HIỂN THỊ — ưu tiên ảnh riêng của variant (variant_image,
+    // theo sortOrder) để phân biệt đúng màu/kiểu; nếu variant chưa có
+    // ảnh nào thì tạm dùng ảnh đầu tiên của Product làm ảnh thay thế.
+    // Public để CashierController tái sử dụng cho /search-variants.
+    // ─────────────────────────────────────────────────────────────
+
+    public String resolveImageUrl(ProductVariant variant) {
+        if (variant.getImages() != null && !variant.getImages().isEmpty()) {
+            return variant.getImages().get(0).getImageUrl();
+        }
+        Product product = variant.getProduct();
+        if (product != null && product.getImages() != null && !product.getImages().isEmpty()) {
+            return product.getImages().get(0).getImageUrl();
+        }
+        return null;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -163,6 +183,28 @@ public class CashierService {
         static VoucherPreviewDTO fail(String msg) {
             return new VoucherPreviewDTO(false, msg, BigDecimal.ZERO);
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // TÍNH TỔNG TIỀN GIỎ HÀNG (dùng để tạo số tiền thanh toán VNPay)
+    // Không trừ kho, không trừ lượt voucher — chỉ preview.
+    // ─────────────────────────────────────────────────────────────
+
+    public BigDecimal previewCartTotal(List<CounterCartItemDTO> items,
+                                       String voucherCode,
+                                       Integer customerId) {
+        BigDecimal subtotal = items.stream()
+                .map(CounterCartItemDTO::getLineTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal discount = BigDecimal.ZERO;
+        if (voucherCode != null && !voucherCode.isBlank() && customerId != null) {
+            VoucherPreviewDTO preview = validateVoucher(voucherCode, subtotal, customerId);
+            if (preview.valid()) {
+                discount = preview.discountAmount();
+            }
+        }
+        return subtotal.subtract(discount).max(BigDecimal.ZERO);
     }
 
     // ─────────────────────────────────────────────────────────────

@@ -34,6 +34,7 @@
                     <table class="table table-sm mb-0" th:if="${!#lists.isEmpty(cartItems)}">
                         <thead>
                         <tr>
+                            <th></th>
                             <th>Sản phẩm</th>
                             <th class="text-center">SL</th>
                             <th class="text-end">Tiền</th>
@@ -42,6 +43,15 @@
                         </thead>
                         <tbody>
                         <tr th:each="item : ${cartItems}">
+                            <td style="width:48px;">
+                                <img th:if="${item.imageUrl != null}" th:src="${item.imageUrl}" alt=""
+                                     style="width:40px;height:40px;object-fit:cover;border-radius:6px;">
+                                <div th:unless="${item.imageUrl != null}"
+                                     class="d-flex align-items-center justify-content-center"
+                                     style="width:40px;height:40px;border-radius:6px;background:#f1f1f1;">
+                                    <i class="bi bi-image text-muted"></i>
+                                </div>
+                            </td>
                             <td>
                                 <div class="fw-semibold" th:text="${item.productName}"></div>
                                 <small class="text-muted"
@@ -160,13 +170,20 @@
                         <!-- ── Phương thức thanh toán ── -->
                         <div class="mb-3">
                             <label class="form-label small">Phương thức thanh toán</label>
-                            <select class="form-select form-select-sm" name="paymentMethod" required>
+                            <select class="form-select form-select-sm" name="paymentMethod" id="paymentMethodSelect" required onchange="togglePaymentMethod()">
                                 <option value="CASH">Tiền mặt</option>
-                                <option value="TRANSFER">Chuyển khoản</option>
+                                <option value="TRANSFER">Chuyển khoản (thủ công)</option>
+                                <option value="VNPAY">Chuyển khoản QR (VNPay)</option>
                             </select>
                         </div>
 
-                        <button type="submit" class="btn btn-success w-100">
+                        <!-- Trạng thái khi đang tạo/chờ thanh toán VNPay -->
+                        <div id="vnpayStatus" class="alert alert-info py-2 px-2 small mb-2" style="display:none">
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                            Đang tạo mã QR thanh toán, vui lòng chờ...
+                        </div>
+
+                        <button type="submit" class="btn btn-success w-100" id="checkoutSubmitBtn">
                             <i class="bi bi-check-circle"></i> Hoàn tất thanh toán
                         </button>
                     </form>
@@ -213,13 +230,23 @@
             }
             searchResults.innerHTML = items.map(item => `
                 <div class="list-group-item d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="fw-semibold">${escapeHtml(item.productName)}</div>
-                        <small class="text-muted">
-                            ${escapeHtml(item.sizeName || '')} / ${escapeHtml(item.colorName || '')}
-                            &middot; SKU: ${escapeHtml(item.sku || '-')}
-                            &middot; Còn: ${item.stock}
-                        </small>
+                    <div class="d-flex align-items-center gap-2">
+                        ${item.imageUrl
+                            ? `<img src="${item.imageUrl}" alt=""
+                                   style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0;">`
+                            : `<div style="width:44px;height:44px;border-radius:6px;background:#f1f1f1;
+                                          display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                   <i class="bi bi-image text-muted"></i>
+                               </div>`
+                        }
+                        <div>
+                            <div class="fw-semibold">${escapeHtml(item.productName)}</div>
+                            <small class="text-muted">
+                                ${escapeHtml(item.sizeName || '')} / ${escapeHtml(item.colorName || '')}
+                                &middot; SKU: ${escapeHtml(item.sku || '-')}
+                                &middot; Còn: ${item.stock}
+                            </small>
+                        </div>
                     </div>
                     <div class="text-end">
                         <div class="fw-semibold">${formatMoney(item.price)} đ</div>
@@ -388,7 +415,62 @@
                 alert('Vui lòng tìm và chọn khách hàng trước khi thanh toán!');
                 return false;
             }
+
+            // Nếu chọn VNPay (QR) thì không submit form theo cách thông thường —
+            // gọi API init để lấy payUrl rồi điều hướng sang trang VNPay.
+            const paymentMethod = document.getElementById('paymentMethodSelect').value;
+            if (paymentMethod === 'VNPAY') {
+                startVnpayCheckout(customerId);
+                return false; // chặn submit mặc định
+            }
+
             return true;
+        }
+
+        function togglePaymentMethod() {
+            // Ẩn thông báo trạng thái cũ nếu người dùng đổi lại phương thức khác
+            document.getElementById('vnpayStatus').style.display = 'none';
+        }
+
+        /**
+         * Gọi /cashier/checkout/vnpay/init bằng AJAX (KHÔNG trừ kho ngay).
+         * Server trả về payUrl của VNPay — trang đó tự hiển thị mã QR để khách quét.
+         * Sau khi khách thanh toán xong, VNPay sẽ tự redirect trình duyệt về
+         * /cashier/vnpay-return, lúc đó server mới thực sự trừ kho + tạo đơn.
+         */
+        function startVnpayCheckout(customerId) {
+            const statusEl = document.getElementById('vnpayStatus');
+            const btn      = document.getElementById('checkoutSubmitBtn');
+
+            statusEl.style.display = 'block';
+            btn.disabled = true;
+
+            const params = new URLSearchParams();
+            if (customerId) params.set('customerId', customerId);
+            const voucherCode = document.getElementById('voucherCodeInput').value;
+            if (voucherCode) params.set('voucherCode', voucherCode);
+
+            fetch('/cashier/checkout/vnpay/init?' + params.toString(), {
+                method: 'POST'
+            })
+                .then(res => res.json().then(data => ({ ok: res.ok, data })))
+                .then(({ ok, data }) => {
+                    if (!ok || data.error) {
+                        statusEl.style.display = 'none';
+                        btn.disabled = false;
+                        alert(data.error || 'Không thể tạo giao dịch VNPay, vui lòng thử lại.');
+                        return;
+                    }
+                    // Điều hướng cả trang sang VNPay — trang này tự vẽ mã QR để khách quét
+                    // bằng app ngân hàng. VNPay chặn hiển thị trong iframe (X-Frame-Options)
+                    // nên không thể nhúng, phải chuyển hẳn trang.
+                    window.location.href = data.payUrl;
+                })
+                .catch(() => {
+                    statusEl.style.display = 'none';
+                    btn.disabled = false;
+                    alert('Lỗi kết nối tới máy chủ, vui lòng thử lại.');
+                });
         }
 
         // ───────────── TIỆN ÍCH CHUNG ─────────────

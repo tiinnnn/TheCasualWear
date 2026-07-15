@@ -21,7 +21,19 @@ public class VNPayService {
     // Tạo URL thanh toán VNPay
     public String createPaymentUrl(long amount, String orderInfo,
                                    HttpServletRequest request) {
-        String vnp_TxnRef = VNPayConfig.getRandomNumber(8);
+        return createPaymentUrl(amount, orderInfo, VNPayConfig.getRandomNumber(8),
+                vnPayConfig.getReturnUrl(), request);
+    }
+
+    /**
+     * Overload cho phép truyền vào txnRef và returnUrl riêng.
+     * Dùng cho luồng POS/cashier: txnRef để khớp lại giao dịch đang chờ (lưu trong session),
+     * returnUrl riêng để trỏ về endpoint xử lý callback của cashier
+     * (thay vì returnUrl mặc định dùng cho đơn online).
+     */
+    public String createPaymentUrl(long amount, String orderInfo, String txnRef,
+                                   String returnUrl, HttpServletRequest request) {
+        String vnp_TxnRef = txnRef;
         String vnp_IpAddr = getIpAddress(request);
 
         Map<String, String> vnp_Params = new HashMap<>();
@@ -35,7 +47,7 @@ public class VNPayService {
         vnp_Params.put("vnp_OrderInfo", orderInfo);
         vnp_Params.put("vnp_OrderType", "other");
         vnp_Params.put("vnp_Locale", "vn");
-        vnp_Params.put("vnp_ReturnUrl", vnPayConfig.getReturnUrl());
+        vnp_Params.put("vnp_ReturnUrl", returnUrl);
         vnp_Params.put("vnp_IpAddr", vnp_IpAddr);
 
         // Thời gian tạo và hết hạn

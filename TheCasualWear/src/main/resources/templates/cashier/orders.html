@@ -32,13 +32,14 @@
                     <th>Thời gian</th>
                     <th>Khách hàng</th>
                     <th>Thanh toán</th>
+                    <th>Trạng thái</th>
                     <th class="text-end">Tổng tiền</th>
                     <th></th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr th:if="${#lists.isEmpty(orders)}">
-                    <td colspan="6" class="text-center text-muted py-4">
+                    <td colspan="7" class="text-center text-muted py-4">
                         Chưa có đơn nào trong khoảng thời gian này
                     </td>
                 </tr>
@@ -52,6 +53,11 @@
                     <td>
                         <span class="badge bg-success" th:if="${o.paymentMethod == 'CASH'}">Tiền mặt</span>
                         <span class="badge bg-info text-dark" th:if="${o.paymentMethod == 'TRANSFER'}">Chuyển khoản</span>
+                        <span class="badge bg-primary" th:if="${o.paymentMethod == 'VNPAY'}">VNPay (QR)</span>
+                    </td>
+                    <td>
+                        <span class="badge bg-success" th:if="${o.status.name() == 'COMPLETED'}">Hoàn thành</span>
+                        <span class="badge bg-danger" th:if="${o.status.name() == 'CANCELLED'}">Đã hủy</span>
                     </td>
                     <td class="text-end fw-semibold"
                         th:text="${#numbers.formatDecimal(o.totalPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
@@ -59,6 +65,14 @@
                         <a th:href="@{'/cashier/orders/' + ${o.id}}" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-eye"></i> Xem
                         </a>
+                        <form th:if="${o.status.name() == 'COMPLETED'}"
+                              th:action="@{'/cashier/orders/' + ${o.id} + '/cancel'}"
+                              method="post" class="d-inline"
+                              onsubmit="return confirm('Xác nhận hủy đơn #' + [[${o.id}]] + '? Kho sẽ được hoàn lại.');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-x-circle"></i> Hủy
+                            </button>
+                        </form>
                     </td>
                 </tr>
                 </tbody>

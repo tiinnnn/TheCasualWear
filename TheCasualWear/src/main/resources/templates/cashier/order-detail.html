@@ -6,6 +6,14 @@
             <a th:href="@{'/cashier/invoice/' + ${order.id}}" class="btn btn-outline-dark btn-sm" target="_blank">
                 <i class="bi bi-printer"></i> In hóa đơn
             </a>
+            <form th:if="${order.status.name() == 'COMPLETED'}"
+                  th:action="@{'/cashier/orders/' + ${order.id} + '/cancel'}"
+                  method="post" class="d-inline"
+                  onsubmit="return confirm('Xác nhận hủy đơn #' + [[${order.id}]] + '? Kho sẽ được hoàn lại.');">
+                <button type="submit" class="btn btn-outline-danger btn-sm">
+                    <i class="bi bi-x-circle"></i> Hủy đơn
+                </button>
+            </form>
             <a th:href="@{/cashier/orders}" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-arrow-left"></i> Quay lại danh sách
             </a>
@@ -63,6 +71,11 @@
                 <div class="card-body">
                     <h6 class="fw-bold mb-3">Thông tin đơn hàng</h6>
                     <p class="mb-1">
+                        <strong>Trạng thái:</strong>
+                        <span class="badge bg-success" th:if="${order.status.name() == 'COMPLETED'}">Hoàn thành</span>
+                        <span class="badge bg-danger" th:if="${order.status.name() == 'CANCELLED'}">Đã hủy</span>
+                    </p>
+                    <p class="mb-1">
                         <strong>Khách hàng:</strong>
                         <span th:if="${order.customer != null}" th:text="${order.customer.username}"></span>
                         <span th:if="${order.customer == null}">Khách lẻ</span>
@@ -83,6 +96,9 @@
                         <strong>Thanh toán:</strong>
                         <span class="badge bg-success" th:if="${order.paymentMethod == 'CASH'}">Tiền mặt</span>
                         <span class="badge bg-info text-dark" th:if="${order.paymentMethod == 'TRANSFER'}">Chuyển khoản</span>
+                        <span class="badge bg-primary" th:if="${order.paymentMethod == 'VNPAY'}">
+                            <i class="bi bi-qr-code"></i> VNPay (QR)
+                        </span>
                     </p>
                 </div>
             </div>
