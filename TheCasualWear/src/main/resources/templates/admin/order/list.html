@@ -19,7 +19,7 @@
             <label class="form-label small text-muted mb-1">Tên khách hàng</label>
             <input type="text" name="keyword" th:value="${keyword}"
                    class="form-control form-control-sm"
-                   style="min-width:180px"
+                   style="min-width:180px;flex:1 1 180px"
                    placeholder="Tìm theo tên khách..."/>
         </div>
 
@@ -67,7 +67,7 @@
 </form>
 
 <div class="card border-0 shadow-sm">
-    <div class="card-body p-0">
+    <div class="card-body p-0 table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-dark">
             <tr>
@@ -130,9 +130,9 @@
 
 <!-- Pagination — giữ fromDate/toDate khi chuyển trang -->
 <div th:if="${totalPages > 1}"
-     class="d-flex justify-content-center mt-4">
+     class="d-flex justify-content-center mt-4 overflow-auto">
     <nav>
-        <ul class="pagination">
+        <ul class="pagination flex-nowrap">
             <li class="page-item"
                 th:classappend="${currentPage == 0} ? 'disabled'">
                 <a class="page-link"

@@ -19,7 +19,7 @@
             <label class="form-label small text-muted mb-1">Tìm kiếm</label>
             <input type="text" name="keyword" th:value="${keyword}"
                    class="form-control form-control-sm"
-                   style="min-width:220px"
+                   style="min-width:220px;flex:1 1 220px"
                    placeholder="Tên đăng nhập, email hoặc SĐT..."/>
         </div>
 
@@ -139,9 +139,9 @@
 
 <!-- Pagination -->
 <div th:if="${totalPages > 1}"
-     class="d-flex justify-content-center mt-4">
+     class="d-flex justify-content-center mt-4 overflow-auto">
     <nav>
-        <ul class="pagination">
+        <ul class="pagination flex-nowrap">
             <li class="page-item"
                 th:classappend="${currentPage == 0} ? 'disabled'">
                 <a class="page-link"

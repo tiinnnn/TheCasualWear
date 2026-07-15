@@ -4,8 +4,8 @@
 <body>
 <div th:fragment="content">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="fw-bold">Sản phẩm đã xóa</h4>
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+        <h4 class="fw-bold mb-0">Sản phẩm đã xóa</h4>
         <a th:href="@{/admin/products}" class="btn btn-outline-secondary btn-sm">← Quay lại</a>
     </div>
 
@@ -15,7 +15,7 @@
     </div>
 
     <div class="card border-0 shadow-sm" th:unless="${#lists.isEmpty(deletedProducts)}">
-        <div class="card-body p-0">
+        <div class="card-body p-0 table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-dark">
                 <tr>

@@ -2,8 +2,8 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head><title>Quản lý sản phẩm</title></head>
 <body>
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="fw-bold">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <h4 class="fw-bold mb-0">
         Quản lý sản phẩm
         <small class="text-muted fs-6" th:text="'(' + ${totalItems} + ' sản phẩm)'"></small>
     </h4>
@@ -18,16 +18,17 @@
 </div>
 
 <!-- Search -->
-<form th:action="@{/admin/products}" method="get" class="d-flex gap-2 mb-3">
+<form th:action="@{/admin/products}" method="get" class="d-flex flex-wrap gap-2 mb-3">
     <input type="text" name="keyword" th:value="${keyword}"
-           class="form-control" placeholder="Tìm kiếm theo tên sản phẩm..."/>
+           class="form-control" style="min-width:200px;flex:1 1 200px"
+           placeholder="Tìm kiếm theo tên sản phẩm..."/>
     <button type="submit" class="btn btn-dark">Tìm</button>
     <a th:if="${keyword != null}" th:href="@{/admin/products}"
        class="btn btn-outline-secondary">✕</a>
 </form>
 
 <div class="card border-0 shadow-sm">
-    <div class="card-body p-0">
+    <div class="card-body p-0 table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-dark">
             <tr>
@@ -95,9 +96,9 @@
 </div>
 
 <!-- Pagination -->
-<div th:if="${totalPages > 1}" class="d-flex justify-content-center mt-4">
+<div th:if="${totalPages > 1}" class="d-flex justify-content-center mt-4 overflow-auto">
     <nav>
-        <ul class="pagination">
+        <ul class="pagination flex-nowrap">
             <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
                 <a class="page-link"
                    th:href="@{/admin/products(page=${currentPage-1}, keyword=${keyword})}">←</a>
