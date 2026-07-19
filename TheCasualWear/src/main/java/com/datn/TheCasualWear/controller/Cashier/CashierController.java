@@ -393,4 +393,22 @@ public class CashierController {
             return "redirect:/cashier/orders";
         }
     }
+
+    // ─────────────────────────────────────────────────────────────
+    // HỦY ĐƠN POS — khách đổi ý không thanh toán / tạo nhầm.
+    // Dùng chung cho nút "Hủy đơn" ở cả trang hóa đơn (invoice) lẫn
+    // trang chi tiết đơn (order-detail) trong danh sách "Đơn đã bán".
+    // ─────────────────────────────────────────────────────────────
+
+    @PostMapping("/orders/{id}/cancel")
+    public String cancelOrder(@PathVariable Integer id, RedirectAttributes ra) {
+        try {
+            cashierService.cancelOrder(id);
+            ra.addFlashAttribute("successMessage",
+                    "Đã hủy đơn hàng #" + id + " và hoàn kho thành công.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/cashier/orders/" + id;
+    }
 }

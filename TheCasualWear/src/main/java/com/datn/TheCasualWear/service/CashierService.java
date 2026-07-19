@@ -13,6 +13,8 @@ import com.datn.TheCasualWear.enums.OrderStatus;
 import com.datn.TheCasualWear.enums.OrderType;
 import com.datn.TheCasualWear.repository.AppOrderRepository;
 import com.datn.TheCasualWear.repository.AppUserRepository;
+import com.datn.TheCasualWear.repository.OrderDetailRepository;
+import com.datn.TheCasualWear.repository.OrderVoucherRepository;
 import com.datn.TheCasualWear.repository.ProductVariantRepository;
 import com.datn.TheCasualWear.repository.VoucherRepository;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +36,12 @@ public class CashierService {
     private final AppUserRepository        appUserRepository;
     private final ProductVariantRepository variantRepository;
     private final VoucherRepository        voucherRepository;
+    private final OrderDetailRepository    orderDetailRepository;
+    private final OrderVoucherRepository   orderVoucherRepository;
+
+    // Cashier tự hủy đơn trong vòng bao nhiêu phút kể từ lúc tạo.
+    // Admin/Owner không bị giới hạn bởi mốc thời gian này.
+    private static final int CANCEL_WINDOW_MINUTES = 30;
 
     // ─────────────────────────────────────────────────────────────
     // INTERNAL HELPERS
@@ -319,19 +327,76 @@ public class CashierService {
         return orderRepository.findRecentCounterOrdersByCashier(cashier.getId(), from);
     }
 
-    public AppOrder getOwnOrderDetail(Integer orderId) {
+    private boolean isCurrentUserAdminOrOwner() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
-        boolean isAdminOrOwner = auth != null && auth.getAuthorities().stream()
+        return auth != null && auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")
                         || a.getAuthority().equals("ROLE_OWNER"));
+    }
 
+    public AppOrder getOwnOrderDetail(Integer orderId) {
         AppOrder order = getOrderForInvoice(orderId);
-        if (isAdminOrOwner) return order;
+        if (isCurrentUserAdminOrOwner()) return order;
 
         AppUser cashier = getCurrentUser();
         if (order.getCashier() == null || !order.getCashier().getId().equals(cashier.getId())) {
             throw new IllegalStateException("Bạn không có quyền xem đơn hàng này!");
         }
         return order;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // HỦY ĐƠN POS — khách đổi ý không thanh toán / thu ngân lỡ tạo nhầm.
+    //
+    // Quy tắc:
+    //   • Chỉ hủy được đơn COUNTER, đang ở trạng thái COMPLETED
+    //     (đơn POS luôn tạo thẳng COMPLETED, không có trạng thái PENDING).
+    //   • Cashier chỉ hủy được đơn của chính mình, trong vòng
+    //     CANCEL_WINDOW_MINUTES kể từ lúc tạo. Admin/Owner hủy được
+    //     bất kỳ lúc nào (không giới hạn thời gian).
+    //   • Hoàn kho từng dòng sản phẩm + hoàn lượt dùng voucher (nếu có).
+    // ─────────────────────────────────────────────────────────────
+
+    @Transactional
+    public void cancelOrder(Integer orderId) {
+        AppOrder order = getOwnOrderDetail(orderId); // đã kiểm tra quyền sở hữu / admin-owner
+
+        if (order.getOrderType() != OrderType.COUNTER) {
+            throw new IllegalStateException("Chỉ có thể hủy đơn bán tại quầy!");
+        }
+        if (order.getStatus() != OrderStatus.COMPLETED) {
+            throw new IllegalStateException("Đơn hàng này không ở trạng thái có thể hủy!");
+        }
+
+        if (!isCurrentUserAdminOrOwner()) {
+            LocalDateTime deadline = order.getOrderDate().plusMinutes(CANCEL_WINDOW_MINUTES);
+            if (LocalDateTime.now().isAfter(deadline)) {
+                throw new IllegalStateException(
+                        "Đơn hàng đã tạo quá " + CANCEL_WINDOW_MINUTES
+                                + " phút, không thể tự hủy. Vui lòng liên hệ quản lý!");
+            }
+        }
+
+        // Hoàn kho từng dòng sản phẩm
+        List<OrderDetail> details = orderDetailRepository.findByOrderId(order.getId());
+        for (OrderDetail detail : details) {
+            ProductVariant variant = detail.getVariant();
+            variant.setStock(variant.getStock() + detail.getQuantity());
+            variantRepository.save(variant);
+        }
+
+        // Hoàn lượt dùng voucher (nếu đơn có áp mã)
+        orderVoucherRepository.findByOrderId(orderId).ifPresent(ov -> {
+            Voucher voucher = ov.getVoucher();
+            if (voucher.getUsedCount() != null && voucher.getUsedCount() > 0) {
+                voucher.setUsedCount(voucher.getUsedCount() - 1);
+                voucherRepository.save(voucher);
+            }
+            order.setOrderVoucher(null);
+            orderVoucherRepository.delete(ov);
+        });
+
+        order.setStatus(OrderStatus.CANCELLED);
+        orderRepository.save(order);
     }
 }
