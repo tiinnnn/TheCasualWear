@@ -46,16 +46,13 @@
                         </div>
                         <div id="voucher-result" class="mt-2"></div>
 
-                        <div th:if="${!#lists.isEmpty(activeVouchers)}" class="mt-2">
-                            <small class="text-muted">Voucher khả dụng:</small><br/>
-                            <span th:each="v : ${activeVouchers}"
-                                  class="badge bg-light text-dark border me-1 mt-1"
-                                  style="cursor:pointer"
-                                  th:text="${v.code + ' - Giảm ' + v.discountPercent + '%'}"
-                                  th:attr="data-code=${v.code}"
-                                  onclick="document.getElementById('voucherCode').value=this.dataset.code; applyVoucher()">
-                        </span>
-                        </div>
+                        <button th:if="${!#lists.isEmpty(activeVouchers)}"
+                                type="button" class="btn btn-link btn-sm ps-0 mt-2"
+                                data-bs-toggle="modal" data-bs-target="#voucherModal">
+                            <i class="bi bi-tag-fill me-1"></i>
+                            Xem voucher khả dụng
+                            (<span th:text="${#lists.size(activeVouchers)}"></span>)
+                        </button>
                     </div>
                 </div>
 
@@ -168,11 +165,49 @@
             </div>
         </div>
     </form>
+
+    <!-- Modal chọn voucher -->
+    <div class="modal fade" id="voucherModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-tag-fill me-2"></i>Chọn voucher</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0" style="max-height: 420px; overflow-y: auto;">
+                    <div th:each="v : ${activeVouchers}"
+                         class="d-flex align-items-center justify-content-between p-3 border-bottom voucher-item"
+                         style="cursor:pointer"
+                         th:attr="data-code=${v.code}"
+                         onclick="selectVoucherFromModal(this)">
+                        <div>
+                            <div class="fw-semibold" th:text="${v.code}"></div>
+                            <small class="text-muted"
+                                   th:text="'Giảm ' + ${v.discountPercent} + '%' + (${v.maxDiscount != null} ? ', tối đa ' + ${#numbers.formatInteger(v.maxDiscount, 0, 'COMMA')} + ' đ' : '')"></small>
+                        </div>
+                        <button type="button" class="btn btn-outline-dark btn-sm">Áp dụng</button>
+                    </div>
+                    <div th:if="${#lists.isEmpty(activeVouchers)}" class="p-4 text-center text-muted">
+                        Hiện chưa có voucher khả dụng.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script th:inline="javascript">
     const originalTotal = /*[[${totalPrice}]]*/ 0;
     const LIMIT = 1000000;
+
+    function selectVoucherFromModal(el) {
+        document.getElementById('voucherCode').value = el.dataset.code;
+        applyVoucher();
+
+        const modalEl = document.getElementById('voucherModal');
+        const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modal.hide();
+    }
 
     function applyVoucher() {
         const code      = document.getElementById('voucherCode').value.trim();
