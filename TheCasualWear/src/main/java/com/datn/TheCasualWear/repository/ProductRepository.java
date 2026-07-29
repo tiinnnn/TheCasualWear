@@ -13,8 +13,9 @@ import java.util.Optional;
 public interface ProductRepository extends JpaRepository<Product, Integer> {
 
     // Shop: tìm SP còn ít nhất 1 variant có stock > 0
-    @Query("SELECT DISTINCT p FROM Product p JOIN p.variants v " +
-            "WHERE p.isDeleted = false AND v.stock > 0 " +
+    @Query("SELECT p FROM Product p " +
+            "WHERE p.isDeleted = false " +
+            "AND EXISTS (SELECT v FROM ProductVariant v WHERE v.product = p AND v.stock > 0) " +
             "AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%',:keyword,'%'))) " +
             "AND (:categoryId IS NULL OR p.category.id = :categoryId)")
     Page<Product> searchProducts(@Param("keyword")    String keyword,
@@ -22,8 +23,9 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                                  Pageable pageable);
 
     // Trang chủ: 8 SP mới nhất còn hàng
-    @Query("SELECT DISTINCT p FROM Product p JOIN p.variants v " +
-            "WHERE p.isDeleted = false AND v.stock > 0 " +
+    @Query("SELECT p FROM Product p " +
+            "WHERE p.isDeleted = false " +
+            "AND EXISTS (SELECT v FROM ProductVariant v WHERE v.product = p AND v.stock > 0) " +
             "ORDER BY p.createdAt DESC")
     List<Product> findTop8Newest(Pageable pageable);
 

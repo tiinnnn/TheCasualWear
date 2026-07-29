@@ -58,13 +58,26 @@
                 </div>
             </div>
 
-            <div class="form-check mb-4">
-                <input class="form-check-input" type="checkbox"
-                       name="isActive" id="isActive" value="true"
-                       th:checked="${collection.isActive != false}"/>
-                <label class="form-check-label" for="isActive">
-                    Hiển thị (Active)
-                </label>
+            <div class="mb-4">
+                <label class="form-label fw-bold d-block">Trạng thái hiển thị</label>
+
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio"
+                           name="isActive" id="isActiveTrue" value="true"
+                           th:checked="${collection.isActive != false}"/>
+                    <label class="form-check-label" for="isActiveTrue">
+                        Hiển thị
+                    </label>
+                </div>
+
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio"
+                           name="isActive" id="isActiveFalse" value="false"
+                           th:checked="${collection.isActive == false}"/>
+                    <label class="form-check-label" for="isActiveFalse">
+                        Ẩn
+                    </label>
+                </div>
             </div>
 
             <div class="d-flex gap-2">
