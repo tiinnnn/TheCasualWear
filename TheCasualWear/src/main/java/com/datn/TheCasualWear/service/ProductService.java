@@ -32,6 +32,15 @@ public class ProductService {
                         "Không tìm thấy sản phẩm với id: " + id));
     }
 
+    // Bọc "%...%" quanh keyword ở tầng Java thay vì dùng CONCAT() trong JPQL,
+    // để tránh Hibernate + SQL Server dialect sinh CAST(? AS VARCHAR(MAX))
+    // làm hỏng ký tự tiếng Việt có dấu khi so khớp LIKE.
+    private String toLikePattern(String keyword) {
+        return (keyword == null || keyword.isBlank())
+                ? null
+                : "%" + keyword.trim() + "%";
+    }
+
     //USER
 
     public Page<Product> getShopProducts(String keyword, String sort,
@@ -41,7 +50,7 @@ public class ProductService {
             case "price_desc" -> Sort.by("price").descending();
             default           -> Sort.by("createdAt").descending();
         };
-        String kw = (keyword == null || keyword.isBlank()) ? null : keyword;
+        String kw = toLikePattern(keyword);
         Pageable pageable = PageRequest.of(page, SHOP_PAGE_SIZE, sortObj);
         return productRepository.searchProducts(kw, categoryId, pageable);
     }
@@ -53,7 +62,7 @@ public class ProductService {
     //ADMIN
 
     public Page<Product> getAdminProducts(String keyword, int page) {
-        String kw = (keyword == null || keyword.isBlank()) ? null : keyword;
+        String kw = toLikePattern(keyword);
         Pageable pageable = PageRequest.of(page, ADMIN_PAGE_SIZE,
                 Sort.by("createdAt").descending());
         return productRepository.searchProductsForAdmin(kw, pageable);
