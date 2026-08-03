@@ -1,0 +1,237 @@
+<div xmlns:th="http://www.thymeleaf.org">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0"><i class="bi bi-truck me-2"></i>Tạo phiếu nhập kho</h4>
+        <a class="btn btn-outline-secondary btn-sm" th:href="@{/admin/warehouse/receipts}">
+            <i class="bi bi-arrow-left me-1"></i>Quay lại
+        </a>
+    </div>
+
+    <form th:action="@{/admin/warehouse/receipts/save}" th:object="${form}" method="post" id="receiptForm">
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Nhà cung cấp <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" th:field="*{supplierName}" required
+                               placeholder="Tên nhà cung cấp"/>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Ghi chú</label>
+                        <input type="text" class="form-control" th:field="*{note}"
+                               placeholder="Ghi chú (không bắt buộc)"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <div class="row g-2 align-items-end mb-3">
+                    <div class="col-md-5">
+                        <label class="form-label">Sản phẩm</label>
+                        <select class="form-select" id="productSelect">
+                            <option value="">-- Chọn sản phẩm --</option>
+                            <option th:each="p : ${products}"
+                                    th:value="${p.id}" th:text="${p.name}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Biến thể (size/màu)</label>
+                        <select class="form-select" id="variantSelect" disabled>
+                            <option value="">-- Chọn sản phẩm trước --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="button" class="btn btn-dark w-100" id="btnAddItem">
+                            <i class="bi bi-plus-lg me-1"></i>Thêm dòng
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table align-middle" id="itemsTable">
+                        <thead class="table-light">
+                        <tr>
+                            <th>SKU</th>
+                            <th>Sản phẩm</th>
+                            <th>Size</th>
+                            <th>Màu</th>
+                            <th>Tồn hiện tại</th>
+                            <th style="width:120px">Số lượng nhập</th>
+                            <th style="width:160px">Đơn giá nhập</th>
+                            <th class="text-end">Thành tiền</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody id="itemsBody">
+                        <!-- các dòng item sẽ được JS chèn vào đây -->
+                        </tbody>
+                        <tfoot>
+                        <tr>
+                            <td colspan="7" class="text-end fw-semibold">Tổng cộng</td>
+                            <td class="text-end fw-semibold" id="grandTotal">0 đ</td>
+                            <td></td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                    <p class="text-muted small" id="emptyHint">Chưa có sản phẩm nào trong phiếu nhập.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-end">
+            <button type="submit" class="btn btn-dark px-4" id="btnSubmit" disabled>
+                <i class="bi bi-check-lg me-1"></i>Lưu phiếu nhập
+            </button>
+        </div>
+    </form>
+</div>
+
+<script th:inline="none">
+    (function () {
+        const productSelect = document.getElementById('productSelect');
+        const variantSelect = document.getElementById('variantSelect');
+        const btnAddItem    = document.getElementById('btnAddItem');
+        const itemsBody     = document.getElementById('itemsBody');
+        const emptyHint     = document.getElementById('emptyHint');
+        const grandTotalEl  = document.getElementById('grandTotal');
+        const btnSubmit     = document.getElementById('btnSubmit');
+        const form          = document.getElementById('receiptForm');
+
+        let variantOptionsCache = [];
+        let rowIndex = 0; // index dùng cho name="items[i].xxx" khi submit
+
+        // Khi chọn 1 sản phẩm -> gọi AJAX lấy danh sách variant (size/màu/tồn)
+        productSelect.addEventListener('change', function () {
+            const productId = this.value;
+            variantSelect.innerHTML = '<option value="">Đang tải...</option>';
+            variantSelect.disabled = true;
+
+            if (!productId) {
+                variantSelect.innerHTML = '<option value="">-- Chọn sản phẩm trước --</option>';
+                return;
+            }
+
+            fetch(`/admin/warehouse/receipts/variant-options?productId=${productId}`)
+                .then(res => {
+                    if (!res.ok) throw new Error('Không tải được danh sách biến thể');
+                    return res.json();
+                })
+                .then(data => {
+                    variantOptionsCache = data;
+                    if (!data.length) {
+                        variantSelect.innerHTML = '<option value="">Sản phẩm chưa có biến thể</option>';
+                        variantSelect.disabled = true;
+                        return;
+                    }
+                    variantSelect.innerHTML = data.map(v =>
+                        `<option value="${v.id}">${v.sku} - ${v.sizeName ?? ''} / ${v.colorName ?? ''} (tồn: ${v.stock})</option>`
+                    ).join('');
+                    variantSelect.disabled = false;
+                })
+                .catch(err => {
+                    console.error(err);
+                    variantSelect.innerHTML = '<option value="">Lỗi tải dữ liệu</option>';
+                });
+        });
+
+        // Thêm 1 dòng vào bảng item
+        btnAddItem.addEventListener('click', function () {
+            const variantId = variantSelect.value;
+            if (!variantId) {
+                alert('Vui lòng chọn biến thể sản phẩm trước khi thêm.');
+                return;
+            }
+            const variant = variantOptionsCache.find(v => String(v.id) === String(variantId));
+            if (!variant) return;
+
+            // Không cho thêm trùng 1 biến thể 2 lần
+            if (itemsBody.querySelector(`tr[data-variant-id="${variant.id}"]`)) {
+                alert('Biến thể này đã có trong phiếu nhập.');
+                return;
+            }
+
+            const i = rowIndex++;
+            const productName = productSelect.options[productSelect.selectedIndex].text;
+
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-variant-id', variant.id);
+            tr.innerHTML = `
+                <td>${variant.sku}</td>
+                <td>${productName}</td>
+                <td>${variant.sizeName ?? '—'}</td>
+                <td>${variant.colorName ?? '—'}</td>
+                <td>${variant.stock}</td>
+                <td>
+                    <input type="hidden" name="items[${i}].variantId" value="${variant.id}"/>
+                    <input type="number" name="items[${i}].quantity" class="form-control form-control-sm qty-input"
+                           min="1" value="1" required/>
+                </td>
+                <td>
+                    <input type="number" name="items[${i}].unitCostPrice" class="form-control form-control-sm price-input"
+                           min="0" step="1000" value="0" required/>
+                </td>
+                <td class="text-end subtotal-cell">0 đ</td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-remove-row">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>`;
+            itemsBody.appendChild(tr);
+
+            attachRowListeners(tr);
+            updateVisibility();
+            recalcRow(tr);
+        });
+
+        function attachRowListeners(tr) {
+            const qtyInput   = tr.querySelector('.qty-input');
+            const priceInput = tr.querySelector('.price-input');
+            qtyInput.addEventListener('input', () => recalcRow(tr));
+            priceInput.addEventListener('input', () => recalcRow(tr));
+            tr.querySelector('.btn-remove-row').addEventListener('click', () => {
+                tr.remove();
+                updateVisibility();
+                recalcGrandTotal();
+            });
+        }
+
+        function recalcRow(tr) {
+            const qty   = parseFloat(tr.querySelector('.qty-input').value) || 0;
+            const price = parseFloat(tr.querySelector('.price-input').value) || 0;
+            const subtotal = qty * price;
+            tr.querySelector('.subtotal-cell').textContent = formatVnd(subtotal);
+            recalcGrandTotal();
+        }
+
+        function recalcGrandTotal() {
+            let total = 0;
+            itemsBody.querySelectorAll('tr').forEach(tr => {
+                const qty   = parseFloat(tr.querySelector('.qty-input').value) || 0;
+                const price = parseFloat(tr.querySelector('.price-input').value) || 0;
+                total += qty * price;
+            });
+            grandTotalEl.textContent = formatVnd(total);
+        }
+
+        function updateVisibility() {
+            const hasRows = itemsBody.querySelectorAll('tr').length > 0;
+            emptyHint.style.display = hasRows ? 'none' : 'block';
+            btnSubmit.disabled = !hasRows;
+        }
+
+        function formatVnd(n) {
+            return new Intl.NumberFormat('vi-VN').format(n) + ' đ';
+        }
+
+        form.addEventListener('submit', function (e) {
+            if (itemsBody.querySelectorAll('tr').length === 0) {
+                e.preventDefault();
+                alert('Vui lòng thêm ít nhất 1 sản phẩm vào phiếu nhập.');
+            }
+        });
+
+        updateVisibility();
+    })();
+</script>

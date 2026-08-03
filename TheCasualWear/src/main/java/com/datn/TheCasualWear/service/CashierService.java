@@ -11,6 +11,8 @@ import com.datn.TheCasualWear.entity.ProductVariant;
 import com.datn.TheCasualWear.entity.Voucher;
 import com.datn.TheCasualWear.enums.OrderStatus;
 import com.datn.TheCasualWear.enums.OrderType;
+import com.datn.TheCasualWear.enums.StockMovementType;
+import com.datn.TheCasualWear.enums.StockRefType;
 import com.datn.TheCasualWear.repository.AppOrderRepository;
 import com.datn.TheCasualWear.repository.AppUserRepository;
 import com.datn.TheCasualWear.repository.OrderDetailRepository;
@@ -38,6 +40,7 @@ public class CashierService {
     private final VoucherRepository        voucherRepository;
     private final OrderDetailRepository    orderDetailRepository;
     private final OrderVoucherRepository   orderVoucherRepository;
+    private final StockMovementLogService  stockMovementLogService;
 
     // Cashier tự hủy đơn trong vòng bao nhiêu phút kể từ lúc tạo.
     // Admin/Owner không bị giới hạn bởi mốc thời gian này.
@@ -250,6 +253,9 @@ public class CashierService {
             order.setCustomer(customer);
         }
 
+        // Lưu trước để có order.getId() dùng làm refId khi ghi log biến động kho
+        orderRepository.save(order);
+
         // ── Tính tổng hàng ──────────────────────────────────────
         BigDecimal subtotal = BigDecimal.ZERO;
 
@@ -265,8 +271,15 @@ public class CashierService {
                                 + item.getQuantity() + ")!");
             }
 
-            variant.setStock(variant.getStock() - item.getQuantity());
-            variantRepository.save(variant);
+            stockMovementLogService.logMovement(
+                    variant,
+                    StockMovementType.SALE,
+                    -item.getQuantity(),
+                    StockRefType.ORDER,
+                    order.getId(),
+                    "Bán tại quầy - đơn #" + order.getId(),
+                    cashier
+            );
 
             OrderDetail detail = new OrderDetail();
             detail.setOrder(order);
@@ -378,11 +391,18 @@ public class CashierService {
         }
 
         // Hoàn kho từng dòng sản phẩm
+        AppUser actor = getCurrentUser();
         List<OrderDetail> details = orderDetailRepository.findByOrderId(order.getId());
         for (OrderDetail detail : details) {
-            ProductVariant variant = detail.getVariant();
-            variant.setStock(variant.getStock() + detail.getQuantity());
-            variantRepository.save(variant);
+            stockMovementLogService.logMovement(
+                    detail.getVariant(),
+                    StockMovementType.CANCEL,
+                    detail.getQuantity(),
+                    StockRefType.ORDER,
+                    order.getId(),
+                    "Hủy đơn quầy #" + order.getId(),
+                    actor
+            );
         }
 
         // Hoàn lượt dùng voucher (nếu đơn có áp mã)

@@ -19,9 +19,12 @@
                             <a th:href="@{/account/address/add}">Thêm địa chỉ ngay</a>
                         </div>
                         <div th:each="addr : ${addresses}" class="form-check mb-2">
-                            <input class="form-check-input" type="radio"
+                            <input class="form-check-input address-radio" type="radio"
                                    name="shippingAddressId" th:value="${addr.id}"
-                                   th:checked="${addr.isDefault}"/>
+                                   th:checked="${addr.isDefault}"
+                                   th:attr="data-fullname=${addr.fullName},
+                                            data-phone=${addr.phone},
+                                            data-address=${addr.street + ', ' + addr.district + ', ' + addr.city}"/>
                             <label class="form-check-label">
                                 <strong th:text="${addr.fullName}"></strong> —
                                 <span th:text="${addr.phone}"></span><br/>
@@ -156,8 +159,9 @@
                                   th:text="${#numbers.formatInteger(totalPrice, 0, 'COMMA') + ' đ'}"></span>
                         </div>
 
-                        <button type="submit" class="btn btn-dark w-100 mt-3"
-                                th:disabled="${#lists.isEmpty(addresses)}">
+                        <button type="button" class="btn btn-dark w-100 mt-3" id="btn-open-confirm"
+                                th:disabled="${#lists.isEmpty(addresses)}"
+                                onclick="openConfirmModal()">
                             <i class="bi bi-bag-check me-2"></i>Đặt hàng
                         </button>
                     </div>
@@ -194,11 +198,83 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal xác nhận đặt hàng -->
+    <div class="modal fade" id="confirmOrderModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-circle me-2"></i>Xác nhận đặt hàng</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3">Vui lòng kiểm tra lại thông tin trước khi đặt hàng:</p>
+
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Giao đến:</small>
+                        <strong id="confirm-name"></strong> — <span id="confirm-phone"></span><br/>
+                        <span id="confirm-address" class="small"></span>
+                    </div>
+
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Thanh toán:</small>
+                        <strong id="confirm-payment"></strong>
+                    </div>
+
+                    <div class="d-flex justify-content-between fw-bold fs-5 pt-2 border-top mt-3">
+                        <span>Tổng cộng:</span>
+                        <span class="text-danger" id="confirm-total"></span>
+                    </div>
+
+                    <div class="alert alert-warning mt-3 mb-0 py-2 small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Sau khi đặt hàng, bạn chỉ có thể hủy khi đơn chưa được xác nhận và chưa thanh toán.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        Kiểm tra lại
+                    </button>
+                    <button type="button" class="btn btn-dark" id="btn-submit-order">
+                        <i class="bi bi-check-lg me-1"></i>Xác nhận đặt hàng
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script th:inline="javascript">
     const originalTotal = /*[[${totalPrice}]]*/ 0;
     const LIMIT = 1000000;
+
+    function openConfirmModal() {
+        const addressRadio = document.querySelector('.address-radio:checked');
+        if (!addressRadio) {
+            alert('Vui lòng chọn địa chỉ giao hàng!');
+            return;
+        }
+
+        document.getElementById('confirm-name').textContent = addressRadio.dataset.fullname;
+        document.getElementById('confirm-phone').textContent = addressRadio.dataset.phone;
+        document.getElementById('confirm-address').textContent = addressRadio.dataset.address;
+
+        const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked');
+        document.getElementById('confirm-payment').textContent =
+            paymentMethod.value === 'VNPAY' ? 'Thanh toán qua VNPay' : 'Thanh toán khi nhận hàng (COD)';
+
+        document.getElementById('confirm-total').textContent =
+            document.getElementById('final-price').textContent;
+
+        const modal = new bootstrap.Modal(document.getElementById('confirmOrderModal'));
+        modal.show();
+    }
+
+    document.getElementById('btn-submit-order').addEventListener('click', function () {
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
+        document.getElementById('checkout-form').submit();
+    });
 
     function selectVoucherFromModal(el) {
         document.getElementById('voucherCode').value = el.dataset.code;

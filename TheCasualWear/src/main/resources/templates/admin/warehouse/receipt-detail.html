@@ -1,0 +1,81 @@
+<div xmlns:th="http://www.thymeleaf.org">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">
+            <i class="bi bi-truck me-2"></i>Phiếu nhập <span th:text="${receipt.code}"></span>
+        </h4>
+        <a class="btn btn-outline-secondary btn-sm" th:href="@{/admin/warehouse/receipts}">
+            <i class="bi bi-arrow-left me-1"></i>Quay lại danh sách
+        </a>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="text-muted small">Mã phiếu</div>
+                    <div class="fw-semibold" th:text="${receipt.code}"></div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-muted small">Nhà cung cấp</div>
+                    <div class="fw-semibold" th:text="${receipt.supplierName}"></div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-muted small">Người tạo</div>
+                    <div class="fw-semibold"
+                         th:text="${receipt.createdBy != null ? receipt.createdBy.username : '—'}"></div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-muted small">Ngày tạo</div>
+                    <div class="fw-semibold"
+                         th:text="${#temporals.format(receipt.createdAt, 'HH:mm dd/MM/yyyy')}"></div>
+                </div>
+                <div class="col-12" th:if="${receipt.note != null and !#strings.isEmpty(receipt.note)}">
+                    <div class="text-muted small">Ghi chú</div>
+                    <div th:text="${receipt.note}"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white fw-semibold">Danh sách sản phẩm nhập</div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th>SKU</th>
+                    <th>Sản phẩm</th>
+                    <th>Size</th>
+                    <th>Màu</th>
+                    <th class="text-end">Số lượng</th>
+                    <th class="text-end">Đơn giá</th>
+                    <th class="text-end">Thành tiền</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="item : ${receipt.items}">
+                    <td th:text="${item.variant.sku}"></td>
+                    <td th:text="${item.variant.product != null ? item.variant.product.name : '—'}"></td>
+                    <td th:text="${item.variant.size != null ? item.variant.size.name : '—'}"></td>
+                    <td th:text="${item.variant.color != null ? item.variant.color.name : '—'}"></td>
+                    <td class="text-end" th:text="${item.quantity}"></td>
+                    <td class="text-end"
+                        th:text="${#numbers.formatDecimal(item.unitCostPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                    <td class="text-end fw-semibold"
+                        th:text="${#numbers.formatDecimal(item.quantity * item.unitCostPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(receipt.items)}">
+                    <td colspan="7" class="text-center text-muted py-4">Phiếu nhập không có sản phẩm</td>
+                </tr>
+                </tbody>
+                <tfoot>
+                <tr>
+                    <td colspan="6" class="text-end fw-semibold">Tổng cộng</td>
+                    <td class="text-end fw-semibold"
+                        th:text="${#numbers.formatDecimal(receipt.totalAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>

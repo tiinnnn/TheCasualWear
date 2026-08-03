@@ -5,11 +5,15 @@ import com.datn.TheCasualWear.dto.OrderListDTO;
 import org.springframework.data.domain.PageImpl;
 import com.datn.TheCasualWear.entity.*;
 import com.datn.TheCasualWear.enums.OrderStatus;
+import com.datn.TheCasualWear.enums.StockMovementType;
+import com.datn.TheCasualWear.enums.StockRefType;
 import com.datn.TheCasualWear.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,8 +31,21 @@ public class OrderService {
     private final OrderVoucherRepository    orderVoucherRepository;
     private final CartService               cartService;
     private final VoucherService            voucherService;
-    private final ProductVariantRepository  variantRepository;
     private final NotificationService       notificationService;
+    private final StockMovementLogService   stockMovementLogService;
+    private final AppUserRepository         appUserRepository;
+
+    // Lấy admin/owner đang đăng nhập cho các thao tác phía admin (cancelOrderByAdmin,
+    // returnOrder). Trả null nếu không xác định được thay vì throw, vì các method
+    // này cũng có thể được gọi từ job nền trong tương lai.
+    private AppUser getCurrentUserOrNull() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof User principal)) {
+            return null;
+        }
+        return appUserRepository.findByUsernameOrEmailOrPhone(principal.getUsername())
+                .orElse(null);
+    }
 
     private static final int ADMIN_PAGE_SIZE = 10;
     private static final int RETURN_DAYS     = 15;
@@ -143,8 +160,15 @@ public class OrderService {
             detail.setPrice(unitPrice);
             orderDetailRepository.save(detail);
 
-            variant.setStock(variant.getStock() - item.getQuantity());
-            variantRepository.save(variant);
+            stockMovementLogService.logMovement(
+                    variant,
+                    StockMovementType.SALE,
+                    -item.getQuantity(),
+                    StockRefType.ORDER,
+                    order.getId(),
+                    "Đặt hàng online - đơn #" + order.getId(),
+                    user
+            );
         }
 
         if (voucher != null) {
@@ -187,7 +211,7 @@ public class OrderService {
                     "Đơn hàng đã thanh toán không thể hủy trực tiếp. "
                             + "Vui lòng liên hệ Zalo 0901.234.567 để được hỗ trợ!");
         }
-        restoreVariantStock(order);
+        restoreVariantStock(order, StockMovementType.CANCEL, user);
         removeOrderVoucher(order, orderId);
         order.setStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
@@ -282,7 +306,7 @@ public class OrderService {
             throw new IllegalStateException("Không thể hủy đơn hàng này!");
         }
         if (order.getStatus() != OrderStatus.PENDING) {
-            restoreVariantStock(order);
+            restoreVariantStock(order, StockMovementType.CANCEL, getCurrentUserOrNull());
         }
         removeOrderVoucher(order, orderId);
         order.setStatus(OrderStatus.CANCELLED);
@@ -314,7 +338,7 @@ public class OrderService {
                     "Đã quá " + RETURN_DAYS + " ngày kể từ khi giao, không thể hoàn hàng!");
         }
 
-        if (restock) restoreVariantStock(order);
+        if (restock) restoreVariantStock(order, StockMovementType.RETURN, getCurrentUserOrNull());
 
         removeOrderVoucher(order, orderId);
         order.setStatus(OrderStatus.CANCELLED);
@@ -363,12 +387,19 @@ public class OrderService {
     // ─────────────────────────────────────────────────────────────
 
     @Transactional
-    protected void restoreVariantStock(AppOrder order) {
+    protected void restoreVariantStock(AppOrder order, StockMovementType movementType, AppUser actor) {
         List<OrderDetail> details = orderDetailRepository.findByOrderId(order.getId());
         for (OrderDetail detail : details) {
-            ProductVariant variant = detail.getVariant();
-            variant.setStock(variant.getStock() + detail.getQuantity());
-            variantRepository.save(variant);
+            stockMovementLogService.logMovement(
+                    detail.getVariant(),
+                    movementType,
+                    detail.getQuantity(),
+                    StockRefType.ORDER,
+                    order.getId(),
+                    (movementType == StockMovementType.RETURN ? "Hoàn hàng" : "Hủy đơn")
+                            + " #" + order.getId(),
+                    actor
+            );
         }
     }
 

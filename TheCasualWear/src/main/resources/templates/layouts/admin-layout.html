@@ -155,6 +155,29 @@
                             <i class="bi bi-collection me-2"></i>Collections
                         </a>
                     </li>
+
+                    <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','OWNER')">
+                        <a class="nav-link text-white py-3 px-4 d-flex justify-content-between align-items-center"
+                           data-bs-toggle="collapse" href="#warehouseMenu" role="button"
+                           aria-expanded="false" aria-controls="warehouseMenu">
+                            <span><i class="bi bi-boxes me-2"></i>Quản lý kho</span>
+                            <i class="bi bi-chevron-down small"></i>
+                        </a>
+                        <div class="collapse" id="warehouseMenu">
+                            <ul class="nav flex-column ps-3">
+                                <li class="nav-item">
+                                    <a class="nav-link text-white-50 py-2 px-4" th:href="@{/admin/warehouse/receipts}">
+                                        <i class="bi bi-truck me-2"></i>Phiếu nhập kho
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link text-white-50 py-2 px-4" th:href="@{/admin/warehouse/stock-log}">
+                                        <i class="bi bi-clock-history me-2"></i>Lịch sử tồn kho
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
                     <li class="nav-item">
                         <a class="nav-link text-success py-3 px-4" th:href="@{/cashier}">
                             <i class="bi bi-cash-coin me-2"></i>Bán hàng tại quầy

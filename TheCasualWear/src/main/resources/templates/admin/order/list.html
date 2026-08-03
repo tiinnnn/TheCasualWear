@@ -109,11 +109,14 @@
                 </td>
                 <td>
                     <!-- Đã có mã vận đơn (SHIPPING / DELIVERED / COMPLETED) -->
-                    <span th:if="${order.trackingCode != null}"
-                          class="badge bg-primary">
+                    <a th:if="${order.trackingCode != null}"
+                       th:href="@{'https://tracking.ghn.dev/?order_code=' + ${order.trackingCode}}"
+                       target="_blank" rel="noopener"
+                       class="badge bg-primary text-decoration-none"
+                       title="Bấm để tra cứu hành trình đơn hàng trên GHN">
                         <i class="bi bi-truck me-1"></i>
                         <span th:text="${order.trackingCode}"></span>
-                    </span>
+                    </a>
                     <!-- Chưa có mã vận đơn -->
                     <span th:if="${order.trackingCode == null}"
                           class="text-muted small">-</span>

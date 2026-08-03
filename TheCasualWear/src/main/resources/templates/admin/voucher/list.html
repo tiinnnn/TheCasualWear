@@ -53,10 +53,6 @@
                     <span th:unless="${v.isActive}" class="badge bg-secondary">Tắt</span>
                 </td>
                 <td>
-                    <a th:href="@{'/admin/vouchers/edit/' + ${v.id}}"
-                       class="btn btn-sm btn-outline-primary me-1">
-                        <i class="bi bi-pencil"></i>
-                    </a>
                     <a th:href="@{'/admin/vouchers/toggle/' + ${v.id}}"
                        class="btn btn-sm btn-outline-warning me-1">
                         <i class="bi bi-toggle-on"></i>

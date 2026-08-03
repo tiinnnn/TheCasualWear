@@ -123,6 +123,12 @@
                 <p class="mb-1" th:if="${order.trackingCode != null}">
                     <strong>Mã vận đơn:</strong>
                     <span class="badge bg-primary" th:text="${order.trackingCode}"></span>
+                    <a th:href="@{'https://tracking.ghn.dev/?order_code=' + ${order.trackingCode}}"
+                       target="_blank" rel="noopener"
+                       class="ms-1 small"
+                       title="Tra cứu hành trình đơn hàng trên GHN">
+                        <i class="bi bi-box-arrow-up-right"></i> Tra cứu
+                    </a>
                 </p>
                 <p class="mb-0" th:if="${order.shippedAt != null}">
                     <strong>Ngày gửi:</strong>
@@ -197,6 +203,11 @@
                         <strong th:text="${order.trackingCode}"></strong>
                         — bấm xác nhận khi GHN báo giao thành công hoặc khách phản hồi đã nhận hàng.
                     </p>
+                    <a th:href="@{'https://tracking.ghn.dev/?order_code=' + ${order.trackingCode}}"
+                       target="_blank" rel="noopener"
+                       class="btn btn-outline-primary btn-sm w-100 mb-2">
+                        <i class="bi bi-geo-alt me-1"></i>Xem hành trình vận chuyển
+                    </a>
                     <form th:action="@{'/admin/orders/' + ${order.id} + '/delivered'}" method="post">
                         <div class="d-grid">
                             <button type="submit" class="btn btn-success btn-sm"

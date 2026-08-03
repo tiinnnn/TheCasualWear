@@ -29,13 +29,6 @@ public class AdminVoucherController {
         return "layouts/admin-layout";
     }
 
-    @GetMapping("/edit/{id}")
-    public String editVoucherPage(@PathVariable Integer id, Model model) {
-        model.addAttribute("voucher", voucherService.getVoucherById(id));
-        model.addAttribute("view", "admin/voucher/form");
-        return "layouts/admin-layout";
-    }
-
     @GetMapping("/edit")
     public String editNewVoucherPage(Model model) {
         model.addAttribute("view", "admin/voucher/form");
@@ -45,12 +38,13 @@ public class AdminVoucherController {
     @PostMapping("/save")
     public String saveVoucher(@ModelAttribute Voucher voucher,
                               RedirectAttributes redirectAttributes) {
-        if (voucher.getId() == null) {
+        // Chỉ cho phép tạo voucher mới, không hỗ trợ sửa voucher đã tồn tại
+        // để tránh sai lệch dữ liệu với các order đã áp dụng voucher.
+        try {
             voucherService.createVoucher(voucher);
             redirectAttributes.addFlashAttribute("successMessage", "Thêm voucher thành công!");
-        } else {
-            voucherService.updateVoucher(voucher.getId(), voucher);
-            redirectAttributes.addFlashAttribute("successMessage", "Cập nhật voucher thành công!");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/vouchers";
     }

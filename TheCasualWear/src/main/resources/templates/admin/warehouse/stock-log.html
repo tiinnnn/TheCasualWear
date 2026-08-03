@@ -1,0 +1,87 @@
+<div xmlns:th="http://www.thymeleaf.org">
+    <h4 class="mb-3"><i class="bi bi-clock-history me-2"></i>Lịch sử biến động tồn kho</h4>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <form th:action="@{/admin/warehouse/stock-log}" method="get" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Mã biến thể (variant ID)</label>
+                    <input type="number" class="form-control" name="variantId" th:value="${variantId}"
+                           placeholder="Để trống nếu lọc theo ngày"/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Từ ngày</label>
+                    <input type="date" class="form-control" name="fromDate" th:value="${fromDate}"/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Đến ngày</label>
+                    <input type="date" class="form-control" name="toDate" th:value="${toDate}"/>
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-dark flex-fill">
+                        <i class="bi bi-search me-1"></i>Lọc
+                    </button>
+                    <a class="btn btn-outline-secondary" th:href="@{/admin/warehouse/stock-log}">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                </div>
+            </form>
+            <p class="text-muted small mt-2 mb-0">
+                Lưu ý: nếu nhập "Mã biến thể", hệ thống sẽ ưu tiên lọc theo biến thể và bỏ qua khoảng ngày.
+                Mặc định không lọc gì sẽ hiển thị 30 ngày gần nhất.
+            </p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th>Thời gian</th>
+                    <th>SKU</th>
+                    <th>Sản phẩm</th>
+                    <th>Size / Màu</th>
+                    <th>Loại</th>
+                    <th class="text-end">Thay đổi</th>
+                    <th class="text-end">Tồn sau</th>
+                    <th>Nguồn</th>
+                    <th>Ghi chú</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="log : ${logs}">
+                    <td th:text="${#temporals.format(log.createdAt, 'HH:mm dd/MM/yyyy')}"></td>
+                    <td th:text="${log.variant != null ? log.variant.sku : '—'}"></td>
+                    <td th:text="${log.variant != null and log.variant.product != null ? log.variant.product.name : '—'}"></td>
+                    <td>
+                        <span th:if="${log.variant != null}"
+                              th:text="${(log.variant.size != null ? log.variant.size.name : '—') + ' / ' + (log.variant.color != null ? log.variant.color.name : '—')}"></span>
+                    </td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${log.changeType != null and log.changeType.name() == 'IMPORT'} ? 'bg-success'
+                                              : (${log.changeType != null and log.changeType.name() == 'SALE'} ? 'bg-primary'
+                                              : (${log.changeType != null and log.changeType.name() == 'CANCEL'} ? 'bg-secondary'
+                                              : (${log.changeType != null and log.changeType.name() == 'RETURN'} ? 'bg-warning text-dark'
+                                              : 'bg-dark')))"
+                              th:text="${log.changeType}"></span>
+                    </td>
+                    <td class="text-end fw-semibold"
+                        th:classappend="${log.changeQty > 0} ? 'text-success' : 'text-danger'"
+                        th:text="${(log.changeQty > 0 ? '+' : '') + log.changeQty}"></td>
+                    <td class="text-end" th:text="${log.balanceAfter}"></td>
+                    <td>
+                        <span th:text="${log.refType}"></span>
+                        <span th:if="${log.refId != null}" th:text="' #' + ${log.refId}"></span>
+                    </td>
+                    <td th:text="${log.note}"></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(logs)}">
+                    <td colspan="9" class="text-center text-muted py-4">Không có dữ liệu biến động phù hợp</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

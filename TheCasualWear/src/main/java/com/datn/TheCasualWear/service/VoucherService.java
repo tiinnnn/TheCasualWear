@@ -123,25 +123,6 @@ public class VoucherService {
         return voucherRepository.save(voucher);
     }
 
-    public Voucher updateVoucher(Integer id, Voucher details) {
-        Voucher voucher = getVoucherById(id);
-        voucher.setCode(details.getCode().toUpperCase());
-        voucher.setDescription(details.getDescription());
-        voucher.setDiscountPercent(details.getDiscountPercent());
-        voucher.setMinOrderValue(details.getMinOrderValue());
-        voucher.setMaxDiscount(details.getMaxDiscount());
-        voucher.setUsageLimit(details.getUsageLimit());
-        voucher.setStartDate(details.getStartDate());
-        voucher.setEndDate(details.getEndDate());
-
-        // Nếu ngày kết thúc > hôm nay thì set trạng thái đang hoạt động
-        if (details.getEndDate() != null && details.getEndDate().isAfter(LocalDateTime.now())) {
-            voucher.setIsActive(true);
-        }
-
-        return voucherRepository.save(voucher);
-    }
-
     public void toggleActive(Integer id) {
         Voucher voucher = getVoucherById(id);
         voucher.setIsActive(!voucher.getIsActive()); // bật/tắt
