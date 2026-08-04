@@ -77,4 +77,10 @@ public class AppOrder {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cashier_id")
     private AppUser cashier; // Nhân viên thu ngân tạo đơn (chỉ có khi order_type = COUNTER)
+
+    // ── MỚI: giao ca (Shift handover) ─────────────────────────────────────
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shift_id")
+    private Shift shift; // Ca làm việc tạo ra đơn này (chỉ có khi order_type = COUNTER)
 }

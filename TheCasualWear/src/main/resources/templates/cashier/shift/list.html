@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Quản lý ca làm việc</title></head>
+<body>
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <h4 class="fw-bold mb-0">
+        Ca làm việc
+        <small class="text-muted fs-6" th:text="'(' + ${#lists.size(shifts)} + ' ca)'"></small>
+    </h4>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+            <tr>
+                <th>Thu ngân</th>
+                <th>Mở ca</th>
+                <th>Đóng ca</th>
+                <th>Tiền đầu ca</th>
+                <th>Tiền lẽ ra có</th>
+                <th>Tiền đếm thực tế</th>
+                <th>Chênh lệch</th>
+                <th>Trạng thái</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:if="${#lists.isEmpty(shifts)}">
+                <td colspan="8" class="text-center text-muted py-4">Chưa có ca làm việc nào.</td>
+            </tr>
+            <tr th:each="s : ${shifts}">
+                <td th:text="${s.cashier.username}"></td>
+                <td th:text="${#temporals.format(s.openedAt, 'HH:mm dd/MM/yyyy')}"></td>
+                <td th:text="${s.closedAt != null ? #temporals.format(s.closedAt, 'HH:mm dd/MM/yyyy') : '-'}"></td>
+                <td th:text="${#numbers.formatInteger(s.openingCash, 0, 'COMMA') + ' đ'}"></td>
+                <td th:text="${s.expectedCash != null ? #numbers.formatInteger(s.expectedCash, 0, 'COMMA') + ' đ' : '-'}"></td>
+                <td th:text="${s.actualCash != null ? #numbers.formatInteger(s.actualCash, 0, 'COMMA') + ' đ' : '-'}"></td>
+                <td>
+                    <span th:if="${s.cashDifference != null}"
+                          th:classappend="${s.cashDifference.signum() < 0 ? 'text-danger' : 'text-success'}"
+                          class="fw-semibold"
+                          th:text="${(s.cashDifference.signum() > 0 ? '+' : '') + #numbers.formatInteger(s.cashDifference, 0, 'COMMA') + ' đ'}"></span>
+                    <span th:if="${s.cashDifference == null}">-</span>
+                </td>
+                <td>
+                    <span th:if="${s.status.name() == 'OPEN'}" class="badge bg-success">Đang mở</span>
+                    <span th:if="${s.status.name() == 'CLOSED'}" class="badge bg-secondary">Đã đóng</span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>

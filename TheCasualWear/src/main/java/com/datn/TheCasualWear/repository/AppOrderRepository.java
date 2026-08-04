@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -55,4 +56,9 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
             "ORDER BY o.orderDate DESC")
     List<AppOrder> findRecentCounterOrdersByCashier(@Param("cashierId") Integer cashierId,
                                                     @Param("fromDate") LocalDateTime fromDate);
+
+    @Query("SELECT SUM(o.totalPrice) FROM AppOrder o " +
+            "WHERE o.shift.id = :shiftId AND o.paymentMethod = :paymentMethod")
+    BigDecimal sumTotalPriceByShiftIdAndPaymentMethod(@Param("shiftId") Integer shiftId,
+                                                      @Param("paymentMethod") String paymentMethod);
 }

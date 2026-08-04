@@ -161,13 +161,13 @@
                         <i class="bi bi-check-lg me-1"></i>Xác nhận đơn
                     </a>
 
-                    <a th:if="${order.status.name() != 'COMPLETED'
+                    <button th:if="${order.status.name() != 'COMPLETED'
                                 and order.status.name() != 'CANCELLED'}"
-                       th:href="@{'/admin/orders/' + ${order.id} + '/cancel'}"
-                       class="btn btn-outline-danger"
-                       onclick="return confirm('Hủy đơn hàng này?')">
+                            type="button"
+                            class="btn btn-outline-danger"
+                            data-bs-toggle="modal" data-bs-target="#cancelModal">
                         <i class="bi bi-x-lg me-1"></i>Hủy đơn
-                    </a>
+                    </button>
                 </div>
             </div>
         </div>
@@ -282,5 +282,52 @@
                 </div>
             </div>
         </div>
+
+        <!-- Modal xác nhận hủy đơn (2 bước) -->
+        <div class="modal fade" id="cancelModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header border-0 pb-0">
+                        <h6 class="modal-title fw-bold text-danger">
+                            <i class="bi bi-x-octagon me-2"></i>Hủy đơn hàng
+                        </h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form th:action="@{'/admin/orders/' + ${order.id} + '/cancel'}" method="post"
+                          id="cancelOrderForm">
+                        <div class="modal-body">
+                            <div class="alert alert-danger py-2 mb-3">
+                                Bạn sắp hủy đơn hàng
+                                <strong>#<span th:text="${order.id}"></span></strong>.
+                                Hành động này không thể hoàn tác.
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       id="confirmCancelCheck" onchange="document.getElementById('confirmCancelBtn').disabled = !this.checked;"/>
+                                <label class="form-check-label" for="confirmCancelCheck">
+                                    Tôi xác nhận muốn hủy đơn hàng này
+                                </label>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0 pt-0">
+                            <button type="button" class="btn btn-secondary btn-sm"
+                                    data-bs-dismiss="modal">Đóng</button>
+                            <button type="submit" id="confirmCancelBtn" class="btn btn-danger btn-sm" disabled
+                                    onclick="return confirm('Xác nhận lần cuối: hủy đơn hàng này?')">
+                                <i class="bi bi-x-lg me-1"></i>Xác nhận hủy
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Reset trạng thái tick khi đóng modal, tránh giữ trạng thái đã tick cho lần mở sau
+            document.getElementById('cancelModal').addEventListener('hidden.bs.modal', function () {
+                document.getElementById('confirmCancelCheck').checked = false;
+                document.getElementById('confirmCancelBtn').disabled = true;
+            });
+        </script>
 </body>
 </html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Mở ca làm việc</title></head>
+<body>
+<div th:fragment="content">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold">Mở ca làm việc</h4>
+        <a th:href="@{/cashier/shift/history}" class="btn btn-outline-secondary btn-sm">← Lịch sử ca</a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <p class="text-muted">
+                        Nhập số tiền mặt hiện có trong quầy trước khi bắt đầu bán hàng.
+                        Hệ thống sẽ dùng số này để đối chiếu khi đóng ca.
+                    </p>
+
+                    <form th:action="@{/cashier/shift/open}" method="post" id="openShiftForm">
+                        <div class="mb-3">
+                            <label class="form-label">Tiền quỹ đầu ca <span class="text-danger">*</span></label>
+                            <div class="input-group" style="max-width: 220px">
+                                <input type="text" id="openingCashDisplay" class="form-control"
+                                       inputmode="numeric" autocomplete="off" placeholder="0" required autofocus
+                                       oninput="formatMoneyInput(this, 'openingCash')"/>
+                                <span class="input-group-text">đ</span>
+                            </div>
+                            <input type="hidden" name="openingCash" id="openingCash" value="0"/>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-dark btn-lg">
+                                <i class="bi bi-unlock me-2"></i>Mở ca & vào bán hàng
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // Định dạng input tiền: hiển thị có dấu phẩy ngăn cách hàng nghìn (1,000,000),
+    // giá trị số thật (không dấu phẩy) được lưu vào input hidden để submit lên server.
+    function formatMoneyInput(displayEl, hiddenName) {
+        let raw = displayEl.value.replace(/[^\d]/g, '');
+        raw = raw.replace(/^0+(?=\d)/, ''); // bỏ số 0 thừa ở đầu
+        if (raw === '') raw = '0';
+
+        document.getElementById(hiddenName).value = raw;
+        displayEl.value = Number(raw).toLocaleString('en-US');
+
+        // Đưa con trỏ về cuối sau khi format lại (tránh nhảy vị trí gõ)
+        displayEl.setSelectionRange(displayEl.value.length, displayEl.value.length);
+    }
+</script>
+</body>
+</html>
