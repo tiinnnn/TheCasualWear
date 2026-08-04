@@ -50,9 +50,13 @@ public class GoodsReceiptController {
     }
 
     @GetMapping("/add")
-    public String addForm(Model model) {
+    public String addForm(@RequestParam(required = false) Integer productId,
+                          @RequestParam(required = false) List<Integer> variantId,
+                          Model model) {
         model.addAttribute("form", new GoodsReceiptFormRequest());
         model.addAttribute("products", productService.getAdminProductsList());
+        model.addAttribute("preselectedProductId", productId);
+        model.addAttribute("preselectedVariantIds", variantId);
         model.addAttribute("view", "admin/warehouse/receipt-form");
         return "layouts/admin-layout";
     }

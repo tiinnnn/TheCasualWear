@@ -71,8 +71,11 @@ public class GoodsReceiptService {
             if (dto.quantity() == null || dto.quantity() <= 0) {
                 throw new IllegalArgumentException("Số lượng nhập phải lớn hơn 0!");
             }
-            BigDecimal unitCost = dto.unitCostPrice() != null
-                    ? dto.unitCostPrice() : BigDecimal.ZERO;
+            if (dto.unitCostPrice() == null || dto.unitCostPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException(
+                        "Đơn giá nhập phải lớn hơn 0! Vui lòng nhập đầy đủ đơn giá cho từng dòng.");
+            }
+            BigDecimal unitCost = dto.unitCostPrice();
 
             ProductVariant variant = variantRepository.findById(dto.variantId())
                     .orElseThrow(() -> new ResourceNotFoundException(

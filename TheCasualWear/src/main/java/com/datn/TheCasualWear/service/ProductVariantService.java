@@ -61,6 +61,10 @@ public class ProductVariantService {
                     "Variant với size và màu này đã tồn tại cho sản phẩm này!");
         });
 
+        // Luôn ép tồn kho ban đầu = 0, bất kể client gửi lên giá trị gì —
+        // mọi số lượng tồn kho phải đi qua GoodsReceiptService (module Quản lý kho)
+        // để đảm bảo có audit trail trong stock_movement_log.
+        variant.setStock(0);
         variant.setProduct(product);
         return variantRepository.save(variant);
     }
@@ -76,20 +80,17 @@ public class ProductVariantService {
         variant.setSku(details.getSku());
         variant.setSize(details.getSize());
         variant.setColor(details.getColor());
-        variant.setStock(details.getStock());
+        // KHÔNG set stock ở đây nữa — tồn kho chỉ được thay đổi qua
+        // StockMovementLogService (nhập kho / bán hàng / điều chỉnh có log),
+        // không qua form sửa thông tin biến thể này.
         variant.setCostPrice(details.getCostPrice());
         variant.setPriceAdjustment(details.getPriceAdjustment());
         return variantRepository.save(variant);
     }
 
-    public ProductVariant updateStock(Integer id, Integer stock) {
-        if (stock < 0) {
-            throw new IllegalArgumentException("Tồn kho không được âm!");
-        }
-        ProductVariant variant = getVariantById(id);
-        variant.setStock(stock);
-        return variantRepository.save(variant);
-    }
+    // updateStock() đã bị xóa — set thẳng tồn kho không qua audit trail.
+    // Muốn điều chỉnh tồn kho, dùng StockMovementLogService.logMovement(...)
+    // với StockMovementType.ADJUST.
 
     @Transactional
     public void deleteVariant(Integer id) {

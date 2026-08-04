@@ -4,7 +4,6 @@ import com.datn.TheCasualWear.entity.*;
 import com.datn.TheCasualWear.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -122,42 +121,60 @@ public class AdminProductController {
     @PostMapping("/{id}/variants/add-batch")
     public String addVariantBatch(
             @PathVariable Integer id,
-            @RequestParam Integer colorId,
+            @RequestParam(required = false) Integer colorId,
             @RequestParam(value = "sizeId", required = false) List<Integer> sizeIds,
-            @RequestParam(value = "stockMap", required = false) List<Integer> stockValues,
             @RequestParam(required = false) BigDecimal costPrice,
             @RequestParam(required = false) BigDecimal priceAdjustment,
             @RequestParam(required = false) String skuPrefix,
             RedirectAttributes ra) {
 
+        if (colorId == null) {
+            ra.addFlashAttribute("errorMessage", "Vui lòng chọn màu sắc!");
+            return "redirect:/admin/products/" + id + "/variants";
+        }
         if (sizeIds == null || sizeIds.isEmpty()) {
             ra.addFlashAttribute("errorMessage", "Vui lòng chọn ít nhất 1 size!");
             return "redirect:/admin/products/" + id + "/variants";
         }
+        if (costPrice != null && costPrice.signum() < 0) {
+            ra.addFlashAttribute("errorMessage", "Giá vốn không được âm!");
+            return "redirect:/admin/products/" + id + "/variants";
+        }
+
+        // cost_price là NOT NULL trong DB — nếu admin để trống, mặc định về 0
+        // thay vì để null (tránh lỗi SQL constraint khi lưu).
+        BigDecimal safeCostPrice = costPrice != null ? costPrice : BigDecimal.ZERO;
+        BigDecimal safePriceAdj  = priceAdjustment != null ? priceAdjustment : BigDecimal.ZERO;
 
         Product product = productService.getProductById(id);
         int added = 0, skipped = 0;
         StringBuilder errors = new StringBuilder();
+        List<Integer> createdVariantIds = new java.util.ArrayList<>();
 
-        for (int i = 0; i < sizeIds.size(); i++) {
-            Integer sizeId = sizeIds.get(i);
-            Integer stock  = (stockValues != null && i < stockValues.size())
-                    ? stockValues.get(i) : 0;
-
+        for (Integer sizeId : sizeIds) {
             ProductVariant v = new ProductVariant();
             Color c = new Color(); c.setId(colorId); v.setColor(c);
             Size  s = new Size();  s.setId(sizeId);  v.setSize(s);
-            v.setStock(stock != null && stock >= 0 ? stock : 0);
-            v.setCostPrice(costPrice);
-            v.setPriceAdjustment(priceAdjustment);
+            // Tồn kho luôn khởi tạo = 0 — bắt buộc nhập kho qua module
+            // Quản lý kho (GoodsReceiptService) để đảm bảo audit trail đầy đủ.
+            v.setStock(0);
+            v.setCostPrice(safeCostPrice);
+            v.setPriceAdjustment(safePriceAdj);
 
             if (skuPrefix != null && !skuPrefix.isBlank()) {
                 String sizeName = sizeService.getSizeById(sizeId).getName();
                 v.setSku(skuPrefix.toUpperCase().trim() + "-" + sizeName.toUpperCase());
+            } else {
+                // Không để sku = null: cột sku là UNIQUE, và SQL Server chỉ cho
+                // phép 1 giá trị NULL trong toàn cột — tạo variant thứ 2 trở đi
+                // với sku null sẽ vi phạm unique constraint. Tự sinh SKU dự
+                // phòng dựa trên product/color/size để đảm bảo luôn duy nhất.
+                v.setSku("SP" + id + "-C" + colorId + "-S" + sizeId);
             }
 
             try {
-                variantService.createVariant(product, v);
+                ProductVariant saved = variantService.createVariant(product, v);
+                createdVariantIds.add(saved.getId());
                 added++;
             } catch (IllegalArgumentException e) {
                 skipped++;
@@ -165,13 +182,23 @@ public class AdminProductController {
             }
         }
 
-        if (added > 0)
+        if (added > 0) {
             ra.addFlashAttribute("successMessage",
-                    "Đã thêm " + added + " biến thể!" +
-                            (skipped > 0 ? " Bỏ qua " + skipped + " trùng." : ""));
-        if (skipped > 0 && added == 0)
+                    "Đã thêm " + added + " biến thể (tồn kho = 0)!" +
+                            (skipped > 0 ? " Bỏ qua " + skipped + " trùng." : "") +
+                            " Hãy tạo phiếu nhập kho để thêm số lượng.");
+            // Chuyển thẳng sang trang nhập kho, pre-select sẵn sản phẩm + các
+            // biến thể vừa tạo để admin không phải chọn lại thủ công.
+            StringBuilder url = new StringBuilder(
+                    "redirect:/admin/warehouse/receipts/add?productId=" + id);
+            for (Integer vid : createdVariantIds) {
+                url.append("&variantId=").append(vid);
+            }
+            return url.toString();
+        }
+        if (skipped > 0) {
             ra.addFlashAttribute("errorMessage", errors.toString());
-
+        }
         return "redirect:/admin/products/" + id + "/variants";
     }
 
@@ -202,18 +229,9 @@ public class AdminProductController {
         return "redirect:/admin/products/" + productId + "/variants";
     }
 
-    @PostMapping("/{productId}/variants/{variantId}/stock")
-    @ResponseBody
-    public ResponseEntity<String> updateStock(@PathVariable Integer productId,
-                                              @PathVariable Integer variantId,
-                                              @RequestParam Integer stock) {
-        try {
-            variantService.updateStock(variantId, stock);
-            return ResponseEntity.ok("OK");
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
+    // Endpoint updateStock (POST .../variants/{variantId}/stock) đã bị xóa —
+    // set thẳng tồn kho không qua audit trail. Dùng module Quản lý kho
+    // (/admin/warehouse/receipts, /admin/warehouse/stock-log) thay thế.
 
     @PostMapping("/{productId}/variants/{variantId}/images/upload")
     public String uploadVariantImages(

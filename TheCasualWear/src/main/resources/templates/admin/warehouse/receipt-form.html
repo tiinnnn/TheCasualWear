@@ -28,13 +28,21 @@
         <div class="card shadow-sm mb-3">
             <div class="card-body">
                 <div class="row g-2 align-items-end mb-3">
-                    <div class="col-md-5">
+                    <div class="col-md-5 position-relative" id="productSearchWrap">
                         <label class="form-label">Sản phẩm</label>
-                        <select class="form-select" id="productSelect">
-                            <option value="">-- Chọn sản phẩm --</option>
-                            <option th:each="p : ${products}"
-                                    th:value="${p.id}" th:text="${p.name}"></option>
-                        </select>
+                        <input type="text" class="form-control" id="productSearchInput"
+                               autocomplete="off" placeholder="Gõ tên để tìm sản phẩm..."/>
+                        <div id="productSuggestions" class="list-group shadow-sm"
+                             style="display:none; position:absolute; z-index:1050;
+                                    top:100%; left:0; right:0; max-height:240px;
+                                    overflow-y:auto;"></div>
+                        <!-- Data nodes ẩn cho JS đọc danh sách sản phẩm -->
+                        <div id="productDataList" style="display:none">
+                            <span th:each="p : ${products}" class="product-data"
+                                  th:attr="data-id=${p.id}, data-name=${p.name}"></span>
+                        </div>
+                        <input type="hidden" id="preselectedProductIdField"
+                               th:value="${preselectedProductId}"/>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Biến thể (size/màu)</label>
@@ -88,9 +96,14 @@
     </form>
 </div>
 
+<div id="preselectedVariantIds" style="display:none" th:if="${preselectedVariantIds != null}">
+    <span th:each="vid : ${preselectedVariantIds}" th:text="${vid}" class="pv-id"></span>
+</div>
+
 <script th:inline="none">
     (function () {
-        const productSelect = document.getElementById('productSelect');
+        const productSearchInput = document.getElementById('productSearchInput');
+        const suggestionBox = document.getElementById('productSuggestions');
         const variantSelect = document.getElementById('variantSelect');
         const btnAddItem    = document.getElementById('btnAddItem');
         const itemsBody     = document.getElementById('itemsBody');
@@ -99,19 +112,126 @@
         const btnSubmit     = document.getElementById('btnSubmit');
         const form          = document.getElementById('receiptForm');
 
+        // Danh sách {id, name} đọc từ các span ẩn (#productDataList) — không
+        // dùng JS-inline vì script này có th:inline="none".
+        const productOptions = Array.from(
+            document.querySelectorAll('#productDataList .product-data')
+        ).map(el => ({ id: el.dataset.id, name: el.dataset.name }));
+
+        let currentProductId   = null;
+        let currentProductName = '';
         let variantOptionsCache = [];
         let rowIndex = 0; // index dùng cho name="items[i].xxx" khi submit
+        let activeSuggestionIndex = -1;
 
-        // Khi chọn 1 sản phẩm -> gọi AJAX lấy danh sách variant (size/màu/tồn)
-        productSelect.addEventListener('change', function () {
-            const productId = this.value;
-            variantSelect.innerHTML = '<option value="">Đang tải...</option>';
-            variantSelect.disabled = true;
+        // Danh sách variantId truyền từ trang tạo biến thể (nếu có) — đọc từ
+        // các span ẩn bên dưới thay vì JS-inline (script này có th:inline="none").
+        const preselectedVariantIds = Array.from(
+            document.querySelectorAll('#preselectedVariantIds .pv-id')
+        ).map(el => el.textContent.trim());
 
-            if (!productId) {
-                variantSelect.innerHTML = '<option value="">-- Chọn sản phẩm trước --</option>';
+        function escapeHtml(s) {
+            const div = document.createElement('div');
+            div.textContent = s;
+            return div.innerHTML;
+        }
+
+        function renderSuggestions(matches) {
+            activeSuggestionIndex = -1;
+            if (!matches.length) {
+                suggestionBox.innerHTML =
+                    '<div class="list-group-item text-muted small">Không tìm thấy sản phẩm phù hợp</div>';
+                suggestionBox.style.display = 'block';
                 return;
             }
+            suggestionBox.innerHTML = matches.map((p, idx) =>
+                `<button type="button" class="list-group-item list-group-item-action py-2 suggestion-item"
+                         data-index="${idx}" data-id="${p.id}" data-name="${escapeHtml(p.name)}">
+                    ${escapeHtml(p.name)}
+                 </button>`
+            ).join('');
+            suggestionBox.style.display = 'block';
+        }
+
+        function selectProduct(id, name) {
+            currentProductId   = id;
+            currentProductName = name;
+            productSearchInput.value = name;
+            suggestionBox.style.display = 'none';
+            suggestionBox.innerHTML = '';
+            loadVariantsForProduct(id);
+        }
+
+        function resetVariantDropdown() {
+            variantSelect.innerHTML = '<option value="">-- Chọn sản phẩm trước --</option>';
+            variantSelect.disabled = true;
+        }
+
+        // Gõ vào ô tìm kiếm -> lọc theo tên (không phân biệt hoa/thường,
+        // khớp theo chuỗi con chứ không cần khớp ngay từ đầu)
+        productSearchInput.addEventListener('input', function () {
+            const q = this.value.trim().toLowerCase();
+            currentProductId   = null;
+            currentProductName = '';
+            resetVariantDropdown();
+
+            if (!q) {
+                suggestionBox.style.display = 'none';
+                suggestionBox.innerHTML = '';
+                return;
+            }
+
+            const matches = productOptions
+                .filter(p => p.name.toLowerCase().includes(q))
+                .slice(0, 8);
+            renderSuggestions(matches);
+        });
+
+        productSearchInput.addEventListener('focus', function () {
+            if (this.value.trim()) this.dispatchEvent(new Event('input'));
+        });
+
+        // Điều hướng gợi ý bằng bàn phím: ↑ ↓ để chọn, Enter để xác nhận, Esc để đóng
+        productSearchInput.addEventListener('keydown', function (e) {
+            const items = suggestionBox.querySelectorAll('.suggestion-item');
+            if (!items.length || suggestionBox.style.display === 'none') return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                activeSuggestionIndex = Math.min(activeSuggestionIndex + 1, items.length - 1);
+                items.forEach((el, i) => el.classList.toggle('active', i === activeSuggestionIndex));
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                activeSuggestionIndex = Math.max(activeSuggestionIndex - 1, 0);
+                items.forEach((el, i) => el.classList.toggle('active', i === activeSuggestionIndex));
+            } else if (e.key === 'Enter') {
+                if (activeSuggestionIndex >= 0) {
+                    e.preventDefault();
+                    const el = items[activeSuggestionIndex];
+                    selectProduct(el.dataset.id, el.dataset.name);
+                }
+            } else if (e.key === 'Escape') {
+                suggestionBox.style.display = 'none';
+            }
+        });
+
+        suggestionBox.addEventListener('click', function (e) {
+            const btn = e.target.closest('.suggestion-item');
+            if (!btn) return;
+            selectProduct(btn.dataset.id, btn.dataset.name);
+        });
+
+        // Click ra ngoài ô tìm kiếm/gợi ý -> đóng dropdown
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('#productSearchWrap')) {
+                suggestionBox.style.display = 'none';
+            }
+        });
+
+        // Gọi AJAX lấy danh sách variant (size/màu/tồn) của 1 sản phẩm
+        function loadVariantsForProduct(productId) {
+            variantSelect.innerHTML = '<option value="">Đang tải...</option>';
+            variantSelect.disabled = true;
 
             fetch(`/admin/warehouse/receipts/variant-options?productId=${productId}`)
                 .then(res => {
@@ -129,12 +249,22 @@
                         `<option value="${v.id}">${v.sku} - ${v.sizeName ?? ''} / ${v.colorName ?? ''} (tồn: ${v.stock})</option>`
                     ).join('');
                     variantSelect.disabled = false;
+
+                    // Nếu được điều hướng từ trang tạo biến thể kèm sẵn danh sách
+                    // variantId, tự động thêm mỗi variant đó thành 1 dòng trong
+                    // bảng nhập kho — khỏi bắt admin chọn lại thủ công từng cái.
+                    if (preselectedVariantIds.length) {
+                        preselectedVariantIds.forEach(vid => {
+                            const variant = variantOptionsCache.find(v => String(v.id) === String(vid));
+                            if (variant) addItemRow(variant);
+                        });
+                    }
                 })
                 .catch(err => {
                     console.error(err);
                     variantSelect.innerHTML = '<option value="">Lỗi tải dữ liệu</option>';
                 });
-        });
+        }
 
         // Thêm 1 dòng vào bảng item
         btnAddItem.addEventListener('click', function () {
@@ -145,21 +275,24 @@
             }
             const variant = variantOptionsCache.find(v => String(v.id) === String(variantId));
             if (!variant) return;
+            addItemRow(variant);
+        });
 
+        // Dùng chung cho cả nút "Thêm dòng" và cơ chế tự-thêm-dòng khi được
+        // điều hướng từ trang tạo biến thể (kèm ?variantId=...&variantId=...)
+        function addItemRow(variant) {
             // Không cho thêm trùng 1 biến thể 2 lần
             if (itemsBody.querySelector(`tr[data-variant-id="${variant.id}"]`)) {
-                alert('Biến thể này đã có trong phiếu nhập.');
                 return;
             }
 
             const i = rowIndex++;
-            const productName = productSelect.options[productSelect.selectedIndex].text;
 
             const tr = document.createElement('tr');
             tr.setAttribute('data-variant-id', variant.id);
             tr.innerHTML = `
                 <td>${variant.sku}</td>
-                <td>${productName}</td>
+                <td>${currentProductName}</td>
                 <td>${variant.sizeName ?? '—'}</td>
                 <td>${variant.colorName ?? '—'}</td>
                 <td>${variant.stock}</td>
@@ -170,7 +303,7 @@
                 </td>
                 <td>
                     <input type="number" name="items[${i}].unitCostPrice" class="form-control form-control-sm price-input"
-                           min="0" step="1000" value="0" required/>
+                           min="1" step="1000" value="" placeholder="Bắt buộc nhập" required/>
                 </td>
                 <td class="text-end subtotal-cell">0 đ</td>
                 <td class="text-center">
@@ -183,13 +316,16 @@
             attachRowListeners(tr);
             updateVisibility();
             recalcRow(tr);
-        });
+        }
 
         function attachRowListeners(tr) {
             const qtyInput   = tr.querySelector('.qty-input');
             const priceInput = tr.querySelector('.price-input');
             qtyInput.addEventListener('input', () => recalcRow(tr));
-            priceInput.addEventListener('input', () => recalcRow(tr));
+            priceInput.addEventListener('input', () => {
+                priceInput.classList.remove('is-invalid');
+                recalcRow(tr);
+            });
             tr.querySelector('.btn-remove-row').addEventListener('click', () => {
                 tr.remove();
                 updateVisibility();
@@ -226,12 +362,46 @@
         }
 
         form.addEventListener('submit', function (e) {
-            if (itemsBody.querySelectorAll('tr').length === 0) {
+            const rows = itemsBody.querySelectorAll('tr');
+            if (rows.length === 0) {
                 e.preventDefault();
                 alert('Vui lòng thêm ít nhất 1 sản phẩm vào phiếu nhập.');
+                return;
+            }
+
+            // Đơn giá nhập bắt buộc phải > 0 cho từng dòng — không cho để 0/trống.
+            let invalidRow = null;
+            rows.forEach(tr => {
+                const priceInput = tr.querySelector('.price-input');
+                const price = parseFloat(priceInput.value);
+                if (!invalidRow && (isNaN(price) || price <= 0)) {
+                    invalidRow = { tr, priceInput };
+                }
+            });
+
+            if (invalidRow) {
+                e.preventDefault();
+                const sku = invalidRow.tr.querySelector('td').textContent;
+                alert(`Vui lòng nhập đơn giá nhập lớn hơn 0 cho dòng SKU "${sku}".`);
+                invalidRow.priceInput.classList.add('is-invalid');
+                invalidRow.priceInput.focus();
             }
         });
 
         updateVisibility();
+
+        // Nếu được điều hướng từ trang tạo biến thể (kèm ?productId=), tự điền
+        // sẵn tên sản phẩm vào ô tìm kiếm và load luôn danh sách biến thể,
+        // khỏi bắt admin gõ/chọn lại thủ công.
+        const preselectedProductIdRaw = document.getElementById('preselectedProductIdField').value;
+        if (preselectedProductIdRaw) {
+            const match = productOptions.find(p => String(p.id) === preselectedProductIdRaw);
+            if (match) {
+                productSearchInput.value = match.name;
+                currentProductId   = match.id;
+                currentProductName = match.name;
+                loadVariantsForProduct(currentProductId);
+            }
+        }
     })();
 </script>
