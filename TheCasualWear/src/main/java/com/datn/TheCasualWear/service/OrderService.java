@@ -151,9 +151,6 @@ public class OrderService {
             }
 
             BigDecimal unitPrice = product.getPrice();
-            if (variant.getPriceAdjustment() != null) {
-                unitPrice = unitPrice.add(variant.getPriceAdjustment());
-            }
 
             OrderDetail detail = new OrderDetail();
             detail.setOrder(order);

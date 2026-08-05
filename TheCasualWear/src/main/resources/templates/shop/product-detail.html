@@ -509,8 +509,7 @@
             return;
         }
 
-        const adj = selectedVariant.priceAdjustment || 0;
-        priceEl.textContent = (basePrice + adj).toLocaleString('vi-VN') + ' đ';
+        priceEl.textContent = basePrice.toLocaleString('vi-VN') + ' đ';
 
         const stock = selectedVariant.stock;
         if (stock > 0) {

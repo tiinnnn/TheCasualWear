@@ -37,9 +37,6 @@ public class ProductVariant {
     @Column(name = "cost_price", nullable = false)
     private BigDecimal costPrice = BigDecimal.ZERO;
 
-    @Column(name = "price_adjustment")
-    private BigDecimal priceAdjustment = BigDecimal.ZERO;
-
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -47,10 +44,11 @@ public class ProductVariant {
     @OrderBy("sortOrder ASC")
     private List<VariantImage> images;
 
+    // Giữ lại accessor này (không xóa hẳn) để những nơi đang gọi
+    // variant.getActualPrice() / ${variant.actualPrice} trong Thymeleaf không
+    // bị vỡ — nhưng giờ mọi variant của 1 sản phẩm dùng chung 1 giá bán.
     @Transient
     public BigDecimal getActualPrice() {
-        return product.getPrice().add(
-                priceAdjustment != null ? priceAdjustment : BigDecimal.ZERO
-        );
+        return product.getPrice();
     }
 }

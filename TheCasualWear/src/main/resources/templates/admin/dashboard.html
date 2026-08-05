@@ -268,7 +268,8 @@
                 <tbody>
                 <tr th:each="order : ${recentOrders}">
                     <td th:text="${order.id}"></td>
-                    <td th:text="${order.customer.username}"></td>
+                    <td th:text="${order.customer != null ? order.customer.username
+                              : (order.cashier != null ? order.cashier.username + ' (POS)' : 'Khách vãng lai')}"></td>
                     <td th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy HH:mm')}"></td>
                     <td class="text-danger fw-bold"
                         th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></td>

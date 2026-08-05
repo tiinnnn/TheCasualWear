@@ -328,8 +328,26 @@
 
             // Gõ vào ô hiển thị -> format có dấu phẩy (1,000,000), giá trị số
             // thật (không dấu phẩy) được lưu vào input hidden để submit lên server.
+            //
+            // QUAN TRỌNG: tách làm 2 giai đoạn để không phá bộ gõ Unikey.
+            // Unikey theo dõi nội dung ô input bằng một bộ đệm nội bộ riêng
+            // (không đọc DOM) để ghép dấu tiếng Việt. Nếu ghi đè lại value
+            // của ô hiển thị NGAY TRONG LÚC đang gõ — dù có delay bằng
+            // setTimeout(0) — nội dung thật trên DOM và bộ đệm của Unikey
+            // sẽ bị lệch nhau, khiến phím gõ sau bị chèn/nhân đôi sai vị
+            // trí (gõ "67" ra "6067"...).
+            // -> Lúc đang gõ (input): chỉ đồng bộ số vào ô hidden để tính
+            //    lại thành tiền dòng, KHÔNG đụng value ô hiển thị.
+            // -> Lúc rời khỏi ô (blur): chắc chắn không còn ai gõ nữa,
+            //    lúc này mới format đẹp lại (thêm dấu phẩy, bỏ số 0 thừa).
             priceDisplay.addEventListener('input', () => {
                 priceDisplay.classList.remove('is-invalid');
+                const raw = priceDisplay.value.replace(/[^\d]/g, '');
+                priceHidden.value = raw;
+                recalcRow(tr);
+            });
+
+            priceDisplay.addEventListener('blur', () => {
                 let raw = priceDisplay.value.replace(/[^\d]/g, '');
                 raw = raw.replace(/^0+(?=\d)/, ''); // bỏ số 0 thừa ở đầu
                 priceHidden.value = raw;

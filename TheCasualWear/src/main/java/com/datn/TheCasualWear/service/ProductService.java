@@ -78,8 +78,15 @@ public class ProductService {
 
     // CRUD PRODUCT
 
+    private void validateCategory(Product product) {
+        if (product.getCategory() == null || product.getCategory().getId() == null) {
+            throw new IllegalArgumentException("Vui lòng chọn danh mục sản phẩm!");
+        }
+    }
+
     @Transactional
     public Product createProduct(Product product) {
+        validateCategory(product);
         product.setIsDeleted(false);
         return productRepository.save(product);
     }
@@ -87,6 +94,7 @@ public class ProductService {
     @Transactional
     public Product createProductWithVariants(Product product,
                                              List<ProductVariant> variants) {
+        validateCategory(product);
         product.setIsDeleted(false);
         Product saved = productRepository.save(product);
 
@@ -102,6 +110,7 @@ public class ProductService {
 
     @Transactional
     public Product updateProduct(Integer id, Product details) {
+        validateCategory(details);
         Product product = getProductById(id);
         product.setName(details.getName());
         product.setPrice(details.getPrice());

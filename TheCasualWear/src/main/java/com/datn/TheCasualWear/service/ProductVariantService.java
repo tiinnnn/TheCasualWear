@@ -47,11 +47,6 @@ public class ProductVariantService {
             throw new IllegalArgumentException("SKU đã tồn tại: " + variant.getSku());
         }
 
-        if (variant.getCostPrice() != null && product.getPrice() != null
-                && variant.getCostPrice().compareTo(product.getPrice()) > 0) {
-            throw new IllegalArgumentException("Giá vốn không được lớn hơn giá bán!");
-        }
-
         variantRepository.findByProductAndSizeAndColor(
                 product.getId(),
                 variant.getSize()  != null ? variant.getSize().getId()  : null,
@@ -61,10 +56,12 @@ public class ProductVariantService {
                     "Variant với size và màu này đã tồn tại cho sản phẩm này!");
         });
 
-        // Luôn ép tồn kho ban đầu = 0, bất kể client gửi lên giá trị gì —
-        // mọi số lượng tồn kho phải đi qua GoodsReceiptService (module Quản lý kho)
-        // để đảm bảo có audit trail trong stock_movement_log.
+        // Luôn ép tồn kho + giá vốn ban đầu = 0, bất kể client gửi lên giá trị
+        // gì — cả 2 giờ chỉ được thiết lập qua GoodsReceiptService (module
+        // Quản lý kho): tồn kho cộng dồn, giá vốn tính bình quân gia quyền
+        // theo từng lần nhập, đảm bảo audit trail đầy đủ trong stock_movement_log.
         variant.setStock(0);
+        variant.setCostPrice(java.math.BigDecimal.ZERO);
         variant.setProduct(product);
         return variantRepository.save(variant);
     }
@@ -80,17 +77,8 @@ public class ProductVariantService {
         variant.setSku(details.getSku());
         variant.setSize(details.getSize());
         variant.setColor(details.getColor());
-        // KHÔNG set stock ở đây nữa — tồn kho chỉ được thay đổi qua
-        // StockMovementLogService (nhập kho / bán hàng / điều chỉnh có log),
-        // không qua form sửa thông tin biến thể này.
-        variant.setCostPrice(details.getCostPrice());
-        variant.setPriceAdjustment(details.getPriceAdjustment());
         return variantRepository.save(variant);
     }
-
-    // updateStock() đã bị xóa — set thẳng tồn kho không qua audit trail.
-    // Muốn điều chỉnh tồn kho, dùng StockMovementLogService.logMovement(...)
-    // với StockMovementType.ADJUST.
 
     @Transactional
     public void deleteVariant(Integer id) {

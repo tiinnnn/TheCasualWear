@@ -119,16 +119,12 @@ public class CartService {
         cartItemRepository.deleteByCartId(cart.getId());
     }
 
-    // Tính tổng tiền giỏ hàng
-    // Giá = variant.product.price + variant.priceAdjustment
+    // Tính tổng tiền giỏ hàng — mọi variant của 1 sản phẩm dùng chung giá bán
     public long getTotalPrice(AppUser user) {
         return getCartItems(user).stream()
                 .mapToLong(item -> {
-                    java.math.BigDecimal base = item.getVariant().getProduct().getPrice();
-                    java.math.BigDecimal adj  = item.getVariant().getPriceAdjustment() != null
-                            ? item.getVariant().getPriceAdjustment()
-                            : java.math.BigDecimal.ZERO;
-                    return base.add(adj)
+                    java.math.BigDecimal price = item.getVariant().getProduct().getPrice();
+                    return price
                             .multiply(java.math.BigDecimal.valueOf(item.getQuantity()))
                             .longValue();
                 })

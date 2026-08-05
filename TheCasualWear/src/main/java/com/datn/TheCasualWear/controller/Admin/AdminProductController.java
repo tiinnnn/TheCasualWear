@@ -9,7 +9,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import java.math.BigDecimal;
 import java.util.List;
 
 @Controller
@@ -123,8 +122,6 @@ public class AdminProductController {
             @PathVariable Integer id,
             @RequestParam(required = false) Integer colorId,
             @RequestParam(value = "sizeId", required = false) List<Integer> sizeIds,
-            @RequestParam(required = false) BigDecimal costPrice,
-            @RequestParam(required = false) BigDecimal priceAdjustment,
             @RequestParam(required = false) String skuPrefix,
             RedirectAttributes ra) {
 
@@ -136,15 +133,6 @@ public class AdminProductController {
             ra.addFlashAttribute("errorMessage", "Vui lòng chọn ít nhất 1 size!");
             return "redirect:/admin/products/" + id + "/variants";
         }
-        if (costPrice != null && costPrice.signum() < 0) {
-            ra.addFlashAttribute("errorMessage", "Giá vốn không được âm!");
-            return "redirect:/admin/products/" + id + "/variants";
-        }
-
-        // cost_price là NOT NULL trong DB — nếu admin để trống, mặc định về 0
-        // thay vì để null (tránh lỗi SQL constraint khi lưu).
-        BigDecimal safeCostPrice = costPrice != null ? costPrice : BigDecimal.ZERO;
-        BigDecimal safePriceAdj  = priceAdjustment != null ? priceAdjustment : BigDecimal.ZERO;
 
         Product product = productService.getProductById(id);
         int added = 0, skipped = 0;
@@ -155,11 +143,9 @@ public class AdminProductController {
             ProductVariant v = new ProductVariant();
             Color c = new Color(); c.setId(colorId); v.setColor(c);
             Size  s = new Size();  s.setId(sizeId);  v.setSize(s);
-            // Tồn kho luôn khởi tạo = 0 — bắt buộc nhập kho qua module
-            // Quản lý kho (GoodsReceiptService) để đảm bảo audit trail đầy đủ.
-            v.setStock(0);
-            v.setCostPrice(safeCostPrice);
-            v.setPriceAdjustment(safePriceAdj);
+            // Tồn kho + giá vốn luôn khởi tạo = 0 ở createVariant() — bắt buộc
+            // nhập kho qua module Quản lý kho (GoodsReceiptService) để đảm bảo
+            // audit trail đầy đủ và giá vốn tính bình quân gia quyền đúng.
 
             if (skuPrefix != null && !skuPrefix.isBlank()) {
                 String sizeName = sizeService.getSizeById(sizeId).getName();

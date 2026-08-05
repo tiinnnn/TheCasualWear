@@ -71,11 +71,8 @@ public class GoodsReceiptService {
             if (dto.quantity() == null || dto.quantity() <= 0) {
                 throw new IllegalArgumentException("Số lượng nhập phải lớn hơn 0!");
             }
-            if (dto.unitCostPrice() == null || dto.unitCostPrice().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new IllegalArgumentException(
-                        "Đơn giá nhập phải lớn hơn 0! Vui lòng nhập đầy đủ đơn giá cho từng dòng.");
-            }
-            BigDecimal unitCost = dto.unitCostPrice();
+            BigDecimal unitCost = dto.unitCostPrice() != null
+                    ? dto.unitCostPrice() : BigDecimal.ZERO;
 
             ProductVariant variant = variantRepository.findById(dto.variantId())
                     .orElseThrow(() -> new ResourceNotFoundException(
@@ -90,7 +87,28 @@ public class GoodsReceiptService {
 
             total = total.add(unitCost.multiply(BigDecimal.valueOf(dto.quantity())));
 
-            // Cộng stock + ghi log biến động, gắn ref về phiếu nhập này
+            // Giá vốn bình quân gia quyền (Weighted Average Cost) — tính TRƯỚC
+            // khi logMovement() cập nhật stock, vì công thức cần tồn kho CŨ:
+            //
+            //   giá vốn mới = (tồn cũ × giá vốn cũ + số lượng nhập × giá nhập)
+            //                 ────────────────────────────────────────────────
+            //                          (tồn cũ + số lượng nhập)
+            //
+            // Khi variant chưa từng có tồn kho (tồn cũ = 0), công thức tự động
+            // rút gọn về đúng giá nhập lần này — không cần xử lý riêng.
+            int oldStock = variant.getStock();
+            BigDecimal oldCost = variant.getCostPrice() != null
+                    ? variant.getCostPrice() : BigDecimal.ZERO;
+            int newStockTotal = oldStock + dto.quantity();
+
+            BigDecimal newAvgCost = BigDecimal.valueOf(oldStock).multiply(oldCost)
+                    .add(BigDecimal.valueOf(dto.quantity()).multiply(unitCost))
+                    .divide(BigDecimal.valueOf(newStockTotal), 2, java.math.RoundingMode.HALF_UP);
+            variant.setCostPrice(newAvgCost);
+
+            // Cộng stock + ghi log biến động, gắn ref về phiếu nhập này.
+            // logMovement() sẽ save() variant, nên costPrice vừa set ở trên
+            // được lưu cùng luôn trong 1 lần save, không cần gọi save() riêng.
             stockMovementLogService.logMovement(
                     variant,
                     StockMovementType.IMPORT,

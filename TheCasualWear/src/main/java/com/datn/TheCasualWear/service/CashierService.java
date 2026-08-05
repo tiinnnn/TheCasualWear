@@ -92,9 +92,6 @@ public class CashierService {
         }
 
         BigDecimal unitPrice = variant.getProduct().getPrice();
-        if (variant.getPriceAdjustment() != null) {
-            unitPrice = unitPrice.add(variant.getPriceAdjustment());
-        }
 
         return new CounterCartItemDTO(
                 variant.getId(),

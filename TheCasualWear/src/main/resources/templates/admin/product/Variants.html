@@ -58,8 +58,7 @@
                            data-size-name=${v.size != null ? v.size.name : '-'},
                            data-sku=${v.sku != null ? v.sku : ''},
                            data-stock=${v.stock},
-                           data-cost-price=${v.costPrice != null ? v.costPrice : ''},
-                           data-price-adj=${v.priceAdjustment != null ? v.priceAdjustment : ''}">
+                           data-cost-price=${v.costPrice != null ? v.costPrice : ''}">
                     <!-- ✅ Ảnh variant — mỗi ảnh 1 span để JS đọc -->
                     <span th:each="img : ${v.images}"
                           class="variant-img-data"
@@ -106,23 +105,10 @@
                             <small class="text-muted">Hệ thống thêm <code>-SIZE</code> vào sau</small>
                         </div>
 
-                        <div class="row g-2 mb-3">
-                            <div class="col-6">
-                                <label class="form-label fw-semibold small">Giá vốn</label>
-                                <input type="number" name="costPrice" id="costPriceInput"
-                                       class="form-control form-control-sm" min="0" placeholder="0"/>
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label fw-semibold small">
-                                    Điều chỉnh giá
-                                    <span class="text-muted" title="+/- so với giá tham chiếu"
-                                          data-bs-toggle="tooltip">
-                                        <i class="bi bi-info-circle"></i>
-                                    </span>
-                                </label>
-                                <input type="number" name="priceAdjustment"
-                                       class="form-control form-control-sm" placeholder="0"/>
-                            </div>
+                        <div class="alert alert-info small mt-2 mb-3">
+                            <i class="bi bi-info-circle-fill me-1"></i>
+                            Tồn kho và giá vốn sẽ = 0 khi tạo — nhập số lượng và
+                            giá vốn qua <strong>phiếu nhập kho</strong> ngay sau khi lưu.
                         </div>
 
                         <div class="mb-2">
@@ -227,14 +213,14 @@
                                 </small>
                             </div>
                             <div class="col-6">
-                                <label class="form-label">Giá vốn</label>
-                                <input type="number" name="costPrice" id="editCostPrice"
-                                       class="form-control" min="0"/>
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label">Điều chỉnh giá</label>
-                                <input type="number" name="priceAdjustment"
-                                       id="editPriceAdj" class="form-control"/>
+                                <label class="form-label fw-semibold">Giá vốn (bình quân)</label>
+                                <input type="text" id="editCostPriceDisplay" class="form-control"
+                                       disabled readonly/>
+                                <small class="text-muted">
+                                    Tự tính theo lần nhập kho —
+                                    <a th:href="@{/admin/warehouse/receipts/add}" target="_blank">Nhập kho</a>
+                                    để cập nhật.
+                                </small>
                             </div>
                         </div>
                     </div>
@@ -312,12 +298,6 @@
                     alert('Vui lòng chọn ít nhất 1 size!');
                     return;
                 }
-                const costPrice = parseFloat(document.getElementById('costPriceInput').value);
-                if (document.getElementById('costPriceInput').value !== '' && costPrice < 0) {
-                    e.preventDefault();
-                    alert('Giá vốn không được âm!');
-                    return;
-                }
             });
 
             // ── Render accordion từ data nodes ──────────────────────
@@ -344,7 +324,6 @@
                     sku:       n.dataset.sku,
                     stock:     parseInt(n.dataset.stock) || 0,
                     costPrice: n.dataset.costPrice,
-                    priceAdj:  n.dataset.priceAdj,
                     images:    imgs  // ✅
                 });
             });
@@ -374,9 +353,6 @@
                         <td class="small">${v.costPrice
                             ? Number(v.costPrice).toLocaleString('vi-VN') + ' đ'
                             : '<span class="text-muted">-</span>'}</td>
-                        <td class="small">${v.priceAdj && v.priceAdj != 0
-                            ? (Number(v.priceAdj) > 0 ? '+' : '') + Number(v.priceAdj).toLocaleString('vi-VN') + ' đ'
-                            : '<span class="text-muted">0</span>'}</td>
                         <td>
                             <!-- ✅ Nút quản lý ảnh -->
                             <button type="button" class="btn btn-sm btn-outline-success me-1"
@@ -421,7 +397,7 @@
                                     <tr>
                                         <th>Size</th><th>SKU</th>
                                         <th class="text-center">Tồn kho</th>
-                                        <th>Giá vốn</th><th>Đ/chỉnh giá</th>
+                                        <th>Giá vốn</th>
                                         <th style="width:130px"></th>
                                     </tr>
                                     </thead>
@@ -441,8 +417,8 @@
                 document.getElementById('editSizeId').value    = v.sizeId;
                 document.getElementById('editSku').value       = v.sku;
                 document.getElementById('editStockDisplay').value = v.stock + ' (chỉ xem)';
-                document.getElementById('editCostPrice').value = v.costPrice || '';
-                document.getElementById('editPriceAdj').value  = v.priceAdj  || '';
+                document.getElementById('editCostPriceDisplay').value =
+                    v.costPrice ? Number(v.costPrice).toLocaleString('vi-VN') + ' đ' : '0 đ';
                 document.getElementById('editForm').action =
                     '/admin/products/' + v.productId + '/variants/edit/' + v.id;
                 new bootstrap.Modal(document.getElementById('editModal')).show();

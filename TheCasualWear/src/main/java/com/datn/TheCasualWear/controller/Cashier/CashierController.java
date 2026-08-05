@@ -101,9 +101,7 @@ public class CashierController {
                         v.getSize() != null ? v.getSize().getName() : null,
                         v.getColor() != null ? v.getColor().getName() : null,
                         v.getSku(),
-                        v.getProduct().getPrice()
-                                .add(v.getPriceAdjustment() != null
-                                        ? v.getPriceAdjustment() : BigDecimal.ZERO),
+                        v.getProduct().getPrice(),
                         v.getStock(),
                         cashierService.resolveImageUrl(v)
                 ))

@@ -45,7 +45,8 @@
                                 <input type="text" id="priceDisplay" class="form-control"
                                        th:value="${product.price != null ? #numbers.formatInteger(product.price, 0, 'COMMA') : ''}"
                                        inputmode="numeric" autocomplete="off" required placeholder="0"
-                                       oninput="formatMoneyInput(this, 'price')"/>
+                                       oninput="formatMoneyInputLive(this, 'price')"
+                                       onblur="formatMoneyInputFinal(this, 'price')"/>
                                 <span class="input-group-text">đ</span>
                             </div>
                             <input type="hidden" name="price" id="price" th:value="${product.price}"/>
@@ -166,8 +167,8 @@
                 <div class="card border-0 shadow-sm mb-3">
                     <div class="card-body">
                         <h6 class="fw-bold mb-3">Phân loại</h6>
-                        <label class="form-label">Danh mục</label>
-                        <select name="category.id" class="form-select">
+                        <label class="form-label">Danh mục <span class="text-danger">*</span></label>
+                        <select name="category.id" class="form-select" required>
                             <option value="">-- Chọn danh mục --</option>
                             <option th:each="c : ${categories}"
                                     th:value="${c.id}" th:text="${c.name}"
@@ -198,14 +199,30 @@
         // Định dạng input tiền: hiển thị có dấu phẩy ngăn cách hàng nghìn
         // (1,000,000), giá trị số thật được lưu vào input hidden cùng tên
         // để submit lên server không đổi gì ở phía controller/service.
-        function formatMoneyInput(displayEl, hiddenName) {
+        //
+        // QUAN TRỌNG: tách làm 2 giai đoạn để không phá bộ gõ Unikey.
+        // Unikey theo dõi nội dung ô input bằng một bộ đệm nội bộ riêng
+        // (không đọc DOM) để ghép dấu tiếng Việt. Nếu mình ghi đè lại
+        // value của ô hiển thị NGAY TRONG LÚC người dùng còn đang gõ —
+        // dù có delay bằng setTimeout(0) — nội dung thật trên DOM và bộ
+        // đệm của Unikey sẽ bị lệch nhau, khiến các phím gõ sau bị
+        // chèn/nhân đôi sai vị trí (gõ "67" ra "6067"...).
+        // -> Lúc đang gõ (input): chỉ lặng lẽ đồng bộ số vào ô hidden,
+        //    KHÔNG đụng vào value của ô hiển thị.
+        // -> Lúc rời khỏi ô (blur): chắc chắn không còn ai gõ nữa, lúc
+        //    này mới format đẹp lại (thêm dấu phẩy, bỏ số 0 thừa).
+        function formatMoneyInputLive(displayEl, hiddenName) {
+            const raw = displayEl.value.replace(/[^\d]/g, '');
+            document.getElementById(hiddenName).value = raw === '' ? '0' : raw;
+        }
+
+        function formatMoneyInputFinal(displayEl, hiddenName) {
             let raw = displayEl.value.replace(/[^\d]/g, '');
             raw = raw.replace(/^0+(?=\d)/, '');
             if (raw === '') raw = '0';
 
             document.getElementById(hiddenName).value = raw;
             displayEl.value = Number(raw).toLocaleString('en-US');
-            displayEl.setSelectionRange(displayEl.value.length, displayEl.value.length);
         }
     </script>
 

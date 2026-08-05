@@ -82,8 +82,6 @@ public class ShopController {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id",              v.getId());
             m.put("stock",           v.getStock());
-            m.put("priceAdjustment", v.getPriceAdjustment() != null
-                    ? v.getPriceAdjustment().doubleValue() : 0.0);
             m.put("sku",             v.getSku());
 
             // Color

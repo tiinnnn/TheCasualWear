@@ -47,7 +47,8 @@
                             <div class="input-group">
                                 <input type="text" id="actualCashDisplay" class="form-control text-end"
                                        inputmode="numeric" autocomplete="off" required autofocus
-                                       oninput="formatMoneyInput(this, 'actualCash')"/>
+                                       oninput="formatMoneyInputLive(this, 'actualCash')"
+                                       onblur="formatMoneyInputFinal(this, 'actualCash')"/>
                                 <span class="input-group-text">đ</span>
                             </div>
                             <input type="hidden" name="actualCash" id="actualCash"/>
@@ -75,15 +76,24 @@
 </div>
 
 <script th:inline="javascript">
-    // Cùng cơ chế format dấu phẩy như form mở ca
-    function formatMoneyInput(displayEl, hiddenName) {
+    // Cùng cơ chế format dấu phẩy như form mở ca.
+    // Tách làm 2 giai đoạn để không phá bộ gõ Unikey: lúc đang gõ chỉ
+    // đồng bộ số vào ô hidden, KHÔNG đụng value ô hiển thị; chỉ format
+    // đẹp lại (dấu phẩy, bỏ số 0 thừa) lúc rời khỏi ô (blur), vì lúc đó
+    // chắc chắn không còn ai gõ nữa nên không xung đột với bộ đệm nội
+    // bộ của Unikey.
+    function formatMoneyInputLive(displayEl, hiddenName) {
+        const raw = displayEl.value.replace(/[^\d]/g, '');
+        document.getElementById(hiddenName).value = raw === '' ? '0' : raw;
+    }
+
+    function formatMoneyInputFinal(displayEl, hiddenName) {
         let raw = displayEl.value.replace(/[^\d]/g, '');
         raw = raw.replace(/^0+(?=\d)/, '');
         if (raw === '') raw = '0';
 
         document.getElementById(hiddenName).value = raw;
         displayEl.value = Number(raw).toLocaleString('en-US');
-        displayEl.setSelectionRange(displayEl.value.length, displayEl.value.length);
     }
 
     // Prefill sẵn số tiền "lẽ ra phải có" — cashier sẽ tự sửa lại theo số đếm thực tế.
