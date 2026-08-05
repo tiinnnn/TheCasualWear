@@ -2,6 +2,7 @@ package com.datn.TheCasualWear.controller.Admin;
 
 import com.datn.TheCasualWear.dto.OrderListDTO;
 import com.datn.TheCasualWear.entity.AppOrder;
+import com.datn.TheCasualWear.enums.CancelReason;
 import com.datn.TheCasualWear.enums.OrderStatus;
 import com.datn.TheCasualWear.repository.AppUserRepository;
 import com.datn.TheCasualWear.service.OrderService;
@@ -58,6 +59,7 @@ public class AdminOrderController {
     public String orderDetail(@PathVariable Integer id, Model model) {
         AppOrder order = orderService.getOrderById(id);
         model.addAttribute("order", order);
+        model.addAttribute("cancelReasons", CancelReason.values());
         model.addAttribute("view", "admin/order/detail");
         return "layouts/admin-layout";
     }
@@ -93,15 +95,16 @@ public class AdminOrderController {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // XÁC NHẬN GIAO THÀNH CÔNG  (SHIPPING → DELIVERED)
-    // Admin bấm khi GHN báo giao thành công hoặc khách phản hồi
+    // ĐÁNH DẤU HOÀN THÀNH  (SHIPPING → COMPLETED)
+    // Admin tự kiểm tra trạng thái trên GHN rồi đánh dấu — không còn
+    // bước DELIVERED trung gian, không chờ khách xác nhận.
     // ─────────────────────────────────────────────────────────────
 
-    @PostMapping("/{id}/delivered")
-    public String markDelivered(@PathVariable Integer id, RedirectAttributes ra) {
+    @PostMapping("/{id}/complete")
+    public String completeOrder(@PathVariable Integer id, RedirectAttributes ra) {
         try {
-            orderService.markDeliveredByAdmin(id);
-            ra.addFlashAttribute("successMessage", "Đã xác nhận giao hàng thành công!");
+            orderService.completeOrderByAdmin(id);
+            ra.addFlashAttribute("successMessage", "Đã đánh dấu đơn hàng hoàn thành!");
         } catch (Exception e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());
         }
@@ -112,23 +115,32 @@ public class AdminOrderController {
     // HỦY ĐƠN HÀNG
     // ─────────────────────────────────────────────────────────────
 
-    @GetMapping("/{id}/cancel")
-    public String cancelOrder(@PathVariable Integer id, RedirectAttributes ra) {
-        orderService.cancelOrderByAdmin(id);
-        ra.addFlashAttribute("successMessage", "Đã hủy đơn hàng!");
+    @PostMapping("/{id}/cancel")
+    public String cancelOrder(@PathVariable Integer id,
+                              @RequestParam CancelReason reason,
+                              @RequestParam(required = false) String note,
+                              RedirectAttributes ra) {
+        try {
+            orderService.cancelOrderByAdmin(id, reason, note);
+            ra.addFlashAttribute("successMessage", "Đã hủy đơn hàng!");
+        } catch (Exception e) {
+            ra.addFlashAttribute("errorMessage", e.getMessage());
+        }
         return "redirect:/admin/orders/" + id;
     }
 
     // ─────────────────────────────────────────────────────────────
-    // HOÀN HÀNG  (DELIVERED / COMPLETED → CANCELLED + restock)
+    // HOÀN HÀNG  (COMPLETED → RETURNED + restock)
     // ─────────────────────────────────────────────────────────────
 
     @PostMapping("/{id}/return")
     public String returnOrder(@PathVariable Integer id,
                               @RequestParam(defaultValue = "false") boolean restock,
+                              @RequestParam CancelReason reason,
+                              @RequestParam(required = false) String note,
                               RedirectAttributes ra) {
         try {
-            orderService.returnOrder(id, restock);
+            orderService.returnOrder(id, restock, reason, note);
             ra.addFlashAttribute("successMessage",
                     restock ? "Đã hoàn hàng và cộng lại stock!"
                             : "Đã hoàn hàng, không restock!");

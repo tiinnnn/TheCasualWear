@@ -1,5 +1,6 @@
 package com.datn.TheCasualWear.entity;
 
+import com.datn.TheCasualWear.enums.CancelReason;
 import com.datn.TheCasualWear.enums.OrderStatus;
 import com.datn.TheCasualWear.enums.OrderType;
 import jakarta.persistence.*;
@@ -83,4 +84,22 @@ public class AppOrder {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shift_id")
     private Shift shift; // Ca làm việc tạo ra đơn này (chỉ có khi order_type = COUNTER)
+
+    // ── MỚI: audit lý do hủy/hoàn — chỉ có giá trị khi status = CANCELLED
+    // hoặc RETURNED. Dùng chung cho cả 2 trạng thái vì đều là hành động
+    // "kết thúc đơn hàng ngoài dự kiến", chỉ khác thời điểm xảy ra.
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cancel_reason", length = 30)
+    private CancelReason cancelReason;
+
+    @Column(name = "cancel_note", length = 255)
+    private String cancelNote;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cancelled_by")
+    private AppUser cancelledBy; // Ai thực hiện: customer tự hủy, admin, hoặc cashier
+
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
 }

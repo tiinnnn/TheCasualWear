@@ -25,9 +25,9 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
             "WHEN 'PENDING'   THEN 1 " +
             "WHEN 'CONFIRMED' THEN 2 " +
             "WHEN 'SHIPPING'  THEN 3 " +
-            "WHEN 'DELIVERED' THEN 4 " +
-            "WHEN 'COMPLETED' THEN 5 " +
-            "WHEN 'CANCELLED' THEN 6 " +
+            "WHEN 'COMPLETED' THEN 4 " +
+            "WHEN 'CANCELLED' THEN 5 " +
+            "WHEN 'RETURNED'  THEN 6 " +
             "END ASC, o.orderDate DESC")
     List<AppOrder> findAllOrderedByStatus();
 
@@ -40,9 +40,9 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
             "WHEN com.datn.TheCasualWear.enums.OrderStatus.PENDING   THEN 1 " +
             "WHEN com.datn.TheCasualWear.enums.OrderStatus.CONFIRMED THEN 2 " +
             "WHEN com.datn.TheCasualWear.enums.OrderStatus.SHIPPING  THEN 3 " +
-            "WHEN com.datn.TheCasualWear.enums.OrderStatus.DELIVERED THEN 4 " +
-            "WHEN com.datn.TheCasualWear.enums.OrderStatus.COMPLETED THEN 5 " +
-            "WHEN com.datn.TheCasualWear.enums.OrderStatus.CANCELLED THEN 6 " +
+            "WHEN com.datn.TheCasualWear.enums.OrderStatus.COMPLETED THEN 4 " +
+            "WHEN com.datn.TheCasualWear.enums.OrderStatus.CANCELLED THEN 5 " +
+            "WHEN com.datn.TheCasualWear.enums.OrderStatus.RETURNED  THEN 6 " +
             "END ASC, o.orderDate DESC")
     Page<AppOrder> searchOrders(@Param("keyword")  String        keyword,
                                 @Param("status")   OrderStatus   status,

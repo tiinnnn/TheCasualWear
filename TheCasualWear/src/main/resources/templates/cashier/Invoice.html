@@ -97,14 +97,12 @@
 <button class="btn-print no-print" onclick="window.print()">In hóa đơn</button>
 <button class="btn-print no-print" onclick="window.location.href='/cashier'">Quay lại bán hàng</button>
 
-<form th:if="${order.status.name() == 'COMPLETED'}"
-      th:action="@{'/cashier/orders/' + ${order.id} + '/cancel'}"
-      method="post" class="no-print"
-      onsubmit="return confirm('Xác nhận hủy đơn #' + [[${order.id}]] + '? Kho sẽ được hoàn lại.');">
-    <button type="submit" class="btn-print" style="color:#b00020;border-color:#b00020">
-        Hủy đơn này
-    </button>
-</form>
+<!-- Hủy cần chọn lý do → dẫn vào trang chi tiết đơn (có modal xác nhận), không hủy thẳng từ hóa đơn -->
+<a th:if="${order.status.name() == 'COMPLETED'}"
+   th:href="@{'/cashier/orders/' + ${order.id}}"
+   class="btn-print no-print" style="display:block;text-align:center;color:#b00020;border:1px solid #b00020;text-decoration:none">
+    Hủy đơn này
+</a>
 
 </body>
 </html>

@@ -31,9 +31,9 @@
                 <option value="PENDING"   th:selected="${selectedStatus == 'PENDING'}">Chờ xác nhận</option>
                 <option value="CONFIRMED" th:selected="${selectedStatus == 'CONFIRMED'}">Đã xác nhận</option>
                 <option value="SHIPPING"  th:selected="${selectedStatus == 'SHIPPING'}">Đang giao</option>
-                <option value="DELIVERED" th:selected="${selectedStatus == 'DELIVERED'}">Đã giao</option>
                 <option value="COMPLETED" th:selected="${selectedStatus == 'COMPLETED'}">Hoàn thành</option>
                 <option value="CANCELLED" th:selected="${selectedStatus == 'CANCELLED'}">Đã hủy</option>
+                <option value="RETURNED"  th:selected="${selectedStatus == 'RETURNED'}">Đã hoàn hàng</option>
             </select>
         </div>
 
@@ -102,13 +102,13 @@
                         <span th:case="'PENDING'"   class="badge bg-warning text-dark">Chờ xác nhận</span>
                         <span th:case="'CONFIRMED'" class="badge bg-info">Đã xác nhận</span>
                         <span th:case="'SHIPPING'"  class="badge bg-primary">Đang giao</span>
-                        <span th:case="'DELIVERED'" class="badge bg-success">Đã giao</span>
                         <span th:case="'COMPLETED'" class="badge bg-success">Hoàn thành</span>
                         <span th:case="'CANCELLED'" class="badge bg-danger">Đã hủy</span>
+                        <span th:case="'RETURNED'"  class="badge bg-secondary">Đã hoàn hàng</span>
                     </span>
                 </td>
                 <td>
-                    <!-- Đã có mã vận đơn (SHIPPING / DELIVERED / COMPLETED) -->
+                    <!-- Đã có mã vận đơn (SHIPPING / COMPLETED) -->
                     <a th:if="${order.trackingCode != null}"
                        th:href="@{'https://tracking.ghn.dev/?order_code=' + ${order.trackingCode}}"
                        target="_blank" rel="noopener"

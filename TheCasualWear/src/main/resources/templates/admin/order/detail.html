@@ -115,11 +115,28 @@
                         <span th:case="'PENDING'"   class="badge bg-warning text-dark">Chờ xác nhận</span>
                         <span th:case="'CONFIRMED'" class="badge bg-info">Đã xác nhận</span>
                         <span th:case="'SHIPPING'"  class="badge bg-primary">Đang giao</span>
-                        <span th:case="'DELIVERED'" class="badge bg-success">Đã giao</span>
                         <span th:case="'COMPLETED'" class="badge bg-success">Hoàn thành</span>
                         <span th:case="'CANCELLED'" class="badge bg-danger">Đã hủy</span>
+                        <span th:case="'RETURNED'"  class="badge bg-secondary">Đã hoàn hàng</span>
                     </span>
                 </p>
+                <div th:if="${order.cancelReason != null}" class="small text-muted mb-1">
+                    <strong>Lý do:</strong>
+                    <span th:switch="${order.cancelReason.name()}">
+                        <span th:case="'CUSTOMER_REQUEST'">Khách yêu cầu / đổi ý</span>
+                        <span th:case="'OUT_OF_STOCK'">Hết hàng</span>
+                        <span th:case="'PAYMENT_ISSUE'">Vấn đề thanh toán</span>
+                        <span th:case="'DELIVERY_FAILED'">Giao hàng thất bại</span>
+                        <span th:case="'DEFECTIVE_PRODUCT'">Sản phẩm lỗi/hỏng</span>
+                        <span th:case="'WRONG_ITEM'">Giao sai sản phẩm</span>
+                        <span th:case="'DUPLICATE_ORDER'">Đơn trùng/tạo nhầm</span>
+                        <span th:case="'OTHER'">Khác</span>
+                    </span>
+                    <span th:if="${order.cancelNote != null}" th:text="'— ' + ${order.cancelNote}"></span>
+                    <br/>
+                    <span th:if="${order.cancelledBy != null}"
+                          th:text="'Bởi: ' + ${order.cancelledBy.username} + ' lúc ' + ${#temporals.format(order.cancelledAt, 'HH:mm dd/MM/yyyy')}"></span>
+                </div>
                 <p class="mb-1" th:if="${order.trackingCode != null}">
                     <strong>Mã vận đơn:</strong>
                     <span class="badge bg-primary" th:text="${order.trackingCode}"></span>
@@ -162,7 +179,8 @@
                     </a>
 
                     <button th:if="${order.status.name() != 'COMPLETED'
-                                and order.status.name() != 'CANCELLED'}"
+                                and order.status.name() != 'CANCELLED'
+                                and order.status.name() != 'RETURNED'}"
                             type="button"
                             class="btn btn-outline-danger"
                             data-bs-toggle="modal" data-bs-target="#cancelModal">
@@ -172,7 +190,7 @@
             </div>
         </div>
 
-        <!-- Vận chuyển: gửi hàng GHN / xác nhận giao thành công -->
+        <!-- Vận chuyển: gửi hàng GHN / đánh dấu hoàn thành -->
         <div th:if="${order.status.name() == 'CONFIRMED' or order.status.name() == 'SHIPPING'}"
              class="card border-0 shadow-sm mb-3">
             <div class="card-body">
@@ -196,23 +214,24 @@
                     </form>
                 </div>
 
-                <!-- SHIPPING: xác nhận giao thành công -->
+                <!-- SHIPPING: admin tự kiểm tra GHN rồi đánh dấu hoàn thành trực tiếp -->
                 <div th:if="${order.status.name() == 'SHIPPING'}">
                     <p class="small text-muted mb-2">
                         Mã vận đơn:
                         <strong th:text="${order.trackingCode}"></strong>
-                        — bấm xác nhận khi GHN báo giao thành công hoặc khách phản hồi đã nhận hàng.
+                        — kiểm tra trạng thái trên GHN, nếu khách đã thực sự nhận hàng
+                        thì đánh dấu hoàn thành để tính vào doanh thu.
                     </p>
                     <a th:href="@{'https://tracking.ghn.dev/?order_code=' + ${order.trackingCode}}"
                        target="_blank" rel="noopener"
                        class="btn btn-outline-primary btn-sm w-100 mb-2">
-                        <i class="bi bi-geo-alt me-1"></i>Xem hành trình vận chuyển
+                        <i class="bi bi-geo-alt me-1"></i>Kiểm tra trên GHN
                     </a>
-                    <form th:action="@{'/admin/orders/' + ${order.id} + '/delivered'}" method="post">
+                    <form th:action="@{'/admin/orders/' + ${order.id} + '/complete'}" method="post">
                         <div class="d-grid">
                             <button type="submit" class="btn btn-success btn-sm"
-                                    onclick="return confirm('Xác nhận đơn hàng đã giao thành công?')">
-                                <i class="bi bi-check2-circle me-1"></i>Xác nhận giao thành công
+                                    onclick="return confirm('Xác nhận đơn hàng đã hoàn thành? Đơn sẽ được tính vào doanh thu.')">
+                                <i class="bi bi-check2-all me-1"></i>Đánh dấu hoàn thành
                             </button>
                         </div>
                     </form>
@@ -220,8 +239,8 @@
             </div>
         </div>
 
-        <!-- Nut hoan hang: DELIVERED hoac COMPLETED trong 15 ngay -->
-        <div th:if="${(order.status.name() == 'DELIVERED' or order.status.name() == 'COMPLETED')
+        <!-- Nut hoan hang: COMPLETED trong 15 ngay -->
+        <div th:if="${(order.status.name() == 'COMPLETED')
                       and order.deliveredAt != null
                       and #temporals.createNow().isBefore(order.deliveredAt.plusDays(15))}"
              class="card border-0 shadow-sm mt-3">
@@ -257,7 +276,27 @@
                             <div class="alert alert-warning py-2 mb-3">
                                 <i class="bi bi-exclamation-triangle me-1"></i>
                                 Đơn hàng sẽ được chuyển sang trạng thái
-                                <strong>Hủy</strong> nếu nhấn xác nhận bạn có chắc chắn?
+                                <strong>Đã hoàn hàng</strong>, bạn có chắc chắn?
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Lý do hoàn hàng</label>
+                                <select name="reason" class="form-select form-select-sm" required
+                                        onchange="document.getElementById('returnNoteWrap').style.display = (this.value === 'OTHER') ? 'block' : 'none';">
+                                    <option value="">-- Chọn lý do --</option>
+                                    <option th:each="r : ${cancelReasons}" th:value="${r}"
+                                            th:text="${r.name() == 'CUSTOMER_REQUEST'} ? 'Khách yêu cầu / đổi ý' :
+                                                      (${r.name() == 'OUT_OF_STOCK'} ? 'Hết hàng' :
+                                                      (${r.name() == 'PAYMENT_ISSUE'} ? 'Vấn đề thanh toán' :
+                                                      (${r.name() == 'DELIVERY_FAILED'} ? 'Giao hàng thất bại' :
+                                                      (${r.name() == 'DEFECTIVE_PRODUCT'} ? 'Sản phẩm lỗi/hỏng' :
+                                                      (${r.name() == 'WRONG_ITEM'} ? 'Giao sai sản phẩm' :
+                                                      (${r.name() == 'DUPLICATE_ORDER'} ? 'Đơn trùng/tạo nhầm' : 'Khác'))))))"></option>
+                                </select>
+                            </div>
+                            <div class="mb-3" id="returnNoteWrap" style="display:none">
+                                <label class="form-label small fw-bold">Ghi chú (bắt buộc nếu chọn "Khác")</label>
+                                <textarea name="note" class="form-control form-control-sm" rows="2"
+                                          placeholder="Nhập chi tiết lý do..."></textarea>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox"
@@ -297,9 +336,30 @@
                           id="cancelOrderForm">
                         <div class="modal-body">
                             <div class="alert alert-danger py-2 mb-3">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
                                 Bạn sắp hủy đơn hàng
                                 <strong>#<span th:text="${order.id}"></span></strong>.
                                 Hành động này không thể hoàn tác.
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Lý do hủy</label>
+                                <select name="reason" class="form-select form-select-sm" required
+                                        onchange="document.getElementById('cancelNoteWrap').style.display = (this.value === 'OTHER') ? 'block' : 'none';">
+                                    <option value="">-- Chọn lý do --</option>
+                                    <option th:each="r : ${cancelReasons}" th:value="${r}"
+                                            th:text="${r.name() == 'CUSTOMER_REQUEST'} ? 'Khách yêu cầu / đổi ý' :
+                                                      (${r.name() == 'OUT_OF_STOCK'} ? 'Hết hàng' :
+                                                      (${r.name() == 'PAYMENT_ISSUE'} ? 'Vấn đề thanh toán' :
+                                                      (${r.name() == 'DELIVERY_FAILED'} ? 'Giao hàng thất bại' :
+                                                      (${r.name() == 'DEFECTIVE_PRODUCT'} ? 'Sản phẩm lỗi/hỏng' :
+                                                      (${r.name() == 'WRONG_ITEM'} ? 'Giao sai sản phẩm' :
+                                                      (${r.name() == 'DUPLICATE_ORDER'} ? 'Đơn trùng/tạo nhầm' : 'Khác'))))))"></option>
+                                </select>
+                            </div>
+                            <div class="mb-3" id="cancelNoteWrap" style="display:none">
+                                <label class="form-label small fw-bold">Ghi chú (bắt buộc nếu chọn "Khác")</label>
+                                <textarea name="note" class="form-control form-control-sm" rows="2"
+                                          placeholder="Nhập chi tiết lý do..."></textarea>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox"

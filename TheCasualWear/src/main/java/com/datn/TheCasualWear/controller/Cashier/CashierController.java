@@ -3,6 +3,7 @@ package com.datn.TheCasualWear.controller.Cashier;
 import com.datn.TheCasualWear.config.VNPayConfig;
 import com.datn.TheCasualWear.dto.CounterCartItemDTO;
 import com.datn.TheCasualWear.entity.AppOrder;
+import com.datn.TheCasualWear.enums.CancelReason;
 import com.datn.TheCasualWear.repository.AppUserRepository;
 import com.datn.TheCasualWear.repository.ProductVariantRepository;
 import com.datn.TheCasualWear.service.CashierService;
@@ -367,6 +368,7 @@ public class CashierController {
     @GetMapping("/invoice/{orderId}")
     public String invoice(@PathVariable Integer orderId, Model model) {
         model.addAttribute("order", cashierService.getOrderForInvoice(orderId));
+        model.addAttribute("cancelReasons", CancelReason.values());
         return "cashier/invoice";
     }
 
@@ -386,6 +388,7 @@ public class CashierController {
     public String myOrderDetail(@PathVariable Integer id, Model model, RedirectAttributes ra) {
         try {
             model.addAttribute("order", cashierService.getOwnOrderDetail(id));
+            model.addAttribute("cancelReasons", CancelReason.values());
             model.addAttribute("view", "cashier/order-detail");
             return "layouts/cashier-layout";
         } catch (Exception e) {
@@ -401,9 +404,12 @@ public class CashierController {
     // ─────────────────────────────────────────────────────────────
 
     @PostMapping("/orders/{id}/cancel")
-    public String cancelOrder(@PathVariable Integer id, RedirectAttributes ra) {
+    public String cancelOrder(@PathVariable Integer id,
+                              @RequestParam CancelReason reason,
+                              @RequestParam(required = false) String note,
+                              RedirectAttributes ra) {
         try {
-            cashierService.cancelOrder(id);
+            cashierService.cancelOrder(id, reason, note);
             ra.addFlashAttribute("successMessage",
                     "Đã hủy đơn hàng #" + id + " và hoàn kho thành công.");
         } catch (Exception e) {

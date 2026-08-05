@@ -21,11 +21,6 @@ public class OrderScheduler {
     private final NotificationRepository notificationRepository;
     private final NotificationService   notificationService;
 
-    // Mỗi 2 giờ — tự xác nhận đơn DELIVERED quá 2 ngày
-    @Scheduled(cron = "0 0 */2 * * *")
-    public void autoConfirmOrders() {
-        orderService.autoConfirmDeliveredOrders();
-    }
 
     // Mỗi ngày 0h — xóa đơn CANCELLED quá 1 tháng
     @Scheduled(cron = "0 0 0 * * *")

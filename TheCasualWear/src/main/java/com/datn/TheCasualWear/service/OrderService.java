@@ -4,6 +4,7 @@ import com.datn.TheCasualWear.config.ResourceNotFoundException;
 import com.datn.TheCasualWear.dto.OrderListDTO;
 import org.springframework.data.domain.PageImpl;
 import com.datn.TheCasualWear.entity.*;
+import com.datn.TheCasualWear.enums.CancelReason;
 import com.datn.TheCasualWear.enums.OrderStatus;
 import com.datn.TheCasualWear.enums.StockMovementType;
 import com.datn.TheCasualWear.enums.StockRefType;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -190,18 +192,8 @@ public class OrderService {
         return order;
     }
 
-    /** Khách xác nhận đã nhận hàng → COMPLETED */
-    public void confirmReceived(Integer orderId, AppUser user) {
-        AppOrder order = getOrderByIdAndUser(orderId, user);
-        if (order.getStatus() != OrderStatus.DELIVERED) {
-            throw new IllegalStateException("Đơn hàng chưa được giao, không thể xác nhận!");
-        }
-        order.setStatus(OrderStatus.COMPLETED);
-        orderRepository.save(order);
-    }
-
     @Transactional
-    public void cancelOrder(Integer orderId, AppUser user) {
+    public void cancelOrder(Integer orderId, AppUser user, CancelReason reason, String note) {
         AppOrder order = getOrderByIdAndUser(orderId, user);
         if (order.getStatus() != OrderStatus.PENDING) {
             throw new IllegalStateException("Chỉ có thể hủy đơn hàng khi đang chờ xác nhận!");
@@ -211,9 +203,12 @@ public class OrderService {
                     "Đơn hàng đã thanh toán không thể hủy trực tiếp. "
                             + "Vui lòng liên hệ Zalo 0901.234.567 để được hỗ trợ!");
         }
+        validateCancelReason(reason, note);
+
         restoreVariantStock(order, StockMovementType.CANCEL, user);
         removeOrderVoucher(order, orderId);
         order.setStatus(OrderStatus.CANCELLED);
+        applyCancelMetadata(order, reason, note, user);
         orderRepository.save(order);
 
         notificationService.createNotificationForAdmins(
@@ -274,16 +269,19 @@ public class OrderService {
     }
 
     /**
-     * Admin xác nhận giao thành công (GHN báo về hoặc khách phản hồi).
-     * COD → đánh dấu đã thu tiền.
+     * Admin tự kiểm tra trạng thái trên GHN (hoặc khách phản hồi qua kênh khác)
+     * rồi đánh dấu đơn hoàn thành. Chuyển thẳng SHIPPING → COMPLETED, không còn
+     * bước DELIVERED trung gian / không chờ khách xác nhận.
+     * COD → đánh dấu đã thu tiền. Doanh thu trên dashboard chỉ tính khi admin
+     * chủ động đánh dấu bước này.
      */
     @Transactional
-    public void markDeliveredByAdmin(Integer orderId) {
+    public void completeOrderByAdmin(Integer orderId) {
         AppOrder order = getOrderById(orderId);
         if (order.getStatus() != OrderStatus.SHIPPING) {
             throw new IllegalStateException("Đơn hàng không ở trạng thái đang giao!");
         }
-        order.setStatus(OrderStatus.DELIVERED);
+        order.setStatus(OrderStatus.COMPLETED);
         order.setDeliveredAt(LocalDateTime.now());
         if ("COD".equals(order.getPaymentMethod())) {
             order.setIsPaid(true);
@@ -292,24 +290,28 @@ public class OrderService {
 
         notificationService.createNotification(
                 order.getCustomer(),
-                "Đơn hàng #" + orderId + " đã được giao thành công! "
-                        + "Vui lòng xác nhận nhận hàng :>",
+                "Đơn hàng #" + orderId + " đã hoàn thành. Cảm ơn bạn đã mua hàng! =))",
                 "/order/detail/" + orderId
         );
     }
 
     @Transactional
-    public void cancelOrderByAdmin(Integer orderId) {
+    public void cancelOrderByAdmin(Integer orderId, CancelReason reason, String note) {
         AppOrder order = getOrderById(orderId);
         if (order.getStatus() == OrderStatus.COMPLETED
-                || order.getStatus() == OrderStatus.CANCELLED) {
+                || order.getStatus() == OrderStatus.CANCELLED
+                || order.getStatus() == OrderStatus.RETURNED) {
             throw new IllegalStateException("Không thể hủy đơn hàng này!");
         }
+        validateCancelReason(reason, note);
+
+        AppUser actor = getCurrentUserOrNull();
         if (order.getStatus() != OrderStatus.PENDING) {
-            restoreVariantStock(order, StockMovementType.CANCEL, getCurrentUserOrNull());
+            restoreVariantStock(order, StockMovementType.CANCEL, actor);
         }
         removeOrderVoucher(order, orderId);
         order.setStatus(OrderStatus.CANCELLED);
+        applyCancelMetadata(order, reason, note, actor);
         orderRepository.save(order);
 
         notificationService.createNotification(
@@ -320,13 +322,12 @@ public class OrderService {
     }
 
     @Transactional
-    public void returnOrder(Integer orderId, boolean restock) {
+    public void returnOrder(Integer orderId, boolean restock, CancelReason reason, String note) {
         AppOrder order = getOrderById(orderId);
 
-        if (order.getStatus() != OrderStatus.DELIVERED
-                && order.getStatus() != OrderStatus.COMPLETED) {
+        if (order.getStatus() != OrderStatus.COMPLETED) {
             throw new IllegalStateException(
-                    "Chỉ có thể hoàn hàng khi đơn đã giao hoặc hoàn thành!");
+                    "Chỉ có thể hoàn hàng khi đơn đã hoàn thành!");
         }
         if (order.getDeliveredAt() == null) {
             throw new IllegalStateException("Không xác định được ngày giao hàng!");
@@ -337,11 +338,14 @@ public class OrderService {
             throw new IllegalStateException(
                     "Đã quá " + RETURN_DAYS + " ngày kể từ khi giao, không thể hoàn hàng!");
         }
+        validateCancelReason(reason, note);
 
-        if (restock) restoreVariantStock(order, StockMovementType.RETURN, getCurrentUserOrNull());
+        AppUser actor = getCurrentUserOrNull();
+        if (restock) restoreVariantStock(order, StockMovementType.RETURN, actor);
 
         removeOrderVoucher(order, orderId);
-        order.setStatus(OrderStatus.CANCELLED);
+        order.setStatus(OrderStatus.RETURNED);
+        applyCancelMetadata(order, reason, note, actor);
         orderRepository.save(order);
 
         notificationService.createNotification(
@@ -356,28 +360,19 @@ public class OrderService {
     // SCHEDULED JOBS
     // ─────────────────────────────────────────────────────────────
 
-    @Transactional
-    public void autoConfirmDeliveredOrders() {
-        LocalDateTime twoDaysAgo = LocalDateTime.now().minusDays(2);
-        orderRepository.findByStatus(OrderStatus.DELIVERED).stream()
-                .filter(o -> o.getDeliveredAt() != null
-                        && o.getDeliveredAt().isBefore(twoDaysAgo))
-                .forEach(o -> {
-                    o.setStatus(OrderStatus.COMPLETED);
-                    orderRepository.save(o);
-                    notificationService.createNotification(
-                            o.getCustomer(),
-                            "Đơn hàng #" + o.getId()
-                                    + " đã được tự động xác nhận hoàn thành. Cảm ơn bạn đã mua hàng! =))",
-                            "/order/detail/" + o.getId()
-                    );
-                });
-    }
-
+    /**
+     * Dọn đơn CANCELLED và RETURNED sau 1 tháng.
+     * Trước đây chỉ query CANCELLED — vì returnOrder() từng gộp chung
+     * status CANCELLED cho cả hoàn hàng. Từ khi tách RETURNED riêng,
+     * job này phải quét cả 2 status để giữ nguyên hành vi dọn dẹp cũ.
+     */
     @Transactional
     public void deleteCancelledOrderAfterMonth() {
         LocalDateTime oneMonthAgo = LocalDateTime.now().minusMonths(1);
-        orderRepository.findByStatus(OrderStatus.CANCELLED).stream()
+        List<AppOrder> toDelete = new ArrayList<>();
+        toDelete.addAll(orderRepository.findByStatus(OrderStatus.CANCELLED));
+        toDelete.addAll(orderRepository.findByStatus(OrderStatus.RETURNED));
+        toDelete.stream()
                 .filter(o -> o.getOrderDate().isBefore(oneMonthAgo))
                 .forEach(orderRepository::delete);
     }
@@ -408,5 +403,22 @@ public class OrderService {
             order.setOrderVoucher(null);
             orderVoucherRepository.delete(ov);
         });
+    }
+
+    /** reason bắt buộc; nếu chọn OTHER thì note cũng bắt buộc (để còn biết lý do là gì). */
+    private void validateCancelReason(CancelReason reason, String note) {
+        if (reason == null) {
+            throw new IllegalStateException("Vui lòng chọn lý do!");
+        }
+        if (reason == CancelReason.OTHER && (note == null || note.isBlank())) {
+            throw new IllegalStateException("Vui lòng nhập ghi chú khi chọn lý do 'Khác'!");
+        }
+    }
+
+    private void applyCancelMetadata(AppOrder order, CancelReason reason, String note, AppUser actor) {
+        order.setCancelReason(reason);
+        order.setCancelNote((note == null || note.isBlank()) ? null : note.trim());
+        order.setCancelledBy(actor);
+        order.setCancelledAt(LocalDateTime.now());
     }
 }

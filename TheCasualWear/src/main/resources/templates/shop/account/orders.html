@@ -26,18 +26,10 @@
                             <span th:case="'PENDING'"   class="badge bg-warning text-dark">Chờ xác nhận</span>
                             <span th:case="'CONFIRMED'" class="badge bg-info">Đã xác nhận</span>
                             <span th:case="'SHIPPING'"  class="badge bg-primary">Đang giao</span>
-                            <span th:case="'DELIVERED'" class="badge bg-success">Đã giao</span>
                             <span th:case="'COMPLETED'" class="badge bg-success">Hoàn thành</span>
                             <span th:case="'CANCELLED'" class="badge bg-danger">Đã hủy</span>
+                            <span th:case="'RETURNED'"  class="badge bg-secondary">Đã hoàn hàng</span>
                         </span>
-                            <div th:if="${order.status.name() == 'DELIVERED'}"
-                                 class="alert alert-info py-2 mt-2 mb-0">
-                                <i class="bi bi-clock me-1"></i>
-                                <span th:if="${order.deliveredAt != null}"
-                                      th:text="'Tự động xác nhận lúc ' +
-                   ${#temporals.format(order.deliveredAt.plusDays(2),
-                   'HH:mm dd/MM/yyyy')}"></span>
-                            </div>
                             <p class="text-danger fw-bold mt-1 mb-0"
                                th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></p>
                         </div>
@@ -53,14 +45,10 @@
                     <div class="d-flex gap-2 mt-3">
                         <a th:href="@{'/order/detail/' + ${order.id}}"
                            class="btn btn-sm btn-outline-dark">Xem chi tiết</a>
+                        <!-- Hủy đơn cần chọn lý do → chuyển sang trang chi tiết thay vì hủy thẳng từ list -->
                         <a th:if="${order.status.name() == 'PENDING'}"
-                           th:href="@{'/order/cancel/' + ${order.id}}"
-                           class="btn btn-sm btn-outline-danger"
-                           onclick="return confirm('Bạn có chắc muốn hủy?')">Hủy đơn</a>
-                        <a th:if="${order.status.name() == 'DELIVERED'}"
-                           th:href="@{'/order/confirm/' + ${order.id}}"
-                           class="btn btn-sm btn-success"
-                           onclick="return confirm('Xác nhận đã nhận hàng?')">Đã nhận hàng</a>
+                           th:href="@{'/order/detail/' + ${order.id}}"
+                           class="btn btn-sm btn-outline-danger">Hủy đơn</a>
                     </div>
                 </div>
             </div>

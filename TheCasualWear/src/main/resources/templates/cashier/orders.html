@@ -65,14 +65,12 @@
                         <a th:href="@{'/cashier/orders/' + ${o.id}}" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-eye"></i> Xem
                         </a>
-                        <form th:if="${o.status.name() == 'COMPLETED'}"
-                              th:action="@{'/cashier/orders/' + ${o.id} + '/cancel'}"
-                              method="post" class="d-inline"
-                              onsubmit="return confirm('Xác nhận hủy đơn #' + [[${o.id}]] + '? Kho sẽ được hoàn lại.');">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">
-                                <i class="bi bi-x-circle"></i> Hủy
-                            </button>
-                        </form>
+                        <!-- Hủy cần chọn lý do → dẫn vào trang chi tiết (có modal xác nhận) -->
+                        <a th:if="${o.status.name() == 'COMPLETED'}"
+                           th:href="@{'/cashier/orders/' + ${o.id}}"
+                           class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-x-circle"></i> Hủy
+                        </a>
                     </td>
                 </tr>
                 </tbody>

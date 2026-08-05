@@ -42,10 +42,13 @@
                                 </small>
                             </label>
                             <div class="input-group" style="max-width:260px">
-                                <input type="number" name="price" th:value="${product.price}"
-                                       class="form-control" required min="0" placeholder="0"/>
+                                <input type="text" id="priceDisplay" class="form-control"
+                                       th:value="${product.price != null ? #numbers.formatInteger(product.price, 0, 'COMMA') : ''}"
+                                       inputmode="numeric" autocomplete="off" required placeholder="0"
+                                       oninput="formatMoneyInput(this, 'price')"/>
                                 <span class="input-group-text">đ</span>
                             </div>
+                            <input type="hidden" name="price" id="price" th:value="${product.price}"/>
                         </div>
                     </div>
                 </div>
@@ -190,6 +193,21 @@
             </div>
         </div>
     </form>
+
+    <script>
+        // Định dạng input tiền: hiển thị có dấu phẩy ngăn cách hàng nghìn
+        // (1,000,000), giá trị số thật được lưu vào input hidden cùng tên
+        // để submit lên server không đổi gì ở phía controller/service.
+        function formatMoneyInput(displayEl, hiddenName) {
+            let raw = displayEl.value.replace(/[^\d]/g, '');
+            raw = raw.replace(/^0+(?=\d)/, '');
+            if (raw === '') raw = '0';
+
+            document.getElementById(hiddenName).value = raw;
+            displayEl.value = Number(raw).toLocaleString('en-US');
+            displayEl.setSelectionRange(displayEl.value.length, displayEl.value.length);
+        }
+    </script>
 
 </div><!-- /fragment -->
 </body>

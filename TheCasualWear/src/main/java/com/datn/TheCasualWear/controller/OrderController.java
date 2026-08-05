@@ -1,6 +1,7 @@
 package com.datn.TheCasualWear.controller;
 
 import com.datn.TheCasualWear.entity.*;
+import com.datn.TheCasualWear.enums.CancelReason;
 import com.datn.TheCasualWear.service.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -182,29 +183,21 @@ public class OrderController {
         AppUser user = getCurrentUser(auth);
         AppOrder order = orderService.getOrderByIdAndUser(id, user);
         model.addAttribute("order", order);
+        model.addAttribute("cancelReasons", CancelReason.values());
         model.addAttribute("view", "shop/order-detail");
         return "layouts/shop-layout";
     }
 
-    //XÁC NHẬN NHẬN HÀNG
-    @GetMapping("/confirm/{id}")
-    public String confirmReceived(@PathVariable Integer id,
-                                  Authentication auth,
-                                  RedirectAttributes redirectAttributes) {
-        AppUser user = getCurrentUser(auth);
-        orderService.confirmReceived(id, user);
-        redirectAttributes.addFlashAttribute("successMessage", "Xác nhận nhận hàng thành công!");
-        return "redirect:/order/detail/" + id;
-    }
-
     //HỦY ĐƠN HÀNG
-    @GetMapping("/cancel/{id}")
+    @PostMapping("/cancel/{id}")
     public String cancelOrder(@PathVariable Integer id,
+                              @RequestParam CancelReason reason,
+                              @RequestParam(required = false) String note,
                               Authentication auth,
                               RedirectAttributes redirectAttributes) {
         AppUser user = getCurrentUser(auth);
         try {
-            orderService.cancelOrder(id, user);
+            orderService.cancelOrder(id, user, reason, note);
             redirectAttributes.addFlashAttribute("successMessage", "Hủy đơn hàng thành công!");
             return "redirect:/account/orders";
         } catch (IllegalStateException e) {

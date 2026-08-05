@@ -20,16 +20,9 @@
                     <span th:case="'PENDING'"   class="badge bg-warning text-dark fs-6">Chờ xác nhận</span>
                     <span th:case="'CONFIRMED'" class="badge bg-info fs-6">Đã xác nhận</span>
                     <span th:case="'SHIPPING'"  class="badge bg-primary fs-6">Đang giao</span>
-                    <span th:case="'DELIVERED'" class="badge bg-success fs-6">Đã giao</span>
                     <span th:case="'COMPLETED'" class="badge bg-success fs-6">Hoàn thành</span>
                     <span th:case="'CANCELLED'" class="badge bg-danger fs-6">Đã hủy</span>
-                </span>
-            </div>
-            <div th:if="${order.status.name() == 'DELIVERED'}" class="alert alert-info mt-2 mb-0">
-                <i class="bi bi-clock me-2"></i>
-                <span th:if="${order.deliveredAt != null}">
-                    Đơn hàng sẽ tự động xác nhận sau 2 ngày kể từ khi giao
-                    (<strong th:text="${#temporals.format(order.deliveredAt.plusDays(2), 'HH:mm dd/MM/yyyy')}"></strong>)
+                    <span th:case="'RETURNED'"  class="badge bg-secondary fs-6">Đã hoàn hàng</span>
                 </span>
             </div>
             <div th:if="${order.trackingCode != null}" class="mt-2">
@@ -53,7 +46,6 @@
                     <div th:each="detail : ${order.orderDetails}"
                          class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
                         <div class="d-flex align-items-center gap-3">
-                            <!-- ✅ Ảnh qua detail.variant.product.images -->
                             <img th:if="${detail.variant.product.images != null and !detail.variant.product.images.isEmpty()}"
                                  th:src="${detail.variant.product.images[0].imageUrl}"
                                  style="width:65px;height:65px;object-fit:cover" class="rounded"/>
@@ -61,7 +53,6 @@
                                  src="/images/no-image.png"
                                  style="width:65px;height:65px;object-fit:cover" class="rounded"/>
                             <div>
-                                <!-- ✅ Tên qua detail.variant.product.name -->
                                 <p class="mb-1 fw-bold" th:text="${detail.variant.product.name}"></p>
                                 <div class="d-flex gap-1 flex-wrap mb-1"
                                      th:if="${detail.variant != null}">
@@ -101,7 +92,6 @@
                 <div class="card-body">
                     <h6 class="mb-3">Tổng đơn hàng</h6>
 
-                    <!-- Tạm tính -->
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Tạm tính:</span>
                         <span th:if="${order.orderVoucher == null}"
@@ -142,27 +132,71 @@
                 </div>
             </div>
 
+            <!-- Lý do hủy/hoàn (nếu có) -->
+            <div class="card mb-3" th:if="${order.cancelReason != null}">
+                <div class="card-body">
+                    <h6 class="mb-2">
+                        <span th:if="${order.status.name() == 'CANCELLED'}">Lý do hủy đơn</span>
+                        <span th:if="${order.status.name() == 'RETURNED'}">Lý do hoàn hàng</span>
+                    </h6>
+                    <p class="mb-0 small text-muted" th:if="${order.cancelNote != null}" th:text="${order.cancelNote}"></p>
+                </div>
+            </div>
+
             <!-- Nút hành động -->
             <div class="d-grid gap-2">
-                <a th:if="${order.status.name() == 'PENDING' and !order.isPaid}"
-                   th:href="@{'/order/cancel/' + ${order.id}}"
-                   class="btn btn-outline-danger btn-lg"
-                   onclick="return confirm('Bạn có chắc muốn hủy đơn hàng này?')">
-                    Hủy đơn hàng
-                </a>
+                <div th:if="${order.status.name() == 'PENDING' and !order.isPaid}">
+                    <button type="button" class="btn btn-outline-danger btn-lg w-100"
+                            data-bs-toggle="modal" data-bs-target="#cancelOrderModal">
+                        Hủy đơn hàng
+                    </button>
+                </div>
                 <div th:if="${order.status.name() == 'PENDING' and order.isPaid}"
                      class="alert alert-warning mb-0">
                     <i class="bi bi-exclamation-triangle-fill me-2"></i>
                     <strong>Đơn hàng đã thanh toán không thể hủy trực tiếp.</strong><br/>
                     Vui lòng liên hệ Zalo <strong>0901.234.567</strong> để được hỗ trợ.
                 </div>
-                <a th:if="${order.status.name() == 'DELIVERED'}"
-                   th:href="@{'/order/confirm/' + ${order.id}}"
-                   class="btn btn-success btn-lg"
-                   onclick="return confirm('Xác nhận đã nhận hàng?')">
-                    <i class="bi bi-check-circle me-2"></i><strong>Đã nhận hàng</strong>
-                </a>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal hủy đơn — bắt chọn lý do trước khi xác nhận -->
+<div class="modal fade" id="cancelOrderModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="modal-title fw-bold text-danger">Hủy đơn hàng</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form th:action="@{'/order/cancel/' + ${order.id}}" method="post">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Vì sao bạn muốn hủy đơn?</label>
+                        <select name="reason" class="form-select" required
+                                onchange="document.getElementById('customerCancelNoteWrap').style.display = (this.value === 'OTHER') ? 'block' : 'none';">
+                            <option value="">-- Chọn lý do --</option>
+                            <option value="CUSTOMER_REQUEST">Tôi đổi ý, không muốn mua nữa</option>
+                            <option value="PAYMENT_ISSUE">Muốn đổi phương thức thanh toán</option>
+                            <option value="DUPLICATE_ORDER">Đặt nhầm / trùng đơn</option>
+                            <option value="OTHER">Lý do khác</option>
+                        </select>
+                    </div>
+                    <div class="mb-1" id="customerCancelNoteWrap" style="display:none">
+                        <label class="form-label small fw-bold">Ghi chú</label>
+                        <textarea name="note" class="form-control" rows="2"
+                                  placeholder="Cho shop biết thêm chi tiết..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-danger btn-sm"
+                            onclick="return confirm('Bạn có chắc muốn hủy đơn hàng này?')">
+                        Xác nhận hủy
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

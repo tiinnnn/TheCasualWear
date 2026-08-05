@@ -302,8 +302,9 @@
                            min="1" value="1" required/>
                 </td>
                 <td>
-                    <input type="number" name="items[${i}].unitCostPrice" class="form-control form-control-sm price-input"
-                           min="1" step="1000" value="" placeholder="Bắt buộc nhập" required/>
+                    <input type="text" class="form-control form-control-sm price-display"
+                           inputmode="numeric" autocomplete="off" placeholder="Bắt buộc nhập" required/>
+                    <input type="hidden" name="items[${i}].unitCostPrice" class="price-input" value=""/>
                 </td>
                 <td class="text-end subtotal-cell">0 đ</td>
                 <td class="text-center">
@@ -319,13 +320,23 @@
         }
 
         function attachRowListeners(tr) {
-            const qtyInput   = tr.querySelector('.qty-input');
-            const priceInput = tr.querySelector('.price-input');
+            const qtyInput     = tr.querySelector('.qty-input');
+            const priceDisplay = tr.querySelector('.price-display');
+            const priceHidden  = tr.querySelector('.price-input');
+
             qtyInput.addEventListener('input', () => recalcRow(tr));
-            priceInput.addEventListener('input', () => {
-                priceInput.classList.remove('is-invalid');
+
+            // Gõ vào ô hiển thị -> format có dấu phẩy (1,000,000), giá trị số
+            // thật (không dấu phẩy) được lưu vào input hidden để submit lên server.
+            priceDisplay.addEventListener('input', () => {
+                priceDisplay.classList.remove('is-invalid');
+                let raw = priceDisplay.value.replace(/[^\d]/g, '');
+                raw = raw.replace(/^0+(?=\d)/, ''); // bỏ số 0 thừa ở đầu
+                priceHidden.value = raw;
+                priceDisplay.value = raw ? Number(raw).toLocaleString('en-US') : '';
                 recalcRow(tr);
             });
+
             tr.querySelector('.btn-remove-row').addEventListener('click', () => {
                 tr.remove();
                 updateVisibility();
@@ -372,10 +383,11 @@
             // Đơn giá nhập bắt buộc phải > 0 cho từng dòng — không cho để 0/trống.
             let invalidRow = null;
             rows.forEach(tr => {
-                const priceInput = tr.querySelector('.price-input');
-                const price = parseFloat(priceInput.value);
+                const priceHidden  = tr.querySelector('.price-input');
+                const priceDisplay = tr.querySelector('.price-display');
+                const price = parseFloat(priceHidden.value);
                 if (!invalidRow && (isNaN(price) || price <= 0)) {
-                    invalidRow = { tr, priceInput };
+                    invalidRow = { tr, priceDisplay };
                 }
             });
 
@@ -383,8 +395,8 @@
                 e.preventDefault();
                 const sku = invalidRow.tr.querySelector('td').textContent;
                 alert(`Vui lòng nhập đơn giá nhập lớn hơn 0 cho dòng SKU "${sku}".`);
-                invalidRow.priceInput.classList.add('is-invalid');
-                invalidRow.priceInput.focus();
+                invalidRow.priceDisplay.classList.add('is-invalid');
+                invalidRow.priceDisplay.focus();
             }
         });
 

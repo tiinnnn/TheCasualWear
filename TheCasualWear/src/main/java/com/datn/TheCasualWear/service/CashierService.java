@@ -8,8 +8,8 @@ import com.datn.TheCasualWear.entity.OrderDetail;
 import com.datn.TheCasualWear.entity.OrderVoucher;
 import com.datn.TheCasualWear.entity.Product;
 import com.datn.TheCasualWear.entity.ProductVariant;
-import com.datn.TheCasualWear.entity.Shift;
 import com.datn.TheCasualWear.entity.Voucher;
+import com.datn.TheCasualWear.enums.CancelReason;
 import com.datn.TheCasualWear.enums.OrderStatus;
 import com.datn.TheCasualWear.enums.OrderType;
 import com.datn.TheCasualWear.enums.StockMovementType;
@@ -42,7 +42,6 @@ public class CashierService {
     private final OrderDetailRepository    orderDetailRepository;
     private final OrderVoucherRepository   orderVoucherRepository;
     private final StockMovementLogService  stockMovementLogService;
-    private final ShiftService             shiftService;
 
     // Cashier tự hủy đơn trong vòng bao nhiêu phút kể từ lúc tạo.
     // Admin/Owner không bị giới hạn bởi mốc thời gian này.
@@ -240,14 +239,9 @@ public class CashierService {
 
         AppUser cashier = getCurrentUser();
 
-        // Bắt buộc phải có ca đang mở mới được tạo đơn — áp dụng cho cả
-        // checkout thường lẫn checkout VNPay (vnpayReturn cũng gọi lại method này)
-        Shift shift = shiftService.getOpenShiftOrThrow(cashier);
-
         AppOrder order = new AppOrder();
         order.setOrderType(OrderType.COUNTER);
         order.setCashier(cashier);
-        order.setShift(shift);
         order.setStatus(OrderStatus.COMPLETED);
         order.setPaymentMethod(paymentMethod);
         order.setIsPaid(true);
@@ -378,7 +372,7 @@ public class CashierService {
     // ─────────────────────────────────────────────────────────────
 
     @Transactional
-    public void cancelOrder(Integer orderId) {
+    public void cancelOrder(Integer orderId, CancelReason reason, String note) {
         AppOrder order = getOwnOrderDetail(orderId); // đã kiểm tra quyền sở hữu / admin-owner
 
         if (order.getOrderType() != OrderType.COUNTER) {
@@ -386,6 +380,12 @@ public class CashierService {
         }
         if (order.getStatus() != OrderStatus.COMPLETED) {
             throw new IllegalStateException("Đơn hàng này không ở trạng thái có thể hủy!");
+        }
+        if (reason == null) {
+            throw new IllegalStateException("Vui lòng chọn lý do hủy!");
+        }
+        if (reason == CancelReason.OTHER && (note == null || note.isBlank())) {
+            throw new IllegalStateException("Vui lòng nhập ghi chú khi chọn lý do 'Khác'!");
         }
 
         if (!isCurrentUserAdminOrOwner()) {
@@ -424,6 +424,10 @@ public class CashierService {
         });
 
         order.setStatus(OrderStatus.CANCELLED);
+        order.setCancelReason(reason);
+        order.setCancelNote((note == null || note.isBlank()) ? null : note.trim());
+        order.setCancelledBy(actor);
+        order.setCancelledAt(LocalDateTime.now());
         orderRepository.save(order);
     }
 }

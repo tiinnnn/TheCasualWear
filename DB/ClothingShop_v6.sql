@@ -498,12 +498,12 @@ INSERT INTO app_order (customer_id, order_date, status, total_price, payment_met
 -- levanc (user 5) – 3 đơn: id 8-10
 INSERT INTO app_order (customer_id, order_date, status, total_price, payment_method, is_paid, shipped_at, tracking_code, shipping_address_id, billing_address_id) VALUES
 (5, DATEADD(DAY,-25,GETDATE()), N'COMPLETED', 599000, N'COD',   1, NULL,                      NULL,            4, 4),
-(5, DATEADD(DAY, -7,GETDATE()), N'DELIVERED', 599000, N'COD',   1, DATEADD(DAY,-6,GETDATE()), N'GHN-20250002', 4, 4),
+(5, DATEADD(DAY, -7,GETDATE()), N'COMPLETED', 599000, N'COD',   1, DATEADD(DAY,-6,GETDATE()), N'GHN-20250002', 4, 4),
 (5, DATEADD(DAY, -3,GETDATE()), N'CONFIRMED', 349000, N'VNPAY', 1, NULL,                      NULL,            4, 4);
 
 -- phamthid (user 6) – 2 đơn: id 11-12
 INSERT INTO app_order (customer_id, order_date, status, total_price, payment_method, is_paid, shipped_at, tracking_code, shipping_address_id, billing_address_id) VALUES
-(6, DATEADD(DAY,-10,GETDATE()), N'SHIPPING',  448000, N'COD',   0, DATEADD(DAY,-9,GETDATE()), N'GHN-20250003', 5, 5),
+(6, DATEADD(DAY,-10,GETDATE()), N'COMPLETED',  448000, N'COD',   0, DATEADD(DAY,-9,GETDATE()), N'GHN-20250003', 5, 5),
 (6, DATEADD(DAY, -1,GETDATE()), N'PENDING',   498000, N'COD',   0, NULL,                      NULL,            5, 5);
 
 -- hoangvane (user 7) – 2 đơn: id 13-14
