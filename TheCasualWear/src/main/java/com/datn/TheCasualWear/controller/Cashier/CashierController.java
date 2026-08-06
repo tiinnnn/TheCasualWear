@@ -95,16 +95,21 @@ public class CashierController {
     public List<VariantSearchResultDTO> searchVariants(@RequestParam String keyword) {
         return productVariantRepository.searchAvailableByKeyword(keyword)
                 .stream()
-                .map(v -> new VariantSearchResultDTO(
-                        v.getId(),
-                        v.getProduct().getName(),
-                        v.getSize() != null ? v.getSize().getName() : null,
-                        v.getColor() != null ? v.getColor().getName() : null,
-                        v.getSku(),
-                        v.getProduct().getPrice(),
-                        v.getStock(),
-                        cashierService.resolveImageUrl(v)
-                ))
+                .map(v -> {
+                    var sale = cashierService.getActiveSale(v);
+                    return new VariantSearchResultDTO(
+                            v.getId(),
+                            v.getProduct().getName(),
+                            v.getSize() != null ? v.getSize().getName() : null,
+                            v.getColor() != null ? v.getColor().getName() : null,
+                            v.getSku(),
+                            cashierService.getEffectivePrice(v), // MỚI: giá đã áp sale, để khớp giá lúc thêm vào giỏ
+                            v.getStock(),
+                            cashierService.resolveImageUrl(v),
+                            sale != null ? v.getProduct().getPrice() : null,
+                            sale != null ? sale.getDiscountPercent() : null
+                    );
+                })
                 .toList();
     }
 
@@ -116,7 +121,9 @@ public class CashierController {
             String sku,
             BigDecimal price,
             Integer stock,
-            String imageUrl
+            String imageUrl,
+            BigDecimal originalPrice,   // MỚI: giá gốc — null nếu không có sale
+            BigDecimal discountPercent  // MỚI: % giảm — null nếu không có sale
     ) {}
 
     // ─────────────────────────────────────────────────────────────

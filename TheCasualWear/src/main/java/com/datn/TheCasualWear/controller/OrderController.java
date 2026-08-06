@@ -13,6 +13,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -25,19 +27,22 @@ public class OrderController {
     private final CartService cartService;
     private final VoucherService voucherService;
     private final VNPayService vnPayService;
+    private final ProductSaleService productSaleService; // MỚI: badge/giá sale cho trang checkout
 
     public OrderController(OrderService orderService,
                            AppUserService appUserService,
                            AddressService addressService,
                            CartService cartService,
                            VoucherService voucherService,
-                           VNPayService vnPayService) {
+                           VNPayService vnPayService,
+                           ProductSaleService productSaleService) {
         this.orderService = orderService;
         this.appUserService = appUserService;
         this.addressService = addressService;
         this.cartService = cartService;
         this.voucherService = voucherService;
         this.vnPayService = vnPayService;
+        this.productSaleService = productSaleService;
     }
 
     private AppUser getCurrentUser(Authentication auth) {
@@ -54,7 +59,23 @@ public class OrderController {
             return "redirect:/cart";
         }
 
-        model.addAttribute("cartItems", cartService.getCartItems(user));
+        List<CartItem> cartItems = cartService.getCartItems(user);
+
+        // Giá đã áp sale cho từng dòng — khớp với totalPrice bên dưới, và
+        // khớp với cách tính unitPrice lúc snapshot vào order_detail
+        // (OrderService.placeOrder cũng gọi productSaleService.getEffectivePrice).
+        Map<Integer, BigDecimal> itemPrices = new LinkedHashMap<>();
+        for (CartItem item : cartItems) {
+            itemPrices.put(item.getId(), cartService.getEffectiveUnitPrice(item));
+        }
+        List<Integer> productIds = cartItems.stream()
+                .map(i -> i.getVariant().getProduct().getId())
+                .distinct().toList();
+        Map<Integer, ProductSale> activeSales = productSaleService.getActiveSalesByProductIds(productIds);
+
+        model.addAttribute("cartItems", cartItems);
+        model.addAttribute("itemPrices", itemPrices);
+        model.addAttribute("activeSales", activeSales);
         model.addAttribute("totalPrice", cartService.getTotalPrice(user));
         model.addAttribute("addresses", addressService.getAddressesByUser(user));
         model.addAttribute("defaultAddress", addressService.getDefaultAddress(user));

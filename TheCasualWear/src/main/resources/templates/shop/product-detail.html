@@ -118,8 +118,16 @@
             <p class="text-muted mb-1 mt-1"
                th:text="${product.category != null ? product.category.name : ''}"></p>
 
-            <h3 class="text-danger fw-bold my-3" id="displayPrice"
-                th:text="${#numbers.formatInteger(product.price, 0, 'COMMA') + ' đ'}"></h3>
+            <div th:if="${activeSale != null}" class="d-flex align-items-center gap-2 mt-3">
+                <span class="badge bg-danger"
+                      th:text="'-' + ${#numbers.formatDecimal(activeSale.discountPercent,1,0)} + '%'"></span>
+                <span class="text-muted text-decoration-line-through"
+                      th:text="${#numbers.formatInteger(product.price, 0, 'COMMA') + ' đ'}"></span>
+            </div>
+            <h3 class="text-danger fw-bold mb-3"
+                th:classappend="${activeSale != null} ? 'mt-1' : 'mt-3'"
+                id="displayPrice"
+                th:text="${#numbers.formatInteger(effectivePrice, 0, 'COMMA') + ' đ'}"></h3>
 
             <hr/>
 
@@ -177,12 +185,17 @@
     <div th:if="${relatedProducts != null and !relatedProducts.isEmpty()}" class="mt-5">
         <h4 class="mb-3 fw-bold">Sản phẩm liên quan</h4>
         <div class="row row-cols-2 row-cols-md-4 g-4">
-            <div class="col" th:each="p : ${relatedProducts}">
+            <div class="col" th:each="p : ${relatedProducts}"
+                 th:with="relSale=${relatedActiveSales != null ? relatedActiveSales.get(p.id) : null}">
                 <a th:href="@{'/product/' + ${p.id}}" class="text-decoration-none text-dark">
                     <div class="card h-100 border-0 shadow-sm"
-                         style="cursor:pointer;transition:transform 0.2s"
+                         style="cursor:pointer;transition:transform 0.2s;position:relative"
                          onmouseover="this.style.transform='translateY(-4px)'"
                          onmouseout="this.style.transform='translateY(0)'">
+                        <span th:if="${relSale != null}"
+                              class="badge bg-danger position-absolute"
+                              style="top:8px;left:8px;z-index:2"
+                              th:text="'-' + ${#numbers.formatDecimal(relSale.discountPercent,1,0)} + '%'"></span>
                         <img th:if="${p.images != null and !p.images.isEmpty()}"
                              th:src="${p.images[0].imageUrl}"
                              class="card-img-top" style="height:220px;object-fit:cover"/>
@@ -191,7 +204,15 @@
                              class="card-img-top" style="height:220px;object-fit:cover"/>
                         <div class="card-body">
                             <h6 class="card-title" th:text="${p.name}"></h6>
-                            <p class="text-danger fw-bold mb-0"
+                            <p th:if="${relSale != null}" class="mb-0">
+                                <span class="text-muted text-decoration-line-through small me-1"
+                                      th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></span>
+                                <span class="text-danger fw-bold"
+                                      th:text="${#numbers.formatInteger(
+                                            p.price - (p.price * relSale.discountPercent / 100),
+                                            0, 'COMMA') + ' đ'}"></span>
+                            </p>
+                            <p th:unless="${relSale != null}" class="text-danger fw-bold mb-0"
                                th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></p>
                         </div>
                     </div>
@@ -203,7 +224,7 @@
 
 <script th:inline="javascript">
     const variants  = /*[[${variantData}]]*/ [];
-    const basePrice = /*[[${product.price}]]*/ 0;
+    const basePrice = /*[[${effectivePrice}]]*/ 0; // đã áp sale nếu đang có sale chạy
 
     let selectedColorId = null;
     let selectedSizeId  = null;

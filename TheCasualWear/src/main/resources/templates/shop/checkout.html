@@ -96,6 +96,8 @@
 
                         <!-- ✅ Danh sách sản phẩm — dùng variant.product -->
                         <div th:each="item : ${cartItems}"
+                             th:with="unitPrice=${itemPrices.get(item.id)},
+                                      sale=${activeSales.get(item.variant.product.id)}"
                              class="d-flex justify-content-between align-items-center mb-2 gap-2">
                             <div class="d-flex align-items-center gap-2">
                                 <!-- Ảnh nhỏ -->
@@ -117,15 +119,13 @@
                                         <span th:if="${item.variant.color != null}"
                                               th:text="' / ' + ${item.variant.color.name}"></span>
                                         <span th:text="' × ' + ${item.quantity}"></span>
+                                        <span th:if="${sale != null}" class="badge bg-danger ms-1"
+                                              th:text="'-' + ${#numbers.formatDecimal(sale.discountPercent,1,0)} + '%'"></span>
                                     </small>
                                 </div>
                             </div>
-                            <!-- ✅ Giá = variant.product.price + priceAdjustment -->
+                            <!-- ✅ Giá = unitPrice đã áp sale (nếu có), × qty -->
                             <span class="small fw-semibold text-nowrap"
-                                  th:with="unitPrice=${item.variant.product.price.add(
-                                  item.variant.priceAdjustment != null
-                                  ? item.variant.priceAdjustment
-                                  : T(java.math.BigDecimal).ZERO)}"
                                   th:text="${#numbers.formatInteger(
                                   unitPrice.doubleValue() * item.quantity, 0, 'COMMA') + ' đ'}">
                         </span>

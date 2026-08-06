@@ -56,6 +56,8 @@
                                 <div class="fw-semibold" th:text="${item.productName}"></div>
                                 <small class="text-muted"
                                        th:text="${item.sizeName} + ' / ' + ${item.colorName}"></small>
+                                <span th:if="${item.isOnSale()}" class="badge bg-danger ms-1"
+                                      th:text="'-' + ${#numbers.formatDecimal(item.discountPercent,1,0)} + '%'"></span>
                             </td>
                             <td class="text-center" style="width: 110px;">
                                 <form th:action="@{/cashier/cart/update}" method="post"
@@ -72,8 +74,11 @@
                                             onclick="stepQuantity(this, 1)">+</button>
                                 </form>
                             </td>
-                            <td class="text-end"
-                                th:text="${#numbers.formatDecimal(item.lineTotal, 0, 'COMMA', 0, 'POINT')}"></td>
+                            <td class="text-end">
+                                <div th:if="${item.isOnSale()}" class="text-muted text-decoration-line-through small"
+                                     th:text="${#numbers.formatDecimal(item.originalPrice * item.quantity, 0, 'COMMA', 0, 'POINT')}"></div>
+                                <div th:text="${#numbers.formatDecimal(item.lineTotal, 0, 'COMMA', 0, 'POINT')}"></div>
+                            </td>
                             <td>
                                 <form th:action="@{/cashier/cart/remove}" method="post">
                                     <input type="hidden" name="variantId" th:value="${item.variantId}">
@@ -249,7 +254,13 @@
                         </div>
                     </div>
                     <div class="text-end">
-                        <div class="fw-semibold">${formatMoney(item.price)} đ</div>
+                        ${item.discountPercent
+                            ? `<div class="small text-muted text-decoration-line-through">${formatMoney(item.originalPrice)} đ</div>
+                               <div class="fw-semibold text-danger">${formatMoney(item.price)} đ
+                                   <span class="badge bg-danger">-${Number(item.discountPercent).toFixed(0)}%</span>
+                               </div>`
+                            : `<div class="fw-semibold">${formatMoney(item.price)} đ</div>`
+                        }
                         <button type="button" class="btn btn-sm btn-outline-primary mt-1"
                                 onclick="addToCart(${item.variantId})">
                             Thêm

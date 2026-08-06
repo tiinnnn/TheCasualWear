@@ -36,6 +36,7 @@ public class OrderService {
     private final NotificationService       notificationService;
     private final StockMovementLogService   stockMovementLogService;
     private final AppUserRepository         appUserRepository;
+    private final ProductSaleService        productSaleService; // MỚI: snapshot giá đã áp sale vào order_detail
 
     // Lấy admin/owner đang đăng nhập cho các thao tác phía admin (cancelOrderByAdmin,
     // returnOrder). Trả null nếu không xác định được thay vì throw, vì các method
@@ -150,7 +151,10 @@ public class OrderService {
                                 + ") chỉ còn " + variant.getStock() + " trong kho!");
             }
 
-            BigDecimal unitPrice = product.getPrice();
+            // Giá đã áp sale (nếu sản phẩm đang có sale chạy tại thời điểm đặt
+            // hàng) — snapshot vào order_detail.price, không đổi kể cả khi sale
+            // hết hạn/thay đổi sau đó.
+            BigDecimal unitPrice = productSaleService.getEffectivePrice(product);
 
             OrderDetail detail = new OrderDetail();
             detail.setOrder(order);

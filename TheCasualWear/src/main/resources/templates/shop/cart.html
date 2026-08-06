@@ -25,7 +25,9 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="item : ${cartItems}">
+                    <tr th:each="item : ${cartItems}"
+                        th:with="unitPrice=${itemPrices.get(item.id)},
+                                 sale=${activeSales.get(item.variant.product.id)}">
                         <td>
                             <div class="d-flex align-items-center gap-3">
                                 <!-- ✅ Ảnh qua item.variant.product.images -->
@@ -48,24 +50,18 @@
                                         <span th:if="${item.variant.sku != null}"
                                               class="text-muted small"
                                               th:text="'SKU: ' + ${item.variant.sku}"></span>
+                                        <span th:if="${sale != null}"
+                                              class="badge bg-danger"
+                                              th:text="'-' + ${#numbers.formatDecimal(sale.discountPercent,1,0)} + '%'"></span>
                                     </div>
                                 </div>
                             </div>
                         </td>
-                        <!-- ✅ Giá = variant.product.price + variant.priceAdjustment -->
+                        <!-- ✅ Đơn giá — đã áp sale nếu đang có sale chạy -->
                         <td>
-                            <span th:with="unitPrice=${item.variant.product.price.add(
-                                    item.variant.priceAdjustment != null
-                                    ? item.variant.priceAdjustment : T(java.math.BigDecimal).ZERO)}"
-                                  th:text="${#numbers.formatInteger(unitPrice, 0, 'COMMA') + ' đ'}"></span>
-                            <div th:if="${item.variant.priceAdjustment != null
-                                     and item.variant.priceAdjustment.compareTo(T(java.math.BigDecimal).ZERO) != 0}">
-                                <small class="text-muted"
-                                       th:text="${item.variant.priceAdjustment.compareTo(T(java.math.BigDecimal).ZERO) > 0
-                                             ? '(+' + #numbers.formatInteger(item.variant.priceAdjustment, 0, 'COMMA') + ' đ)'
-                                             : '(' + #numbers.formatInteger(item.variant.priceAdjustment, 0, 'COMMA') + ' đ)'}">
-                                </small>
-                            </div>
+                            <span th:if="${sale != null}" class="text-muted text-decoration-line-through small d-block"
+                                  th:text="${#numbers.formatInteger(item.variant.product.price, 0, 'COMMA') + ' đ'}"></span>
+                            <span th:text="${#numbers.formatInteger(unitPrice, 0, 'COMMA') + ' đ'}"></span>
                         </td>
                         <!-- Số lượng -->
                         <td>
@@ -79,11 +75,8 @@
                                        onchange="this.form.submit()"/>
                             </form>
                         </td>
-                        <!-- ✅ Thành tiền = (variant.product.price + adjustment) × qty -->
+                        <!-- ✅ Thành tiền = unitPrice (đã áp sale) × qty -->
                         <td class="text-danger fw-bold"
-                            th:with="unitPrice=${item.variant.product.price.add(
-                                item.variant.priceAdjustment != null
-                                ? item.variant.priceAdjustment : T(java.math.BigDecimal).ZERO)}"
                             th:text="${#numbers.formatInteger(unitPrice.doubleValue() * item.quantity, 0, 'COMMA') + ' đ'}">
                         </td>
                         <td>

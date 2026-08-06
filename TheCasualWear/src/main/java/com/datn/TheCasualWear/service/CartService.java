@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -16,6 +17,7 @@ public class CartService {
     private final CartRepository           cartRepository;
     private final CartItemRepository       cartItemRepository;
     private final ProductVariantRepository variantRepository;
+    private final ProductSaleService       productSaleService; // MỚI: tính giá theo sale
 
     // Lấy hoặc tạo mới cart cho user
     public Cart getOrCreateCart(AppUser user) {
@@ -119,15 +121,20 @@ public class CartService {
         cartItemRepository.deleteByCartId(cart.getId());
     }
 
-    // Tính tổng tiền giỏ hàng — mọi variant của 1 sản phẩm dùng chung giá bán
+    // Giá bán thực tế của 1 item trong giỏ — đã áp sale nếu đang chạy.
+    // Đây là nơi DUY NHẤT nên gọi khi cần "giá khách phải trả" cho 1 cart
+    // item, để trang giỏ hàng / checkout / order đều dùng chung 1 nguồn.
+    public BigDecimal getEffectiveUnitPrice(CartItem item) {
+        return productSaleService.getEffectivePrice(item.getVariant().getProduct());
+    }
+
+    // Tính tổng tiền giỏ hàng — mọi variant của 1 sản phẩm dùng chung giá
+    // bán, đã áp sale (nếu sản phẩm đang có sale chạy)
     public long getTotalPrice(AppUser user) {
         return getCartItems(user).stream()
-                .mapToLong(item -> {
-                    java.math.BigDecimal price = item.getVariant().getProduct().getPrice();
-                    return price
-                            .multiply(java.math.BigDecimal.valueOf(item.getQuantity()))
-                            .longValue();
-                })
+                .mapToLong(item -> getEffectiveUnitPrice(item)
+                        .multiply(BigDecimal.valueOf(item.getQuantity()))
+                        .longValue())
                 .sum();
     }
 

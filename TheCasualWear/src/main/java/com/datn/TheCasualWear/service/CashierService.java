@@ -2,13 +2,7 @@ package com.datn.TheCasualWear.service;
 
 import com.datn.TheCasualWear.config.ResourceNotFoundException;
 import com.datn.TheCasualWear.dto.CounterCartItemDTO;
-import com.datn.TheCasualWear.entity.AppOrder;
-import com.datn.TheCasualWear.entity.AppUser;
-import com.datn.TheCasualWear.entity.OrderDetail;
-import com.datn.TheCasualWear.entity.OrderVoucher;
-import com.datn.TheCasualWear.entity.Product;
-import com.datn.TheCasualWear.entity.ProductVariant;
-import com.datn.TheCasualWear.entity.Voucher;
+import com.datn.TheCasualWear.entity.*;
 import com.datn.TheCasualWear.enums.CancelReason;
 import com.datn.TheCasualWear.enums.OrderStatus;
 import com.datn.TheCasualWear.enums.OrderType;
@@ -42,6 +36,8 @@ public class CashierService {
     private final OrderDetailRepository    orderDetailRepository;
     private final OrderVoucherRepository   orderVoucherRepository;
     private final StockMovementLogService  stockMovementLogService;
+    private final ProductSaleService       productSaleService; // MỚI: giá sale áp cho cả bán tại quầy
+    private final ShiftService       shiftService;
 
     // Cashier tự hủy đơn trong vòng bao nhiêu phút kể từ lúc tạo.
     // Admin/Owner không bị giới hạn bởi mốc thời gian này.
@@ -75,6 +71,23 @@ public class CashierService {
     }
 
     // ─────────────────────────────────────────────────────────────
+    // GIÁ BÁN — đã áp sale nếu sản phẩm đang có sale chạy. Dùng chung
+    // cho cả buildCartItem() (thêm vào giỏ) và ô tìm kiếm autocomplete
+    // ở CashierController, để giá hiển thị lúc tìm và giá lúc thêm
+    // vào giỏ luôn khớp nhau.
+    // ─────────────────────────────────────────────────────────────
+
+    public BigDecimal getEffectivePrice(ProductVariant variant) {
+        return productSaleService.getEffectivePrice(variant.getProduct());
+    }
+
+    // Sale đang chạy của sản phẩm (nếu có) — dùng để hiện badge "-X%" +
+    // giá gốc gạch ngang cho cashier, cả lúc tìm kiếm lẫn trong giỏ tạm.
+    public ProductSale getActiveSale(ProductVariant variant) {
+        return productSaleService.getActiveSale(variant.getProduct()).orElse(null);
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // XÂY DỰNG ITEM GIỎ TẠM
     // ─────────────────────────────────────────────────────────────
 
@@ -91,7 +104,8 @@ public class CashierService {
                             + "' chỉ còn " + variant.getStock() + " trong kho!");
         }
 
-        BigDecimal unitPrice = variant.getProduct().getPrice();
+        BigDecimal unitPrice = getEffectivePrice(variant);
+        ProductSale activeSale = getActiveSale(variant);
 
         return new CounterCartItemDTO(
                 variant.getId(),
@@ -102,7 +116,9 @@ public class CashierService {
                 unitPrice,
                 quantity,
                 variant.getStock(),
-                resolveImageUrl(variant)
+                resolveImageUrl(variant),
+                activeSale != null ? variant.getProduct().getPrice() : null,
+                activeSale != null ? activeSale.getDiscountPercent() : null
         );
     }
 
@@ -222,6 +238,11 @@ public class CashierService {
     // Toàn bộ nằm trong 1 @Transactional:
     //   trừ kho → validate & trừ usedCount voucher → save order
     // Nếu bất kỳ bước nào fail → rollback toàn bộ, không mất kho / lượt voucher.
+    //
+    // Giá lưu vào order_detail lấy từ item.getUnitPrice() — đã được
+    // buildCartItem() tính theo giá sale ngay khi thêm vào giỏ tạm, nên
+    // ở đây không cần tính lại (và cũng không nên: giữ đúng giá lúc
+    // khách được báo giá, tránh lệch nếu sale hết hạn giữa lúc thao tác).
     // ─────────────────────────────────────────────────────────────
 
     @Transactional
@@ -244,6 +265,8 @@ public class CashierService {
         order.setIsPaid(true);
         order.setOrderDate(LocalDateTime.now());
         order.setDeliveredAt(LocalDateTime.now());
+        Shift shift = shiftService.getOpenShiftOrThrow(cashier);
+        order.setShift(shift);
 
         if (customerId != null) {
             AppUser customer = appUserRepository.findById(customerId)

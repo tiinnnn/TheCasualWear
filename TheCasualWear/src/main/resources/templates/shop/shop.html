@@ -1,105 +1,242 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head><title>Shop</title></head>
+<head>
+    <title>Shop</title>
+    <style>
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(18px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .shop-title small { transition: color .2s ease; }
+
+        /* ===== Thanh tìm kiếm + sắp xếp ===== */
+        .shop-toolbar .form-control:focus,
+        .shop-toolbar .form-select:focus {
+            border-color: #ff5a36;
+            box-shadow: 0 0 0 .18rem rgba(255,90,54,.16);
+        }
+        .shop-toolbar .btn-dark {
+            background: #000;
+            border-color: #000;
+            transition: background-color .22s ease, transform .15s ease, box-shadow .22s ease;
+        }
+        .shop-toolbar .btn-dark:hover {
+            background: #ff5a36;
+            border-color: #ff5a36;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 14px rgba(255,90,54,.35);
+        }
+        .shop-toolbar .btn-outline-secondary {
+            transition: all .2s ease;
+        }
+        .shop-toolbar .btn-outline-secondary:hover {
+            background: #000;
+            border-color: #000;
+            color: #fff;
+            transform: rotate(90deg);
+        }
+
+        /* ===== Product card ===== */
+        .product-card-link {
+            display: block;
+            opacity: 0;
+            animation: fadeInUp .5s ease forwards;
+        }
+        .product-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 14px;
+            transition: transform .3s ease, box-shadow .3s ease;
+        }
+        .product-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 16px 30px rgba(0,0,0,.14) !important;
+        }
+        .product-card .img-wrap {
+            overflow: hidden;
+            height: 280px;
+        }
+        .product-card .img-wrap img {
+            height: 280px;
+            width: 100%;
+            object-fit: cover;
+            transition: transform .5s ease;
+        }
+        .product-card:hover .img-wrap img {
+            transform: scale(1.08);
+        }
+        .product-card .card-title {
+            transition: color .2s ease;
+        }
+        .product-card:hover .card-title {
+            color: #ff5a36;
+        }
+        .product-card .price-tag {
+            color: #ff5a36 !important;
+        }
+        .product-card .category-badge {
+            display: inline-block;
+            font-size: .72rem;
+            font-weight: 600;
+            letter-spacing: .02em;
+            color: #ff5a36;
+            background: #fff0eb;
+            border-radius: 999px;
+            padding: 2px 10px;
+            margin-bottom: 6px;
+        }
+        /* ===== Sale badge + giá gạch ngang ===== */
+        .product-card .sale-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 2;
+            background: #ff5a36;
+            color: #fff;
+            font-size: .72rem;
+            font-weight: 700;
+            border-radius: 999px;
+            padding: 3px 10px;
+            box-shadow: 0 2px 8px rgba(255,90,54,.35);
+        }
+        .product-card .price-original {
+            font-size: .8rem;
+            color: #999;
+            text-decoration: line-through;
+            margin-right: 6px;
+        }
+
+        /* ===== Empty state ===== */
+        .empty-state i {
+            font-size: 2.6rem;
+            color: #ff5a36;
+            animation: fadeInUp .4s ease;
+        }
+        .empty-state .btn-outline-dark {
+            transition: all .2s ease;
+        }
+        .empty-state .btn-outline-dark:hover {
+            background: #ff5a36;
+            border-color: #ff5a36;
+            color: #fff;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
 <body>
 <div class="container">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="fw-bold">
-      Shop
-      <small class="text-muted fs-6"
-             th:text="'(' + ${totalItems} + ' sản phẩm)'"></small>
-    </h4>
-  </div>
-
-  <!-- Search + Sort -->
-  <form th:action="@{/shop}" method="get" class="d-flex gap-2 mb-4">
-    <input type="hidden" name="category" th:value="${selectedCategory}"
-           th:if="${selectedCategory != null}"/>
-    <input type="text" name="keyword" th:value="${keyword}"
-           class="form-control" placeholder="Tìm kiếm sản phẩm..."/>
-    <select name="sort" class="form-select w-auto" onchange="this.form.submit()">
-      <option value="newest"
-              th:selected="${sort == 'newest' or sort == null}">Mới nhất</option>
-      <option value="price_asc"
-              th:selected="${sort == 'price_asc'}">Giá: thấp → cao</option>
-      <option value="price_desc"
-              th:selected="${sort == 'price_desc'}">Giá: cao → thấp</option>
-    </select>
-    <button type="submit" class="btn btn-dark">Tìm</button>
-    <!-- Reset filter -->
-    <a th:if="${keyword != null or selectedCategory != null}"
-       th:href="@{/shop}" class="btn btn-outline-secondary">✕</a>
-  </form>
-
-  <!-- Danh sách sản phẩm -->
-  <div th:if="${#lists.isEmpty(products)}" class="text-center py-5">
-    <p class="text-muted">Không tìm thấy sản phẩm nào!</p>
-    <a th:href="@{/shop}" class="btn btn-outline-dark">Xem tất cả</a>
-  </div>
-
-  <div class="row row-cols-2 row-cols-md-4 g-4"
-       th:unless="${#lists.isEmpty(products)}">
-    <div class="col" th:each="p : ${products}">
-      <a th:href="@{'/product/' + ${p.id}}"
-         class="text-decoration-none text-dark">
-        <div class="card h-100 border-0 shadow-sm"
-             style="cursor:pointer;transition:transform 0.2s"
-             onmouseover="this.style.transform='translateY(-4px)'"
-             onmouseout="this.style.transform='translateY(0)'">
-          <img th:if="${p.images != null and !p.images.isEmpty()}"
-               th:src="${p.images[0].imageUrl}"
-               class="card-img-top"
-               style="height:280px;object-fit:cover"/>
-          <img th:unless="${p.images != null and !p.images.isEmpty()}"
-               src="/images/no-image.png"
-               class="card-img-top"
-               style="height:280px;object-fit:cover"/>
-          <div class="card-body">
-            <h6 class="card-title" th:text="${p.name}"></h6>
-            <p class="text-muted small mb-1"
-               th:text="${p.category != null ? p.category.name : ''}"></p>
-            <p class="text-danger fw-bold mb-0"
-               th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></p>
-          </div>
-        </div>
-      </a>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold shop-title">
+            Shop
+            <small class="text-muted fs-6"
+                   th:text="'(' + ${totalItems} + ' sản phẩm)'"></small>
+        </h4>
     </div>
-  </div>
 
-  <!-- Pagination -->
-  <div th:if="${totalPages > 1}"
-       class="d-flex justify-content-center mt-4">
-    <nav>
-      <ul class="pagination">
-        <li class="page-item"
-            th:classappend="${currentPage == 0} ? 'disabled'">
-          <a class="page-link"
-             th:href="@{/shop(page=${currentPage-1},
+    <!-- Search + Sort -->
+    <form th:action="@{/shop}" method="get" class="d-flex gap-2 mb-4 shop-toolbar">
+        <input type="hidden" name="category" th:value="${selectedCategory}"
+               th:if="${selectedCategory != null}"/>
+        <input type="text" name="keyword" th:value="${keyword}"
+               class="form-control" placeholder="Tìm kiếm sản phẩm..."/>
+        <select name="sort" class="form-select w-auto" onchange="this.form.submit()">
+            <option value="newest"
+                    th:selected="${sort == 'newest' or sort == null}">Mới nhất</option>
+            <option value="price_asc"
+                    th:selected="${sort == 'price_asc'}">Giá: thấp → cao</option>
+            <option value="price_desc"
+                    th:selected="${sort == 'price_desc'}">Giá: cao → thấp</option>
+        </select>
+        <button type="submit" class="btn btn-dark">Tìm</button>
+        <!-- Reset filter -->
+        <a th:if="${keyword != null or selectedCategory != null}"
+           th:href="@{/shop}" class="btn btn-outline-secondary">✕</a>
+    </form>
+
+    <!-- Danh sách sản phẩm -->
+    <div th:if="${#lists.isEmpty(products)}" class="text-center py-5 empty-state">
+        <i class="bi bi-emoji-frown d-block mb-3"></i>
+        <p class="text-muted">Không tìm thấy sản phẩm nào!</p>
+        <a th:href="@{/shop}" class="btn btn-outline-dark">Xem tất cả</a>
+    </div>
+
+    <div class="row row-cols-2 row-cols-md-4 g-4"
+         th:unless="${#lists.isEmpty(products)}">
+        <div class="col" th:each="p, iterStat : ${products}"
+             th:with="sale=${activeSales.get(p.id)}">
+            <a th:href="@{'/product/' + ${p.id}}"
+               class="text-decoration-none text-dark product-card-link"
+               th:style="'animation-delay:' + ${iterStat.index % 8 * 0.06} + 's'">
+                <div class="card product-card h-100 border-0 shadow-sm" style="cursor:pointer">
+                    <span th:if="${sale != null}" class="sale-badge"
+                          th:text="'-' + ${#numbers.formatDecimal(sale.discountPercent,1,0)} + '%'"></span>
+                    <div class="img-wrap">
+                        <img th:if="${p.images != null and !p.images.isEmpty()}"
+                             th:src="${p.images[0].imageUrl}"
+                             class="card-img-top"/>
+                        <img th:unless="${p.images != null and !p.images.isEmpty()}"
+                             src="/images/no-image.png"
+                             class="card-img-top"/>
+                    </div>
+                    <div class="card-body">
+            <span th:if="${p.category != null}"
+                  class="category-badge"
+                  th:text="${p.category.name}"></span>
+                        <h6 class="card-title mb-1" th:text="${p.name}"></h6>
+
+                        <!-- Còn sale: giá gốc gạch ngang + giá sau giảm -->
+                        <p th:if="${sale != null}" class="mb-0">
+                            <span class="price-original"
+                                  th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></span>
+                            <span class="price-tag fw-bold"
+                                  th:text="${#numbers.formatInteger(
+                                        p.price - (p.price * sale.discountPercent / 100),
+                                        0, 'COMMA') + ' đ'}"></span>
+                        </p>
+                        <!-- Không sale: giá thường -->
+                        <p th:unless="${sale != null}" class="price-tag fw-bold mb-0"
+                           th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></p>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div th:if="${totalPages > 1}"
+         class="d-flex justify-content-center mt-4">
+        <nav>
+            <ul class="pagination">
+                <li class="page-item"
+                    th:classappend="${currentPage == 0} ? 'disabled'">
+                    <a class="page-link"
+                       th:href="@{/shop(page=${currentPage-1},
                                        keyword=${keyword},
                                        sort=${sort},
                                        category=${selectedCategory})}">←</a>
-        </li>
-        <li th:each="i : ${#numbers.sequence(0, totalPages-1)}"
-            class="page-item"
-            th:classappend="${i == currentPage} ? 'active'">
-          <a class="page-link"
-             th:href="@{/shop(page=${i},
+                </li>
+                <li th:each="i : ${#numbers.sequence(0, totalPages-1)}"
+                    class="page-item"
+                    th:classappend="${i == currentPage} ? 'active'">
+                    <a class="page-link"
+                       th:href="@{/shop(page=${i},
                                        keyword=${keyword},
                                        sort=${sort},
                                        category=${selectedCategory})}"
-             th:text="${i + 1}"></a>
-        </li>
-        <li class="page-item"
-            th:classappend="${currentPage == totalPages-1} ? 'disabled'">
-          <a class="page-link"
-             th:href="@{/shop(page=${currentPage+1},
+                       th:text="${i + 1}"></a>
+                </li>
+                <li class="page-item"
+                    th:classappend="${currentPage == totalPages-1} ? 'disabled'">
+                    <a class="page-link"
+                       th:href="@{/shop(page=${currentPage+1},
                                        keyword=${keyword},
                                        sort=${sort},
                                        category=${selectedCategory})}">→</a>
-        </li>
-      </ul>
-    </nav>
-  </div>
+                </li>
+            </ul>
+        </nav>
+    </div>
 </div>
 </body>
 </html>

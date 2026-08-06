@@ -131,6 +131,25 @@
             font-weight: 700;
             color: #c0392b;
         }
+        .p-card__img-wrap { position: relative; }
+        .p-card__sale-badge {
+            position: absolute;
+            top: 8px; left: 8px;
+            z-index: 2;
+            background: #c0392b;
+            color: #fff;
+            font-size: .68rem;
+            font-weight: 700;
+            border-radius: 999px;
+            padding: 2px 9px;
+        }
+        .p-card__price-original {
+            font-size: .74rem;
+            color: #999;
+            text-decoration: line-through;
+            margin-right: 5px;
+            font-weight: 500;
+        }
 
         /* ── COLLECTION CARD ── */
         .col-card {
@@ -196,9 +215,12 @@
             <a th:href="@{/shop(sort='newest')}">Xem tất cả</a>
         </div>
         <div class="row row-cols-2 row-cols-md-4 g-3">
-            <div class="col" th:each="p : ${newestProducts}">
+            <div class="col" th:each="p : ${newestProducts}"
+                 th:with="sale=${activeSales != null ? activeSales.get(p.id) : null}">
                 <a th:href="@{'/product/' + ${p.id}}" class="p-card">
                     <div class="p-card__img-wrap">
+                        <span th:if="${sale != null}" class="p-card__sale-badge"
+                              th:text="'-' + ${#numbers.formatDecimal(sale.discountPercent,1,0)} + '%'"></span>
                         <img th:if="${p.images != null and !p.images.isEmpty()}"
                              th:src="${p.images[0].imageUrl}" th:alt="${p.name}"/>
                         <img th:unless="${p.images != null and !p.images.isEmpty()}"
@@ -208,7 +230,13 @@
                         <p class="p-card__cat"
                            th:text="${p.category != null ? p.category.name : ''}"></p>
                         <p class="p-card__name" th:text="${p.name}"></p>
-                        <p class="p-card__price"
+                        <p th:if="${sale != null}" class="p-card__price mb-0">
+                            <span class="p-card__price-original"
+                                  th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></span>
+                            <span th:text="${#numbers.formatInteger(
+                                    p.price - (p.price * sale.discountPercent / 100), 0, 'COMMA') + ' đ'}"></span>
+                        </p>
+                        <p th:unless="${sale != null}" class="p-card__price"
                            th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></p>
                     </div>
                 </a>
@@ -228,9 +256,12 @@
                    th:text="'Xem thêm ' + ${entry.key}"></a>
             </div>
             <div class="row row-cols-2 row-cols-md-4 g-3">
-                <div class="col" th:each="p : ${entry.value}">
+                <div class="col" th:each="p : ${entry.value}"
+                     th:with="sale=${activeSales != null ? activeSales.get(p.id) : null}">
                     <a th:href="@{'/product/' + ${p.id}}" class="p-card">
                         <div class="p-card__img-wrap">
+                            <span th:if="${sale != null}" class="p-card__sale-badge"
+                                  th:text="'-' + ${#numbers.formatDecimal(sale.discountPercent,1,0)} + '%'"></span>
                             <img th:if="${p.images != null and !p.images.isEmpty()}"
                                  th:src="${p.images[0].imageUrl}" th:alt="${p.name}"/>
                             <img th:unless="${p.images != null and !p.images.isEmpty()}"
@@ -240,7 +271,13 @@
                             <p class="p-card__cat"
                                th:text="${p.category != null ? p.category.name : ''}"></p>
                             <p class="p-card__name" th:text="${p.name}"></p>
-                            <p class="p-card__price"
+                            <p th:if="${sale != null}" class="p-card__price mb-0">
+                                <span class="p-card__price-original"
+                                      th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></span>
+                                <span th:text="${#numbers.formatInteger(
+                                        p.price - (p.price * sale.discountPercent / 100), 0, 'COMMA') + ' đ'}"></span>
+                            </p>
+                            <p th:unless="${sale != null}" class="p-card__price"
                                th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></p>
                         </div>
                     </a>

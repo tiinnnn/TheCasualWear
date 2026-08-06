@@ -46,6 +46,12 @@ public class Product {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductImage> images = new ArrayList<>();
 
+    // MỚI: lịch sử các đợt sale của sản phẩm này (có thể có nhiều đợt
+    // theo thời gian, chỉ 1 đợt được coi là "đang chạy" tại 1 thời điểm —
+    // xem ProductSaleService.getActiveSale())
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProductSale> sales = new ArrayList<>();
+
     @ManyToMany(mappedBy = "products", fetch = FetchType.LAZY)
     private Set<Collection> collections = new HashSet<>();
 }

@@ -1,10 +1,12 @@
 package com.datn.TheCasualWear.controller;
 
 import com.datn.TheCasualWear.entity.Product;
+import com.datn.TheCasualWear.entity.ProductSale;
 import com.datn.TheCasualWear.entity.ProductVariant;
 import com.datn.TheCasualWear.entity.VariantImage;
 import com.datn.TheCasualWear.repository.CategoryRepository;
 import com.datn.TheCasualWear.service.CollectionService;
+import com.datn.TheCasualWear.service.ProductSaleService;
 import com.datn.TheCasualWear.service.ProductService;
 import com.datn.TheCasualWear.service.ProductVariantService;
 import com.datn.TheCasualWear.service.WishlistService;
@@ -26,11 +28,13 @@ public class ShopController {
     private final WishlistService       wishlistService;
     private final CollectionService     collectionService;
     private final CategoryRepository    categoryRepository;
+    private final ProductSaleService    productSaleService; // MỚI: giá/badge sale cho trang shop
 
     @GetMapping("/")
     public String homePage(Model model) {
         // San pham moi nhat
-        model.addAttribute("newestProducts", productService.getNewestProducts());
+        List<Product> newestProducts = productService.getNewestProducts();
+        model.addAttribute("newestProducts", newestProducts);
 
         // Collections dang active
         model.addAttribute("collections", collectionService.getActiveCollections());
@@ -47,6 +51,16 @@ public class ShopController {
             }
         }
         model.addAttribute("productsByCategory", productsByCategory);
+
+        // MỚI: gom id của TẤT CẢ sản phẩm đang hiển thị trên trang (mới nhất +
+        // theo từng danh mục) để lấy sale đang chạy trong 1 lần query, tránh
+        // N+1. Template dùng activeSales.get(product.id) để hiện badge/giá sale.
+        List<Integer> allProductIds = new ArrayList<>();
+        newestProducts.forEach(p -> allProductIds.add(p.getId()));
+        productsByCategory.values().forEach(list ->
+                list.forEach(p -> allProductIds.add(p.getId())));
+        model.addAttribute("activeSales",
+                productSaleService.getActiveSalesByProductIds(allProductIds));
 
         model.addAttribute("view", "shop/home");
         return "layouts/shop-layout";
@@ -66,6 +80,11 @@ public class ShopController {
         model.addAttribute("currentPage",      page);
         model.addAttribute("totalPages",       productPage.getTotalPages());
         model.addAttribute("totalItems",       productPage.getTotalElements());
+
+        // MỚI: sale đang chạy cho các sản phẩm trong trang này
+        List<Integer> productIds = productPage.getContent().stream().map(Product::getId).toList();
+        model.addAttribute("activeSales", productSaleService.getActiveSalesByProductIds(productIds));
+
         model.addAttribute("view", "shop/shop");
         return "layouts/shop-layout";
     }
@@ -122,6 +141,12 @@ public class ShopController {
         model.addAttribute("variantData", variantData); // dùng trong JS
         model.addAttribute("variants",    variants);    // dùng trong Thymeleaf
 
+        // MỚI: giá đã áp sale (nếu đang có sale chạy) + chính đợt sale đó,
+        // để template hiển thị giá gạch ngang / badge "-X%" / đếm ngược.
+        Optional<ProductSale> activeSale = productSaleService.getActiveSale(product);
+        model.addAttribute("activeSale", activeSale.orElse(null));
+        model.addAttribute("effectivePrice", productSaleService.getEffectivePrice(product));
+
         // Wishlist: check nếu user đã đăng nhập (loại trừ anonymousUser)
         boolean isWishlisted = auth != null
                 && auth.isAuthenticated()
@@ -130,12 +155,17 @@ public class ShopController {
         model.addAttribute("isWishlisted", isWishlisted);
 
         if (product.getCategory() != null) {
-            model.addAttribute("relatedProducts",
-                    productService.getShopProducts(null, "newest",
-                                    product.getCategory().getId(), 0)
-                            .getContent().stream()
-                            .filter(p -> !p.getId().equals(id))
-                            .limit(4).toList());
+            List<Product> relatedProducts = productService.getShopProducts(null, "newest",
+                            product.getCategory().getId(), 0)
+                    .getContent().stream()
+                    .filter(p -> !p.getId().equals(id))
+                    .limit(4).toList();
+            model.addAttribute("relatedProducts", relatedProducts);
+
+            // Sale đang chạy cho các sản phẩm liên quan
+            List<Integer> relatedIds = relatedProducts.stream().map(Product::getId).toList();
+            model.addAttribute("relatedActiveSales",
+                    productSaleService.getActiveSalesByProductIds(relatedIds));
         }
 
         model.addAttribute("view", "shop/product-detail");

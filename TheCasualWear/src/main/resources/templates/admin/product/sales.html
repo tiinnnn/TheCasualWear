@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Sale sản phẩm</title></head>
+<body>
+<div th:fragment="content">
+
+    <!-- ── HEADER ── -->
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item">
+                        <a th:href="@{/admin/products}">Sản phẩm</a>
+                    </li>
+                    <li class="breadcrumb-item active" th:text="${product.name}"></li>
+                </ol>
+            </nav>
+            <h4 class="fw-bold mb-0" th:text="'Sale — ' + ${product.name}"></h4>
+            <small class="text-muted">
+                Giá gốc:
+                <span class="fw-semibold text-danger"
+                      th:text="${#numbers.formatInteger(product.price,0,'COMMA') + ' đ'}"></span>
+            </small>
+        </div>
+        <div class="d-flex gap-2">
+            <a th:href="@{'/admin/products/' + ${product.id} + '/variants'}"
+               class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-boxes me-1"></i>Biến thể
+            </a>
+            <a th:href="@{/admin/products}" class="btn btn-sm btn-outline-dark">← Danh sách</a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- CỘT TRÁI — Danh sách các đợt sale -->
+        <div class="col-md-8">
+
+            <div th:if="${#lists.isEmpty(sales)}" class="text-center py-5 text-muted border rounded">
+                <i class="bi bi-tag" style="font-size:3rem"></i>
+                <p class="mt-2 mb-0">Sản phẩm chưa có đợt sale nào.</p>
+                <p class="small">Dùng form bên phải để tạo đợt sale đầu tiên!</p>
+            </div>
+
+            <div class="table-responsive" th:unless="${#lists.isEmpty(sales)}">
+                <table class="table table-sm table-hover align-middle border rounded">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Giảm giá</th>
+                        <th>Giá sau giảm</th>
+                        <th>Bắt đầu</th>
+                        <th>Kết thúc</th>
+                        <th>Trạng thái</th>
+                        <th style="width:110px"></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="s : ${sales}">
+                        <td class="fw-semibold text-danger"
+                            th:text="'-' + ${#numbers.formatDecimal(s.discountPercent,1,2)} + '%'"></td>
+                        <td th:text="${#numbers.formatInteger(
+                                product.price - (product.price * s.discountPercent / 100),
+                                0,'COMMA') + ' đ'}"></td>
+                        <td class="small" th:text="${#temporals.format(s.startDate, 'HH:mm dd/MM/yyyy')}"></td>
+                        <td class="small" th:text="${#temporals.format(s.endDate, 'HH:mm dd/MM/yyyy')}"></td>
+                        <td>
+                            <span th:if="${s.currentlyRunning}" class="badge bg-success">Đang chạy</span>
+                            <span th:if="${!s.currentlyRunning and s.isActive}" class="badge bg-secondary">Chưa/hết hạn</span>
+                            <span th:if="${!s.isActive}" class="badge bg-light text-muted border">Đã tắt</span>
+                        </td>
+                        <td class="text-end">
+                            <a th:if="${s.isActive}"
+                               th:href="@{'/admin/products/' + ${product.id} + '/sales/deactivate/' + ${s.id}}"
+                               class="btn btn-sm btn-outline-warning"
+                               onclick="return confirm('Tắt đợt sale này?')" title="Tắt">
+                                <i class="bi bi-pause-circle"></i>
+                            </a>
+                            <a th:href="@{'/admin/products/' + ${product.id} + '/sales/delete/' + ${s.id}}"
+                               class="btn btn-sm btn-outline-danger"
+                               onclick="return confirm('Xóa hẳn đợt sale này?')" title="Xóa">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- CỘT PHẢI — Form tạo đợt sale mới -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm sticky-md-top" style="top:16px;z-index:100">
+                <div class="card-header bg-dark text-white">
+                    <span class="fw-bold"><i class="bi bi-plus-circle me-2"></i>Tạo đợt sale mới</span>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{'/admin/products/' + ${product.id} + '/sales/add'}" method="post">
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                Giảm giá (%) <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" name="discountPercent" class="form-control"
+                                   min="1" max="90" step="0.01" placeholder="VD: 20" required/>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                Bắt đầu <span class="text-danger">*</span>
+                            </label>
+                            <input type="datetime-local" name="startDate" class="form-control" required/>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                Kết thúc <span class="text-danger">*</span>
+                            </label>
+                            <input type="datetime-local" name="endDate" class="form-control" required/>
+                        </div>
+
+                        <div class="alert alert-info small mb-3">
+                            <i class="bi bi-info-circle-fill me-1"></i>
+                            Sản phẩm chỉ được có 1 đợt sale đang hoạt động trong 1 khoảng thời gian —
+                            hệ thống sẽ báo lỗi nếu trùng lịch với đợt đang bật.
+                        </div>
+
+                        <button type="submit" class="btn btn-dark w-100">
+                            <i class="bi bi-check-circle me-1"></i>Tạo đợt sale
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

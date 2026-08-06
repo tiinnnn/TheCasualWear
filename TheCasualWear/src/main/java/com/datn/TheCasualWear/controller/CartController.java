@@ -1,8 +1,11 @@
 package com.datn.TheCasualWear.controller;
 
 import com.datn.TheCasualWear.entity.AppUser;
+import com.datn.TheCasualWear.entity.CartItem;
+import com.datn.TheCasualWear.entity.ProductSale;
 import com.datn.TheCasualWear.service.AppUserService;
 import com.datn.TheCasualWear.service.CartService;
+import com.datn.TheCasualWear.service.ProductSaleService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -11,13 +14,19 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.math.BigDecimal;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 @Controller
 @RequestMapping("/cart")
 @RequiredArgsConstructor
 public class CartController {
 
-    private final CartService    cartService;
-    private final AppUserService appUserService;
+    private final CartService        cartService;
+    private final AppUserService     appUserService;
+    private final ProductSaleService productSaleService; // MỚI: badge/giá sale cho trang giỏ hàng
 
     private AppUser getCurrentUser(Authentication auth) {
         return appUserService.getUserByUsername(auth.getName());
@@ -26,7 +35,25 @@ public class CartController {
     @GetMapping
     public String viewCart(Authentication auth, Model model) {
         AppUser user = getCurrentUser(auth);
-        model.addAttribute("cartItems",  cartService.getCartItems(user));
+        List<CartItem> cartItems = cartService.getCartItems(user);
+
+        // Giá đã áp sale cho từng dòng, khóa theo cartItemId — để tổng các
+        // dòng luôn khớp với totalPrice (CartService.getTotalPrice cũng
+        // tính theo giá đã áp sale).
+        Map<Integer, BigDecimal> itemPrices = new LinkedHashMap<>();
+        for (CartItem item : cartItems) {
+            itemPrices.put(item.getId(), cartService.getEffectiveUnitPrice(item));
+        }
+
+        // Sale đang chạy theo productId — để hiện badge "-X%" + giá gốc gạch ngang
+        List<Integer> productIds = cartItems.stream()
+                .map(i -> i.getVariant().getProduct().getId())
+                .distinct().toList();
+        Map<Integer, ProductSale> activeSales = productSaleService.getActiveSalesByProductIds(productIds);
+
+        model.addAttribute("cartItems",  cartItems);
+        model.addAttribute("itemPrices", itemPrices);
+        model.addAttribute("activeSales", activeSales);
         model.addAttribute("totalPrice", cartService.getTotalPrice(user));
         model.addAttribute("view", "shop/cart");
         return "layouts/shop-layout";
