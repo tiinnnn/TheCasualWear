@@ -45,6 +45,18 @@ public class ProductSaleService {
                 .collect(Collectors.toMap(s -> s.getProduct().getId(), Function.identity()));
     }
 
+    // Toàn bộ sản phẩm đang có sale chạy (dùng cho trang clearance + mục
+    // "Đang sale" trên trang chủ). Bỏ sản phẩm đã bị ẩn/xóa mềm, và loại
+    // trùng nếu 1 sản phẩm vô tình có nhiều bản ghi sale đang chạy cùng lúc
+    // (không nên xảy ra do validate overlap, nhưng phòng hờ dữ liệu cũ).
+    public List<Product> getProductsOnSale() {
+        return saleRepository.findAllCurrentlyRunning(LocalDateTime.now()).stream()
+                .map(ProductSale::getProduct)
+                .filter(p -> !Boolean.TRUE.equals(p.getIsDeleted()))
+                .distinct()
+                .toList();
+    }
+
     private BigDecimal applyDiscount(BigDecimal price, BigDecimal percent) {
         BigDecimal discount = price.multiply(percent)
                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);

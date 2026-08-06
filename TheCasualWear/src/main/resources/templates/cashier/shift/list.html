@@ -22,11 +22,14 @@
                 <th>Tiền đếm thực tế</th>
                 <th>Chênh lệch</th>
                 <th>Trạng thái</th>
+                <th>SL bán</th>
+                <th>Bàn giao</th>
+                <th>Ghi chú</th>
             </tr>
             </thead>
             <tbody>
             <tr th:if="${#lists.isEmpty(shifts)}">
-                <td colspan="8" class="text-center text-muted py-4">Chưa có ca làm việc nào.</td>
+                <td colspan="11" class="text-center text-muted py-4">Chưa có ca làm việc nào.</td>
             </tr>
             <tr th:each="s : ${shifts}">
                 <td th:text="${s.cashier.username}"></td>
@@ -46,6 +49,22 @@
                     <span th:if="${s.status.name() == 'OPEN'}" class="badge bg-success">Đang mở</span>
                     <span th:if="${s.status.name() == 'CLOSED'}" class="badge bg-secondary">Đã đóng</span>
                 </td>
+                <td th:text="${s.itemsSoldCount != null ? s.itemsSoldCount : '-'}"></td>
+                <td>
+                    <span th:if="${s.status.name() == 'OPEN'}" class="text-muted small">-</span>
+                    <span th:if="${s.status.name() == 'CLOSED' and s.handoverConfirmedBy == null}"
+                          class="badge bg-warning text-dark">Chờ xác nhận</span>
+                    <span th:if="${s.status.name() == 'CLOSED' and s.handoverConfirmedBy != null}"
+                          class="badge bg-success"
+                          th:title="${'Xác nhận bởi ' + s.handoverConfirmedBy.username}">
+                        <i class="bi bi-check2"></i> [[${s.handoverConfirmedBy.username}]]
+                    </span>
+                </td>
+                <td class="small text-muted" style="max-width: 220px"
+                    th:title="${s.note}"
+                    th:text="${s.note != null and !s.note.isBlank()
+                               ? (s.note.length() > 40 ? s.note.substring(0,40) + '…' : s.note)
+                               : '-'}"></td>
             </tr>
             </tbody>
         </table>

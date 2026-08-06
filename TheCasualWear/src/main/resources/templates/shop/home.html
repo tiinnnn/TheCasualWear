@@ -244,6 +244,43 @@
         </div>
     </div>
 
+    <!-- ═══ ĐANG SALE ═══ -->
+    <div class="home-section"
+         th:if="${saleProducts != null and !#lists.isEmpty(saleProducts)}">
+        <div class="section-head">
+            <h2><i class="bi bi-fire me-1" style="color:#c0392b"></i>Đang sale</h2>
+            <a th:href="@{/clearance}">Xem tất cả sale</a>
+        </div>
+        <div class="row row-cols-2 row-cols-md-4 g-3">
+            <div class="col" th:each="p : ${saleProducts}"
+                 th:with="sale=${activeSales != null ? activeSales.get(p.id) : null}">
+                <a th:href="@{'/product/' + ${p.id}}" class="p-card">
+                    <div class="p-card__img-wrap">
+                        <span th:if="${sale != null}" class="p-card__sale-badge"
+                              th:text="'-' + ${#numbers.formatDecimal(sale.discountPercent,1,0)} + '%'"></span>
+                        <img th:if="${p.images != null and !p.images.isEmpty()}"
+                             th:src="${p.images[0].imageUrl}" th:alt="${p.name}"/>
+                        <img th:unless="${p.images != null and !p.images.isEmpty()}"
+                             src="/images/no-image.png" alt=""/>
+                    </div>
+                    <div class="p-card__body">
+                        <p class="p-card__cat"
+                           th:text="${p.category != null ? p.category.name : ''}"></p>
+                        <p class="p-card__name" th:text="${p.name}"></p>
+                        <p th:if="${sale != null}" class="p-card__price mb-0">
+                            <span class="p-card__price-original"
+                                  th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></span>
+                            <span th:text="${#numbers.formatInteger(
+                                    p.price - (p.price * sale.discountPercent / 100), 0, 'COMMA') + ' đ'}"></span>
+                        </p>
+                        <p th:unless="${sale != null}" class="p-card__price"
+                           th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+
     <!-- ═══ THEO DANH MỤC ═══ -->
     <th:block th:if="${productsByCategory != null}"
               th:each="entry : ${productsByCategory}">

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Quản lý quầy POS</title></head>
+<body>
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <h4 class="fw-bold mb-0">
+        Quầy POS
+        <small class="text-muted fs-6" th:text="'(' + ${#lists.size(counters)} + ' quầy)'"></small>
+    </h4>
+    <a th:href="@{/admin/pos-counters/add}" class="btn btn-dark btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Thêm quầy
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+            <tr>
+                <th>Mã quầy</th>
+                <th>Tên / Vị trí</th>
+                <th class="text-center">Trạng thái</th>
+                <th>Hành động</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:if="${#lists.isEmpty(counters)}">
+                <td colspan="4" class="text-center text-muted py-4">Chưa có quầy nào.</td>
+            </tr>
+            <tr th:each="c : ${counters}">
+                <td class="fw-bold" th:text="${c.code}"></td>
+                <td th:text="${c.name != null ? c.name : '-'}"></td>
+                <td class="text-center">
+                    <span th:if="${c.isActive}" class="badge bg-success">Hoạt động</span>
+                    <span th:unless="${c.isActive}" class="badge bg-secondary">Đã tắt</span>
+                </td>
+                <td>
+                    <a th:href="@{'/admin/pos-counters/edit/' + ${c.id}}"
+                       class="btn btn-sm btn-outline-secondary me-1" title="Sửa">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <a th:href="@{'/admin/pos-counters/toggle/' + ${c.id}}"
+                       class="btn btn-sm btn-outline-warning me-1"
+                       th:title="${c.isActive ? 'Tắt quầy' : 'Bật quầy'}">
+                        <i th:class="${c.isActive ? 'bi bi-toggle-on' : 'bi bi-toggle-off'}"></i>
+                    </a>
+                    <a th:href="@{'/admin/pos-counters/delete/' + ${c.id}}"
+                       class="btn btn-sm btn-outline-danger"
+                       onclick="return confirm('Xóa quầy này?')" title="Xóa">
+                        <i class="bi bi-trash"></i>
+                    </a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>

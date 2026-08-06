@@ -23,6 +23,7 @@ public class AdminProductController {
     private final ColorService          colorService;
     private final CloudinaryService     cloudinaryService;
     private final VariantImageService   variantImageService;
+    private final ProductSaleService    productSaleService; // MỚI: hiển thị giá sale trong list admin
 
     private void addFormData(Model model) {
         model.addAttribute("categories", categoryService.getAllCategories());
@@ -40,6 +41,13 @@ public class AdminProductController {
         model.addAttribute("totalPages",  productPage.getTotalPages());
         model.addAttribute("totalItems",  productPage.getTotalElements());
         model.addAttribute("keyword",     keyword);
+
+        // MỚI: sale đang chạy cho các sản phẩm trong trang này, để hiển thị
+        // giá gạch ngang trực tiếp trong bảng danh sách
+        List<Integer> productIds = productPage.getContent().stream()
+                .map(Product::getId).toList();
+        model.addAttribute("activeSales", productSaleService.getActiveSalesByProductIds(productIds));
+
         model.addAttribute("view", "admin/product/list");
         return "layouts/admin-layout";
     }

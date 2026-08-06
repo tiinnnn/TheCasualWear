@@ -34,8 +34,17 @@
                                 <span th:if="${detail.variant.sku != null}"
                                       class="badge bg-light text-dark border" th:text="'SKU: ' + ${detail.variant.sku}"></span>
                             </div>
-                            <small class="text-muted"
-                                   th:text="${#numbers.formatInteger(detail.price, 0, 'COMMA') + ' đ  ×  ' + detail.quantity}"></small>
+                            <small class="text-muted d-flex align-items-center gap-1 flex-wrap">
+                                <span th:if="${detail.originalPrice != null and detail.originalPrice.compareTo(detail.price) > 0}"
+                                      class="badge bg-danger"
+                                      th:text="'-' + ${#numbers.formatInteger(
+                                            (detail.originalPrice - detail.price) * 100 / detail.originalPrice,
+                                            0,'COMMA') + '%'}"></span>
+                                <span th:if="${detail.originalPrice != null and detail.originalPrice.compareTo(detail.price) > 0}"
+                                      class="text-decoration-line-through"
+                                      th:text="${#numbers.formatInteger(detail.originalPrice, 0, 'COMMA') + ' đ'}"></span>
+                                <span th:text="${#numbers.formatInteger(detail.price, 0, 'COMMA') + ' đ  ×  ' + detail.quantity}"></span>
+                            </small>
                         </div>
                         <span class="fw-bold"
                               th:text="${#numbers.formatInteger(detail.price.doubleValue() * detail.quantity, 0, 'COMMA') + ' đ'}"></span>

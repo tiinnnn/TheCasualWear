@@ -21,11 +21,13 @@
                 <th>Tiền đếm thực tế</th>
                 <th>Chênh lệch</th>
                 <th>Trạng thái</th>
+                <th>SL bán</th>
+                <th>Bàn giao</th>
             </tr>
             </thead>
             <tbody>
             <tr th:if="${#lists.isEmpty(shifts)}">
-                <td colspan="7" class="text-center text-muted py-4">Chưa có ca làm việc nào.</td>
+                <td colspan="9" class="text-center text-muted py-4">Chưa có ca làm việc nào.</td>
             </tr>
             <tr th:each="s : ${shifts}">
                 <td th:text="${#temporals.format(s.openedAt, 'HH:mm dd/MM/yyyy')}"></td>
@@ -43,6 +45,16 @@
                 <td>
                     <span th:if="${s.status.name() == 'OPEN'}" class="badge bg-success">Đang mở</span>
                     <span th:if="${s.status.name() == 'CLOSED'}" class="badge bg-secondary">Đã đóng</span>
+                </td>
+                <td th:text="${s.itemsSoldCount != null ? s.itemsSoldCount : '-'}"></td>
+                <td>
+                    <span th:if="${s.status.name() == 'OPEN'}" class="text-muted small">-</span>
+                    <span th:if="${s.status.name() == 'CLOSED' and s.handoverConfirmedBy == null}"
+                          class="badge bg-warning text-dark">Chờ xác nhận</span>
+                    <span th:if="${s.status.name() == 'CLOSED' and s.handoverConfirmedBy != null}"
+                          class="badge bg-success" th:title="${s.handoverNote}">
+                        <i class="bi bi-check2"></i> Đã xác nhận
+                    </span>
                 </td>
             </tr>
             </tbody>

@@ -52,17 +52,41 @@ public class ShopController {
         }
         model.addAttribute("productsByCategory", productsByCategory);
 
+        // MỚI: sản phẩm đang sale — hiện tối đa 8 sản phẩm ở mục riêng trên
+        // trang chủ, kèm nút "Xem tất cả" trỏ sang /clearance
+        List<Product> saleProducts = productSaleService.getProductsOnSale().stream()
+                .limit(8).toList();
+        model.addAttribute("saleProducts", saleProducts);
+
         // MỚI: gom id của TẤT CẢ sản phẩm đang hiển thị trên trang (mới nhất +
-        // theo từng danh mục) để lấy sale đang chạy trong 1 lần query, tránh
-        // N+1. Template dùng activeSales.get(product.id) để hiện badge/giá sale.
+        // theo từng danh mục + đang sale) để lấy sale đang chạy trong 1 lần
+        // query, tránh N+1. Template dùng activeSales.get(product.id) để hiện
+        // badge/giá sale.
         List<Integer> allProductIds = new ArrayList<>();
         newestProducts.forEach(p -> allProductIds.add(p.getId()));
         productsByCategory.values().forEach(list ->
                 list.forEach(p -> allProductIds.add(p.getId())));
+        saleProducts.forEach(p -> allProductIds.add(p.getId()));
         model.addAttribute("activeSales",
                 productSaleService.getActiveSalesByProductIds(allProductIds));
 
         model.addAttribute("view", "shop/home");
+        return "layouts/shop-layout";
+    }
+
+    // MỚI: trang "Clearance Sale" — liệt kê toàn bộ sản phẩm đang có sale
+    // chạy. Không phân trang (số lượng sale đồng thời thường không lớn đối
+    // với 1 shop quy mô đồ án); nếu sau này danh sách dài ra có thể chuyển
+    // sang Page<Product> giống /shop.
+    @GetMapping("/clearance")
+    public String clearancePage(Model model) {
+        List<Product> products = productSaleService.getProductsOnSale();
+        model.addAttribute("products", products);
+
+        List<Integer> productIds = products.stream().map(Product::getId).toList();
+        model.addAttribute("activeSales", productSaleService.getActiveSalesByProductIds(productIds));
+
+        model.addAttribute("view", "shop/clearance");
         return "layouts/shop-layout";
     }
 

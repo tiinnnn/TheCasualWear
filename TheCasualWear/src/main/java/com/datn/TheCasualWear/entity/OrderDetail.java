@@ -25,6 +25,15 @@ public class OrderDetail {
     @Column(nullable = false)
     private Integer quantity;
 
+    // Giá thực khách trả (đã áp sale nếu sản phẩm đang có sale tại thời điểm mua)
     @Column(nullable = false, precision = 18, scale = 2)
     private BigDecimal price;
+
+    // MỚI: giá gốc của sản phẩm tại thời điểm mua (chưa áp sale). Snapshot
+    // độc lập với bảng product_sale — không cần chặn xóa sale cũ, vì đơn
+    // hàng đã tự chứa đủ thông tin để biết có sale hay không:
+    //   originalPrice == price  → mua giá thường
+    //   originalPrice >  price  → mua lúc đang có sale, % giảm tự tính được
+    @Column(name = "original_price", nullable = false, precision = 18, scale = 2)
+    private BigDecimal originalPrice;
 }

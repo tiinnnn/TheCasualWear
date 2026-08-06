@@ -307,6 +307,8 @@ public class CashierService {
             detail.setVariant(variant);
             detail.setQuantity(item.getQuantity());
             detail.setPrice(item.getUnitPrice());
+            detail.setOriginalPrice(item.getOriginalPrice() != null
+                    ? item.getOriginalPrice() : item.getUnitPrice());
             order.getOrderDetails().add(detail);
 
             subtotal = subtotal.add(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())));

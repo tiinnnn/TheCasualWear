@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title th:text="${counter.id == null ? 'Thêm quầy' : 'Sửa quầy'}"></title></head>
+<body>
+<div th:fragment="content">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold"
+            th:text="${counter.id == null ? 'Thêm quầy mới' : 'Cập nhật quầy #' + counter.id}"></h4>
+        <a th:href="@{/admin/pos-counters}" class="btn btn-outline-secondary btn-sm">← Quay lại</a>
+    </div>
+
+    <form th:action="@{/admin/pos-counters/save}" method="post">
+        <input type="hidden" th:if="${counter.id != null}" name="id" th:value="${counter.id}"/>
+
+        <div class="card border-0 shadow-sm mb-3" style="max-width: 500px">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Mã quầy <span class="text-danger">*</span></label>
+                    <input type="text" name="code" th:value="${counter.code}"
+                           class="form-control" required placeholder="VD: Q1"/>
+                    <small class="text-muted">Tự viết hoa, dùng để cashier chọn lúc vào bán</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Tên / Vị trí</label>
+                    <input type="text" name="name" th:value="${counter.name}"
+                           class="form-control" placeholder="VD: Quầy 1 - gần cửa ra vào"/>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-dark">
+                <i class="bi bi-save me-2"></i>Lưu
+            </button>
+            <a th:href="@{/admin/pos-counters}" class="btn btn-outline-secondary">Hủy</a>
+        </div>
+    </form>
+
+</div>
+</body>
+</html>

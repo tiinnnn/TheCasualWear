@@ -153,14 +153,17 @@ public class OrderService {
 
             // Giá đã áp sale (nếu sản phẩm đang có sale chạy tại thời điểm đặt
             // hàng) — snapshot vào order_detail.price, không đổi kể cả khi sale
-            // hết hạn/thay đổi sau đó.
-            BigDecimal unitPrice = productSaleService.getEffectivePrice(product);
+            // hết hạn/thay đổi sau đó. originalPrice snapshot song song để admin
+            // biết đơn này có mua lúc đang sale hay không.
+            BigDecimal originalPrice = product.getPrice();
+            BigDecimal unitPrice     = productSaleService.getEffectivePrice(product);
 
             OrderDetail detail = new OrderDetail();
             detail.setOrder(order);
             detail.setVariant(variant);
             detail.setQuantity(item.getQuantity());
             detail.setPrice(unitPrice);
+            detail.setOriginalPrice(originalPrice);
             orderDetailRepository.save(detail);
 
             stockMovementLogService.logMovement(

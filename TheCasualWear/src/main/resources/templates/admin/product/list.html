@@ -36,7 +36,7 @@
                 <th>Ảnh</th>
                 <th>Tên sản phẩm</th>
                 <th>Danh mục</th>
-                <th>Giá tham chiếu</th>
+                <th>Giá</th>
                 <!-- ✅ Bỏ cột Tồn kho / SKU / Màu cũ — thay bằng cột Biến thể -->
                 <th class="text-center">Biến thể</th>
                 <th>Hành động</th>
@@ -48,7 +48,7 @@
                     Không tìm thấy sản phẩm nào!
                 </td>
             </tr>
-            <tr th:each="p : ${products}">
+            <tr th:each="p : ${products}" th:with="sale=${activeSales.get(p.id)}">
                 <td th:text="${p.id}"></td>
                 <td>
                     <img th:if="${p.images != null and !p.images.isEmpty()}"
@@ -66,7 +66,20 @@
                                       : p.description}"></small>
                 </td>
                 <td th:text="${p.category != null ? p.category.name : '-'}"></td>
-                <td th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></td>
+                <td>
+                    <div th:if="${sale != null}">
+                        <span class="badge bg-danger mb-1"
+                              th:text="'-' + ${#numbers.formatDecimal(sale.discountPercent,1,0)} + '%'"></span>
+                        <div class="text-muted text-decoration-line-through small"
+                             th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></div>
+                        <div class="fw-bold text-danger"
+                             th:text="${#numbers.formatInteger(
+                                   p.price - (p.price * sale.discountPercent / 100),
+                                   0, 'COMMA') + ' đ'}"></div>
+                    </div>
+                    <span th:unless="${sale != null}"
+                          th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></span>
+                </td>
                 <!-- ✅ Link vào trang quản lý variant -->
                 <td class="text-center">
                     <a th:href="@{'/admin/products/' + ${p.id} + '/variants'}"

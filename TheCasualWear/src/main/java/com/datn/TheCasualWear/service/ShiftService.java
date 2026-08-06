@@ -76,10 +76,16 @@ public class ShiftService {
         return shift.getOpeningCash().add(cashRevenue);
     }
 
+    // Tổng số lượng sản phẩm đã bán trong ca tính đến hiện tại (đơn COMPLETED).
+    // Dùng chung cho preview lúc mở form đóng ca và chốt chính thức lúc closeShift().
+    public int previewItemsSold(Shift shift) {
+        Integer count = orderRepository.sumItemQuantityByShiftId(shift.getId());
+        return count != null ? count : 0;
+    }
+
     /**
-     * Đóng ca: tự tính expectedCash = openingCash + tổng tiền mặt thu được
-     * trong ca (dựa vào app_order.shift_id + paymentMethod = CASH), rồi so
-     * sánh với actualCash cashier đếm thực tế để ra cashDifference.
+     * Đóng ca: tự tính expectedCash + itemsSoldCount, "chốt cứng" cả 2 số
+     * này vào ca (dùng để cashier ca sau đối chiếu khi xác nhận bàn giao).
      */
     @Transactional
     public Shift closeShift(Integer shiftId, AppUser actor, BigDecimal actualCash, String note) {
@@ -100,9 +106,49 @@ public class ShiftService {
         shift.setExpectedCash(expected);
         shift.setActualCash(actualCash);
         shift.setCashDifference(actualCash.subtract(expected));
+        shift.setItemsSoldCount(previewItemsSold(shift));
         shift.setClosedAt(LocalDateTime.now());
         shift.setStatus(ShiftStatus.CLOSED);
         shift.setNote(note);
+
+        return shiftRepository.save(shift);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // XÁC NHẬN BÀN GIAO CA (handover confirmation)
+    // ─────────────────────────────────────────────────────────────
+
+    // Ca CLOSED gần nhất (toàn hệ thống) mà chưa ai xác nhận bàn giao —
+    // nếu có, cashier chuẩn bị mở ca mới phải xem & xác nhận số liệu ca
+    // này trước, chặn không cho mở ca tiếp cho tới khi xác nhận xong.
+    public Optional<Shift> getLatestUnconfirmedClosedShift() {
+        return shiftRepository.findFirstByStatusAndHandoverConfirmedByIsNullOrderByClosedAtDesc(
+                ShiftStatus.CLOSED);
+    }
+
+    /**
+     * @param isMatch true = cashier ca sau xác nhận số liệu ca trước đúng;
+     *                false = báo có sai lệch (bắt buộc kèm note giải thích).
+     */
+    @Transactional
+    public Shift confirmHandover(Integer shiftId, AppUser confirmingUser,
+                                 boolean isMatch, String note) {
+        Shift shift = getShiftById(shiftId);
+
+        if (shift.getStatus() != ShiftStatus.CLOSED) {
+            throw new IllegalStateException("Ca này chưa được đóng, không thể xác nhận bàn giao!");
+        }
+        if (shift.isHandoverConfirmed()) {
+            throw new IllegalStateException("Ca này đã được xác nhận bàn giao trước đó!");
+        }
+        if (!isMatch && (note == null || note.isBlank())) {
+            throw new IllegalArgumentException(
+                    "Vui lòng ghi rõ sai lệch cụ thể khi báo cáo số liệu không khớp!");
+        }
+
+        shift.setHandoverConfirmedBy(confirmingUser);
+        shift.setHandoverConfirmedAt(LocalDateTime.now());
+        shift.setHandoverNote(isMatch ? note : "[SAI LỆCH] " + note);
 
         return shiftRepository.save(shift);
     }

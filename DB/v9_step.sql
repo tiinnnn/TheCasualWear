@@ -1,8 +1,23 @@
 -- ============================================================
 --  ClothingShop  –  Schema sạch + Seed Data
---  v6 – Thêm Bán hàng tại quầy (Cashier/POS)
---       app_order: + order_type (ONLINE/COUNTER), + cashier_id
---       role: + ROLE_CASHIER
+--  v8 – Gộp các migration sau v7 thành 1 baseline duy nhất:
+--       + shift: thêm xác nhận bàn giao ca (items_sold_count,
+--         handover_confirmed_by, handover_confirmed_at, handover_note)
+--       + Bảng pos_counter (quầy thu ngân vật lý)
+--       + Bảng product_sale (sale/giảm giá theo lịch trình)
+--       + order_detail: thêm original_price (giá gốc tại thời điểm
+--         đặt hàng, phân biệt với price = giá thực trả sau sale)
+--
+--  v7 – Gộp các migration sau v6 thành 1 baseline duy nhất:
+--       + Module Quản lý kho (goods_receipt, goods_receipt_item,
+--         stock_movement_log)
+--       + Module Giao ca (shift) + app_order.shift_id
+--       + Xóa cột product_variant.price_adjustment (không dùng)
+--       + app_order: + cancel_reason, cancel_note, cancelled_by,
+--         cancelled_at (lý do hủy/hoàn đơn)
+--       + status DELIVERED đã bị loại khỏi enum OrderStatus,
+--         luồng mới SHIPPING -> COMPLETED đi thẳng (không cần
+--         script dọn dữ liệu cũ vì đây là seed mới hoàn toàn)
 -- ============================================================
 
 DROP DATABASE IF EXISTS ClothingShop;
@@ -92,7 +107,6 @@ CREATE TABLE product_variant (
     sku              NVARCHAR(50)  UNIQUE,
     stock            INT           NOT NULL DEFAULT 0,
     cost_price       DECIMAL(18,2) NOT NULL DEFAULT 0,
-    price_adjustment DECIMAL(18,2)          DEFAULT 0,
     created_at       DATETIME      NOT NULL DEFAULT GETDATE()
 );
 
@@ -103,6 +117,25 @@ CREATE TABLE variant_image (
     image_url  NVARCHAR(500) NOT NULL,
     sort_order INT           NOT NULL DEFAULT 0
 );
+
+-- ============================================================
+--  SALE / KHUYẾN MÃI (từ migration_product_sale.sql)
+-- ============================================================
+
+-- Sale/giảm giá theo lịch trình cho từng sản phẩm
+CREATE TABLE product_sale (
+    id               INT IDENTITY(1,1) PRIMARY KEY,
+    product_id       INT           NOT NULL REFERENCES product(id),
+    discount_percent DECIMAL(5,2)  NOT NULL CHECK (discount_percent > 0 AND discount_percent <= 90),
+    start_date       DATETIME      NOT NULL,
+    end_date         DATETIME      NOT NULL,
+    is_active        BIT           NOT NULL DEFAULT 1,
+    created_at       DATETIME      NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT CK_product_sale_dates CHECK (end_date > start_date)
+);
+
+CREATE INDEX IX_product_sale_product ON product_sale(product_id);
+CREATE INDEX IX_product_sale_dates   ON product_sale(start_date, end_date);
 
 -- Địa chỉ giao hàng
 CREATE TABLE address (
@@ -117,12 +150,119 @@ CREATE TABLE address (
     is_default BIT           NOT NULL DEFAULT 0
 );
 
+-- ============================================================
+--  QUẢN LÝ KHO (từ warehouse_migration.sql)
+-- ============================================================
+
+-- Phiếu nhập kho (header)
+-- supplier_name: chỉ lưu tên NCC dạng text, không tách bảng riêng
+-- created_by: nhân viên (ADMIN/OWNER) thực hiện nhập kho
+CREATE TABLE goods_receipt (
+    id            INT IDENTITY(1,1) PRIMARY KEY,
+    code          NVARCHAR(30)  NOT NULL UNIQUE,        -- vd: PN-20260803-001
+    supplier_name NVARCHAR(150) NOT NULL,
+    note          NVARCHAR(500) NULL,
+    created_by    INT           NOT NULL REFERENCES app_user(id),
+    created_at    DATETIME      NOT NULL DEFAULT GETDATE(),
+    total_amount  DECIMAL(18,2) NOT NULL DEFAULT 0       -- tổng giá trị phiếu (tính từ item)
+);
+
+-- Chi tiết phiếu nhập kho (từng dòng variant)
+CREATE TABLE goods_receipt_item (
+    id                INT IDENTITY(1,1) PRIMARY KEY,
+    goods_receipt_id  INT           NOT NULL REFERENCES goods_receipt(id),
+    variant_id        INT           NOT NULL REFERENCES product_variant(id),
+    quantity          INT           NOT NULL CHECK (quantity > 0),
+    unit_cost_price   DECIMAL(18,2) NOT NULL DEFAULT 0   -- giá nhập tại thời điểm nhập (snapshot)
+);
+
+-- Lịch sử biến động kho (audit trail)
+-- Mỗi lần stock của 1 variant thay đổi (do nhập kho, bán hàng, hủy đơn,
+-- hoặc admin sửa tay) đều ghi 1 dòng ở đây.
+-- change_qty: dương = tăng tồn, âm = giảm tồn
+-- balance_after: số tồn SAU khi áp dụng thay đổi này (để tra cứu nhanh, khỏi tính lại)
+-- ref_type/ref_id: tham chiếu tới bản ghi gốc gây ra biến động (linh hoạt, không FK cứng
+--                  vì có thể trỏ tới nhiều bảng khác nhau: goods_receipt, app_order...)
+CREATE TABLE stock_movement_log (
+    id             INT IDENTITY(1,1) PRIMARY KEY,
+    variant_id     INT           NOT NULL REFERENCES product_variant(id),
+    change_type    NVARCHAR(20)  NOT NULL,   -- 'IMPORT' | 'SALE' | 'RETURN' | 'ADJUST' | 'CANCEL'
+    change_qty     INT           NOT NULL,
+    balance_after  INT           NOT NULL,
+    ref_type       NVARCHAR(30)  NULL,       -- 'GOODS_RECEIPT' | 'ORDER' | 'MANUAL'
+    ref_id         INT           NULL,       -- id của goods_receipt hoặc app_order tương ứng
+    note           NVARCHAR(255) NULL,
+    created_by     INT           NULL REFERENCES app_user(id),
+    created_at     DATETIME      NOT NULL DEFAULT GETDATE()
+);
+
+CREATE INDEX IX_stock_movement_variant ON stock_movement_log(variant_id);
+CREATE INDEX IX_stock_movement_created_at ON stock_movement_log(created_at);
+
+-- ============================================================
+--  QUẦY POS (từ pos_counter_migration.sql)
+-- ============================================================
+
+CREATE TABLE pos_counter (
+    id        INT IDENTITY(1,1) PRIMARY KEY,
+    code      NVARCHAR(20)  NOT NULL UNIQUE,   -- mã quầy, VD: Q1, Q2
+    name      NVARCHAR(150) NULL,              -- tên/vị trí, VD: "Quầy 1 - gần cửa ra vào"
+    is_active BIT           NOT NULL DEFAULT 1
+);
+
+-- ============================================================
+--  GIAO CA (từ shift_migration.sql + shift_handover_migration.sql)
+-- ============================================================
+
+-- items_sold_count/handover_confirmed_by/handover_confirmed_at/handover_note:
+-- xác nhận bàn giao ca giữa cashier ca trước và quản lý/cashier ca sau
+-- counter_id: quầy POS vật lý mà ca này diễn ra (từ shift_counter_migration.sql)
+CREATE TABLE shift (
+    id                     INT IDENTITY(1,1) PRIMARY KEY,
+    cashier_id             INT           NOT NULL REFERENCES app_user(id),
+    counter_id             INT           NULL REFERENCES pos_counter(id),
+
+    opened_at              DATETIME      NOT NULL DEFAULT GETDATE(),
+    closed_at              DATETIME      NULL,
+
+    opening_cash           DECIMAL(18,2) NOT NULL DEFAULT 0,  -- tiền quỹ đầu ca (cashier tự đếm nhập)
+    expected_cash          DECIMAL(18,2) NULL,                -- hệ thống tự tính lúc đóng ca
+    actual_cash            DECIMAL(18,2) NULL,                -- cashier đếm thực tế lúc đóng ca
+    cash_difference        DECIMAL(18,2) NULL,                -- actual_cash - expected_cash
+
+    status                 NVARCHAR(20)  NOT NULL DEFAULT 'OPEN',  -- 'OPEN' | 'CLOSED'
+    note                   NVARCHAR(500) NULL,
+
+    items_sold_count       INT           NULL,
+    handover_confirmed_by  INT           NULL REFERENCES app_user(id),
+    handover_confirmed_at  DATETIME      NULL,
+    handover_note          NVARCHAR(500) NULL
+);
+
+-- Mỗi cashier chỉ được có tối đa 1 ca đang OPEN tại một thời điểm.
+CREATE UNIQUE INDEX UX_shift_cashier_open
+    ON shift(cashier_id)
+    WHERE status = 'OPEN';
+
+-- 1 quầy chỉ được có tối đa 1 ca OPEN tại 1 thời điểm (độc lập với ràng buộc
+-- trên theo cashier_id — cả 2 cùng tồn tại: 1 cashier không mở được 2 ca ở
+-- 2 quầy, và 1 quầy cũng không bị 2 cashier cùng mở).
+CREATE UNIQUE INDEX UX_shift_counter_open
+    ON shift(counter_id)
+    WHERE status = 'OPEN';
+
+CREATE INDEX IX_shift_cashier ON shift(cashier_id);
+
 -- Đơn hàng
 -- tracking_code : mã vận đơn GHN nhân viên nhập thủ công
 -- shipped_at    : thời điểm admin xác nhận gửi hàng cho GHN
 -- order_type    : ONLINE (đơn web) | COUNTER (bán tại quầy)
 -- cashier_id    : nhân viên thu ngân tạo đơn (chỉ có khi order_type = COUNTER)
 -- customer_id   : NULL khi là khách vãng lai mua tại quầy
+-- shift_id      : ca làm việc gắn với đơn COUNTER (từ shift_migration.sql)
+-- cancel_reason/cancel_note/cancelled_by/cancelled_at : lý do hủy/hoàn đơn
+--   (từ cancel_reason_migration.sql). status = 'CANCELLED' dùng cho cả hủy đơn
+--   VÀ hoàn hàng do bug cũ ở OrderService – code mới dùng 'RETURNED' riêng.
 CREATE TABLE app_order (
     id                  INT IDENTITY(1,1) PRIMARY KEY,
     customer_id         INT           NULL REFERENCES app_user(id),
@@ -137,16 +277,28 @@ CREATE TABLE app_order (
     shipping_address_id INT           REFERENCES address(id),
     billing_address_id  INT           REFERENCES address(id),
     order_type          NVARCHAR(20)  NOT NULL DEFAULT 'ONLINE',
-    cashier_id          INT           NULL REFERENCES app_user(id)
+    cashier_id          INT           NULL REFERENCES app_user(id),
+    shift_id            INT           NULL REFERENCES shift(id),
+    cancel_reason       NVARCHAR(30)  NULL,
+    cancel_note         NVARCHAR(255) NULL,
+    cancelled_by        INT           NULL REFERENCES app_user(id),
+    cancelled_at        DATETIME      NULL
 );
 
+CREATE INDEX IX_app_order_shift ON app_order(shift_id);
+CREATE INDEX IX_app_order_cancelled_by ON app_order(cancelled_by);
+
 -- Chi tiết đơn hàng
+-- original_price : giá gốc của sản phẩm tại thời điểm đặt hàng
+-- price           : giá thực khách trả (đã áp sale nếu có)
+-- original_price == price → mua giá thường; original_price > price → mua lúc đang sale
 CREATE TABLE order_detail (
-    id         INT IDENTITY(1,1) PRIMARY KEY,
-    order_id   INT           NOT NULL REFERENCES app_order(id),
-    variant_id INT           NOT NULL REFERENCES product_variant(id),
-    quantity   INT           NOT NULL,
-    price      DECIMAL(18,2) NOT NULL
+    id              INT IDENTITY(1,1) PRIMARY KEY,
+    order_id        INT           NOT NULL REFERENCES app_order(id),
+    variant_id      INT           NOT NULL REFERENCES product_variant(id),
+    quantity        INT           NOT NULL,
+    price           DECIMAL(18,2) NOT NULL,
+    original_price  DECIMAL(18,2) NOT NULL
 );
 
 -- Voucher giảm giá
@@ -347,52 +499,52 @@ INSERT INTO product_image (image_url, product_id) VALUES
 GO
 
 -- ── PRODUCT VARIANTS ───────────────────────────────────────
-INSERT INTO product_variant (product_id, size_id, color_id, sku, stock, cost_price, price_adjustment) VALUES
+INSERT INTO product_variant (product_id, size_id, color_id, sku, stock, cost_price) VALUES
 -- AT Basic Trắng (p=1) → v1-4
-(1, 1, 1, N'AT-WHT-S',     20, 95000,  0),
-(1, 2, 1, N'AT-WHT-M',     35, 95000,  0),
-(1, 3, 1, N'AT-WHT-L',     28, 95000,  0),
-(1, 4, 1, N'AT-WHT-XL',    15, 95000,  0),
+(1, 1, 1, N'AT-WHT-S',     20, 95000),
+(1, 2, 1, N'AT-WHT-M',     35, 95000),
+(1, 3, 1, N'AT-WHT-L',     28, 95000),
+(1, 4, 1, N'AT-WHT-XL',    15, 95000),
 -- AT Basic Đen (p=2) → v5-8
-(2, 1, 2, N'AT-BLK-S',     18, 95000,  0),
-(2, 2, 2, N'AT-BLK-M',     30, 95000,  0),
-(2, 3, 2, N'AT-BLK-L',     22, 95000,  0),
-(2, 4, 2, N'AT-BLK-XL',     3, 95000,  0),
+(2, 1, 2, N'AT-BLK-S',     18, 95000),
+(2, 2, 2, N'AT-BLK-M',     30, 95000),
+(2, 3, 2, N'AT-BLK-L',     22, 95000),
+(2, 4, 2, N'AT-BLK-XL',     3, 95000),
 -- AT In Mèo Trắng (p=3) → v9-11
-(3, 1, 1, N'AT-CAT-WHT-S', 12, 120000, 0),
-(3, 2, 1, N'AT-CAT-WHT-M', 20, 120000, 0),
-(3, 3, 1, N'AT-CAT-WHT-L',  8, 120000, 0),
+(3, 1, 1, N'AT-CAT-WHT-S', 12, 120000),
+(3, 2, 1, N'AT-CAT-WHT-M', 20, 120000),
+(3, 3, 1, N'AT-CAT-WHT-L',  8, 120000),
 -- AT In Mèo Đen (p=4) → v12-14
-(4, 1, 2, N'AT-CAT-BLK-S', 10, 120000, 0),
-(4, 2, 2, N'AT-CAT-BLK-M', 18, 120000, 0),
-(4, 3, 2, N'AT-CAT-BLK-L',  4, 120000, 0),
+(4, 1, 2, N'AT-CAT-BLK-S', 10, 120000),
+(4, 2, 2, N'AT-CAT-BLK-M', 18, 120000),
+(4, 3, 2, N'AT-CAT-BLK-L',  4, 120000),
 -- SM Công sở Trắng (p=5) → v15-18
-(5, 1, 1, N'SM-WHT-S',     12, 165000, 0),
-(5, 2, 1, N'SM-WHT-M',     25, 165000, 0),
-(5, 3, 1, N'SM-WHT-L',     18, 165000, 0),
-(5, 4, 1, N'SM-WHT-XL',     2, 165000, 0),
+(5, 1, 1, N'SM-WHT-S',     12, 165000),
+(5, 2, 1, N'SM-WHT-M',     25, 165000),
+(5, 3, 1, N'SM-WHT-L',     18, 165000),
+(5, 4, 1, N'SM-WHT-XL',     2, 165000),
 -- SM Xanh Nhạt (p=6) → v19-21
-(6, 1, 5, N'SM-LBL-S',     10, 180000, 0),
-(6, 2, 5, N'SM-LBL-M',     20, 180000, 0),
-(6, 3, 5, N'SM-LBL-L',      8, 180000, 0),
+(6, 1, 5, N'SM-LBL-S',     10, 180000),
+(6, 2, 5, N'SM-LBL-M',     20, 180000),
+(6, 3, 5, N'SM-LBL-L',      8, 180000),
 -- SM Xanh Navy (p=7) → v22-24
-(7, 1, 3, N'SM-NVY-S',      8, 190000, 0),
-(7, 2, 3, N'SM-NVY-M',     15, 190000, 0),
-(7, 3, 3, N'SM-NVY-L',     10, 190000, 0),
+(7, 1, 3, N'SM-NVY-S',      8, 190000),
+(7, 2, 3, N'SM-NVY-M',     15, 190000),
+(7, 3, 3, N'SM-NVY-L',     10, 190000),
 -- Quần Jean (p=8) → v25-28
-(8, 1, 2, N'QJ-LAY-S',     12, 260000, 0),
-(8, 2, 2, N'QJ-LAY-M',     20, 260000, 0),
-(8, 3, 2, N'QJ-LAY-L',     15, 260000, 0),
-(8, 4, 2, N'QJ-LAY-XL',     3, 260000, 0),
+(8, 1, 2, N'QJ-LAY-S',     12, 260000),
+(8, 2, 2, N'QJ-LAY-M',     20, 260000),
+(8, 3, 2, N'QJ-LAY-L',     15, 260000),
+(8, 4, 2, N'QJ-LAY-XL',     3, 260000),
 -- Quần Sweater (p=9) → v29-31
-(9, 1, 2, N'QSW-BLK-S',    10, 215000, 0),
-(9, 2, 2, N'QSW-BLK-M',    18, 215000, 0),
-(9, 3, 2, N'QSW-BLK-L',     0, 215000, 0),
+(9, 1, 2, N'QSW-BLK-S',    10, 215000),
+(9, 2, 2, N'QSW-BLK-M',    18, 215000),
+(9, 3, 2, N'QSW-BLK-L',     0, 215000),
 -- Hoodie Đen (p=10) → v32-35
-(10, 1, 2, N'HD-BLK-S',    12, 285000, 0),
-(10, 2, 2, N'HD-BLK-M',    20, 285000, 0),
-(10, 3, 2, N'HD-BLK-L',    15, 285000, 0),
-(10, 4, 2, N'HD-BLK-XL',    2, 285000, 0);
+(10, 1, 2, N'HD-BLK-S',    12, 285000),
+(10, 2, 2, N'HD-BLK-M',    20, 285000),
+(10, 3, 2, N'HD-BLK-L',    15, 285000),
+(10, 4, 2, N'HD-BLK-XL',    2, 285000);
 GO
 
 -- ── VARIANT IMAGES ─────────────────────────────────────────
@@ -480,6 +632,50 @@ INSERT INTO voucher (code, description, discount_percent, max_discount, min_orde
 (N'EXPIRED',   N'Voucher đã hết hạn (test)',                  10,   NULL,   100000, DATEADD(DAY,-60,GETDATE()), DATEADD(DAY,-30,GETDATE()), 0);
 GO
 
+-- ── PRODUCT SALES (từ migration_product_sale.sql) ────────────
+-- product 9 (Quần short) đang sale ~10%, bao trùm thời điểm đơn 14 đặt hàng
+INSERT INTO product_sale (product_id, discount_percent, start_date, end_date, is_active) VALUES
+(9, 10.00, DATEADD(DAY,-5,GETDATE()), DATEADD(DAY, 2,GETDATE()), 1),
+(1, 15.00, DATEADD(DAY,-1,GETDATE()), DATEADD(DAY, 6,GETDATE()), 1),
+(5, 20.00, DATEADD(DAY,-40,GETDATE()), DATEADD(DAY,-30,GETDATE()), 0);
+GO
+
+-- ── POS COUNTERS (từ pos_counter_migration.sql) ──────────────
+INSERT INTO pos_counter (code, name, is_active) VALUES
+(N'Q1', N'Quầy 1 - gần cửa ra vào', 1),
+(N'Q2', N'Quầy 2 - khu thử đồ',     1);
+GO
+
+-- ── SHIFTS (từ shift_migration.sql + shift_handover_migration.sql) ──
+-- cashier1 = user 8; ca CLOSED đã được owner (user 2) xác nhận bàn giao
+INSERT INTO shift (cashier_id, opened_at, closed_at, opening_cash, expected_cash, actual_cash, cash_difference, status, note, items_sold_count, handover_confirmed_by, handover_confirmed_at, handover_note) VALUES
+(8, DATEADD(DAY,-2,GETDATE()), DATEADD(HOUR,8,DATEADD(DAY,-2,GETDATE())), 500000, 1848000, 1848000, 0, N'CLOSED', N'Ca sáng, khớp quỹ', 6, 2, DATEADD(HOUR,9,DATEADD(DAY,-2,GETDATE())), N'Đã kiểm tra quỹ và hàng tồn, khớp'),
+(8, DATEADD(HOUR,-3,GETDATE()), NULL,                                    500000, NULL,    NULL,    NULL, N'OPEN',   NULL,                 NULL, NULL, NULL, NULL);
+GO
+
+-- ── GOODS RECEIPTS (từ warehouse_migration.sql) ─────────────
+-- created_by: admin = user 2
+INSERT INTO goods_receipt (code, supplier_name, note, created_by, created_at, total_amount) VALUES
+(N'PN-20260801-001', N'Xưởng may Thành Công', N'Nhập bổ sung Áo thun Basic', 2, DATEADD(DAY,-5,GETDATE()), 4750000),
+(N'PN-20260803-001', N'Xưởng may An Phát',    N'Nhập hàng Hoodie mùa lạnh', 2, DATEADD(DAY,-2,GETDATE()), 2850000);
+GO
+
+INSERT INTO goods_receipt_item (goods_receipt_id, variant_id, quantity, unit_cost_price) VALUES
+-- PN-20260801-001: AT Basic Trắng size M + L
+(1,  2, 30, 95000),
+(1,  3, 20, 95000),
+-- PN-20260803-001: Hoodie Đen size M
+(2, 33, 10, 285000);
+GO
+
+-- ── STOCK MOVEMENT LOG (từ warehouse_migration.sql) ─────────
+-- ref_id trỏ tới id tương ứng của goods_receipt
+INSERT INTO stock_movement_log (variant_id, change_type, change_qty, balance_after, ref_type, ref_id, note, created_by, created_at) VALUES
+(2,  N'IMPORT', 30, 35, N'GOODS_RECEIPT', 1, N'Nhập từ PN-20260801-001', 2, DATEADD(DAY,-5,GETDATE())),
+(3,  N'IMPORT', 20, 28, N'GOODS_RECEIPT', 1, N'Nhập từ PN-20260801-001', 2, DATEADD(DAY,-5,GETDATE())),
+(33, N'IMPORT', 10, 20, N'GOODS_RECEIPT', 2, N'Nhập từ PN-20260803-001', 2, DATEADD(DAY,-2,GETDATE()));
+GO
+
 -- ── ORDERS ─────────────────────────────────────────────────
 -- nguyenvana (user 3) – 4 đơn: id 1-4
 -- Đơn 3 (SHIPPING): có tracking_code và shipped_at — demo flow GHN
@@ -512,46 +708,63 @@ INSERT INTO app_order (customer_id, order_date, status, total_price, payment_met
 (7, DATEADD(DAY, -2,GETDATE()), N'PENDING',   449000, N'VNPAY', 0, NULL, NULL, 6, 6);
 GO
 
+-- Đơn bán tại quầy (COUNTER) – id 15, thuộc ca đã đóng (shift id=1) của cashier1 (user 8)
+INSERT INTO app_order (customer_id, order_date, status, total_price, payment_method, is_paid, order_type, cashier_id, shift_id) VALUES
+(NULL, DATEADD(DAY,-2,GETDATE()), N'COMPLETED', 294000, N'CASH', 1, N'COUNTER', 8, 1);
+GO
+
 -- Cập nhật delivered_at cho đơn DELIVERED (id=9, levanc)
 UPDATE app_order SET delivered_at = DATEADD(DAY,-1,GETDATE()) WHERE id = 9;
 GO
 
+-- Cập nhật lý do hủy cho đơn CANCELLED (id=13, hoangvane) – từ cancel_reason_migration.sql
+UPDATE app_order
+SET cancel_reason = N'CUSTOMER_REQUEST',
+    cancel_note   = N'Khách đổi ý, không muốn mua nữa',
+    cancelled_by  = 7,
+    cancelled_at  = DATEADD(DAY,-12,GETDATE())
+WHERE id = 13;
+GO
+
 -- ── ORDER DETAILS ───────────────────────────────────────────
-INSERT INTO order_detail (order_id, variant_id, quantity, price) VALUES
+INSERT INTO order_detail (order_id, variant_id, quantity, price, original_price) VALUES
 -- Đơn 1 (nguyenvana – COMPLETED)
-(1,   2, 2, 199000),
-(1,  26, 1, 549000),
+(1,   2, 2, 199000, 199000),
+(1,  26, 1, 549000, 549000),
 -- Đơn 2 (nguyenvana – COMPLETED)
-(2,  27, 1, 549000),
+(2,  27, 1, 549000, 549000),
 -- Đơn 3 (nguyenvana – SHIPPING, có tracking GHN-20250001)
-(3,  16, 1, 350000),
-(3,   6, 1, 199000),
+(3,  16, 1, 350000, 350000),
+(3,   6, 1, 199000, 199000),
 -- Đơn 4 (nguyenvana – PENDING)
-(4,   1, 1, 199000),
+(4,   1, 1, 199000, 199000),
 -- Đơn 5 (tranthib – COMPLETED)
-(5,  16, 1, 350000),
-(5,  30, 1, 449000),
+(5,  16, 1, 350000, 350000),
+(5,  30, 1, 449000, 449000),
 -- Đơn 6 (tranthib – CONFIRMED)
-(6,  33, 1, 599000),
-(6,  10, 1, 249000),
+(6,  33, 1, 599000, 599000),
+(6,  10, 1, 249000, 249000),
 -- Đơn 7 (tranthib – PENDING)
-(7,  13, 1, 249000),
+(7,  13, 1, 249000, 249000),
 -- Đơn 8 (levanc – COMPLETED)
-(8,  33, 1, 599000),
+(8,  33, 1, 599000, 599000),
 -- Đơn 9 (levanc – DELIVERED, có tracking GHN-20250002)
-(9,  34, 1, 599000),
+(9,  34, 1, 599000, 599000),
 -- Đơn 10 (levanc – CONFIRMED)
-(10, 20, 1, 379000),
+(10, 20, 1, 379000, 379000),
 -- Đơn 11 (phamthid – SHIPPING, có tracking GHN-20250003)
-(11, 29, 1, 449000),
-(11,  9, 1, 249000),
+(11, 29, 1, 449000, 449000),
+(11,  9, 1, 249000, 249000),
 -- Đơn 12 (phamthid – PENDING)
-(12, 25, 1, 549000),
-(12,  5, 1, 199000),
+(12, 25, 1, 549000, 549000),
+(12,  5, 1, 199000, 199000),
 -- Đơn 13 (hoangvane – CANCELLED)
-(13,  2, 1, 199000),
+(13,  2, 1, 199000, 199000),
 -- Đơn 14 (hoangvane – PENDING)
-(14, 30, 1, 449000);
+(14, 30, 1, 449000, 499000),
+-- Đơn 15 (COUNTER – bán tại quầy, cashier1)
+(15,  2, 1, 199000, 199000),
+(15,  9, 1,  95000, 95000);
 GO
 
 -- ── ORDER VOUCHERS ──────────────────────────────────────────

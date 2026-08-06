@@ -61,4 +61,12 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
             "WHERE o.shift.id = :shiftId AND o.paymentMethod = :paymentMethod")
     BigDecimal sumTotalPriceByShiftIdAndPaymentMethod(@Param("shiftId") Integer shiftId,
                                                       @Param("paymentMethod") String paymentMethod);
+
+    // Tổng số lượng sản phẩm (tất cả order_detail) đã bán trong 1 ca —
+    // dùng để "chốt" itemsSoldCount lúc đóng ca. Chỉ tính đơn COMPLETED
+    // (đơn đã hủy trong ca không tính là đã bán).
+    @Query("SELECT COALESCE(SUM(od.quantity), 0) FROM OrderDetail od " +
+            "WHERE od.order.shift.id = :shiftId " +
+            "AND od.order.status = com.datn.TheCasualWear.enums.OrderStatus.COMPLETED")
+    Integer sumItemQuantityByShiftId(@Param("shiftId") Integer shiftId);
 }

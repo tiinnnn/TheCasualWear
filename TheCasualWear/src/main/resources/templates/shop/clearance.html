@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Clearance Sale</title>
+    <style>
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(18px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Header ── */
+        .clearance-hero {
+            background: linear-gradient(135deg, #ff5a36 0%, #c0392b 100%);
+            border-radius: 16px;
+            padding: 2.2rem 2rem;
+            color: #fff;
+            margin-bottom: 2rem;
+        }
+        .clearance-hero h4 { font-weight: 800; letter-spacing: -.02em; margin-bottom: .25rem; }
+        .clearance-hero p { opacity: .9; margin: 0; font-size: .9rem; }
+
+        /* ── Product card (giống shop.html) ── */
+        .product-card-link {
+            display: block;
+            opacity: 0;
+            animation: fadeInUp .5s ease forwards;
+        }
+        .product-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 14px;
+            transition: transform .3s ease, box-shadow .3s ease;
+        }
+        .product-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 16px 30px rgba(0,0,0,.14) !important;
+        }
+        .product-card .img-wrap {
+            overflow: hidden;
+            height: 280px;
+        }
+        .product-card .img-wrap img {
+            height: 280px;
+            width: 100%;
+            object-fit: cover;
+            transition: transform .5s ease;
+        }
+        .product-card:hover .img-wrap img { transform: scale(1.08); }
+        .product-card .card-title { transition: color .2s ease; }
+        .product-card:hover .card-title { color: #ff5a36; }
+        .product-card .price-tag { color: #ff5a36 !important; }
+        .product-card .category-badge {
+            display: inline-block;
+            font-size: .72rem;
+            font-weight: 600;
+            letter-spacing: .02em;
+            color: #ff5a36;
+            background: #fff0eb;
+            border-radius: 999px;
+            padding: 2px 10px;
+            margin-bottom: 6px;
+        }
+        .product-card .sale-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 2;
+            background: #ff5a36;
+            color: #fff;
+            font-size: .72rem;
+            font-weight: 700;
+            border-radius: 999px;
+            padding: 3px 10px;
+            box-shadow: 0 2px 8px rgba(255,90,54,.35);
+        }
+        .product-card .price-original {
+            font-size: .8rem;
+            color: #999;
+            text-decoration: line-through;
+            margin-right: 6px;
+        }
+
+        /* ── Empty state ── */
+        .empty-state i {
+            font-size: 2.6rem;
+            color: #ff5a36;
+            animation: fadeInUp .4s ease;
+        }
+        .empty-state .btn-outline-dark { transition: all .2s ease; }
+        .empty-state .btn-outline-dark:hover {
+            background: #ff5a36;
+            border-color: #ff5a36;
+            color: #fff;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="clearance-hero">
+        <h4><i class="bi bi-fire me-2"></i>Clearance Sale</h4>
+        <p th:text="${#lists.isEmpty(products)}
+                     ? 'Hiện chưa có sản phẩm nào đang giảm giá — quay lại sau nhé!'
+                     : 'Đang có ' + ${#lists.size(products)} + ' sản phẩm giảm giá — số lượng có hạn!'"></p>
+    </div>
+
+    <div th:if="${#lists.isEmpty(products)}" class="text-center py-5 empty-state">
+        <i class="bi bi-emoji-frown d-block mb-3"></i>
+        <p class="text-muted">Chưa có sản phẩm nào đang sale.</p>
+        <a th:href="@{/shop}" class="btn btn-outline-dark">Xem toàn bộ sản phẩm</a>
+    </div>
+
+    <div class="row row-cols-2 row-cols-md-4 g-4" th:unless="${#lists.isEmpty(products)}">
+        <div class="col" th:each="p, iterStat : ${products}"
+             th:with="sale=${activeSales.get(p.id)}">
+            <a th:href="@{'/product/' + ${p.id}}"
+               class="text-decoration-none text-dark product-card-link"
+               th:style="'animation-delay:' + ${iterStat.index % 8 * 0.06} + 's'">
+                <div class="card product-card h-100 border-0 shadow-sm" style="cursor:pointer">
+                    <span th:if="${sale != null}" class="sale-badge"
+                          th:text="'-' + ${#numbers.formatDecimal(sale.discountPercent,1,0)} + '%'"></span>
+                    <div class="img-wrap">
+                        <img th:if="${p.images != null and !p.images.isEmpty()}"
+                             th:src="${p.images[0].imageUrl}"
+                             class="card-img-top"/>
+                        <img th:unless="${p.images != null and !p.images.isEmpty()}"
+                             src="/images/no-image.png"
+                             class="card-img-top"/>
+                    </div>
+                    <div class="card-body">
+                        <span th:if="${p.category != null}"
+                              class="category-badge"
+                              th:text="${p.category.name}"></span>
+                        <h6 class="card-title mb-1" th:text="${p.name}"></h6>
+
+                        <p th:if="${sale != null}" class="mb-0">
+                            <span class="price-original"
+                                  th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></span>
+                            <span class="price-tag fw-bold"
+                                  th:text="${#numbers.formatInteger(
+                                        p.price - (p.price * sale.discountPercent / 100),
+                                        0, 'COMMA') + ' đ'}"></span>
+                        </p>
+                        <p th:unless="${sale != null}" class="price-tag fw-bold mb-0"
+                           th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></p>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

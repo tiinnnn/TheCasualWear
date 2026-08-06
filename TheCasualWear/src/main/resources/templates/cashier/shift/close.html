@@ -28,7 +28,15 @@
                         <div class="col-6 fw-bold">Tiền mặt lẽ ra phải có</div>
                         <div class="col-6 text-end fw-bold text-primary"
                              th:text="${#numbers.formatInteger(expectedCashPreview, 0, 'COMMA') + ' đ'}"></div>
+                        <div class="col-12"><hr class="my-1"/></div>
+                        <div class="col-6 text-muted">Số sản phẩm đã bán trong ca</div>
+                        <div class="col-6 text-end fw-bold" th:text="${itemsSoldPreview}"></div>
                     </div>
+                    <p class="small text-muted mt-2 mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Số này sẽ được chốt lại khi bạn đóng ca, và cần được
+                        <strong>ca kế tiếp xác nhận</strong> trước khi họ mở ca mới.
+                    </p>
                 </div>
             </div>
 
@@ -47,8 +55,7 @@
                             <div class="input-group">
                                 <input type="text" id="actualCashDisplay" class="form-control text-end"
                                        inputmode="numeric" autocomplete="off" required autofocus
-                                       oninput="formatMoneyInputLive(this, 'actualCash')"
-                                       onblur="formatMoneyInputFinal(this, 'actualCash')"/>
+                                       oninput="formatMoneyInput(this, 'actualCash')"/>
                                 <span class="input-group-text">đ</span>
                             </div>
                             <input type="hidden" name="actualCash" id="actualCash"/>

@@ -38,6 +38,12 @@ public class ShiftController {
         if (shiftService.hasOpenShift(getCurrentUser())) {
             return "redirect:/cashier";
         }
+        // Bắt buộc xác nhận bàn giao ca trước (nếu có ca CLOSED nào chưa
+        // ai xác nhận) trước khi được mở ca mới cho mình.
+        var pending = shiftService.getLatestUnconfirmedClosedShift();
+        if (pending.isPresent()) {
+            return "redirect:/cashier/shift/confirm-handover/" + pending.get().getId();
+        }
         model.addAttribute("view", "cashier/shift/open");
         return "layouts/cashier-layout";
     }
@@ -62,6 +68,7 @@ public class ShiftController {
         }
         model.addAttribute("shift", shift);
         model.addAttribute("expectedCashPreview", shiftService.previewExpectedCash(shift));
+        model.addAttribute("itemsSoldPreview", shiftService.previewItemsSold(shift));
         model.addAttribute("view", "cashier/shift/close");
         return "layouts/cashier-layout";
     }
@@ -76,11 +83,44 @@ public class ShiftController {
             String diffLabel = closed.getCashDifference().compareTo(BigDecimal.ZERO) >= 0
                     ? "dư " + closed.getCashDifference().toPlainString() + " đ"
                     : "thiếu " + closed.getCashDifference().abs().toPlainString() + " đ";
-            ra.addFlashAttribute("successMessage", "Đã đóng ca! Chênh lệch: " + diffLabel);
+            ra.addFlashAttribute("successMessage",
+                    "Đã đóng ca! Chênh lệch: " + diffLabel
+                            + " — chờ ca sau xác nhận bàn giao.");
             return "redirect:/cashier/shift/history";
         } catch (IllegalArgumentException | IllegalStateException e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());
             return "redirect:/cashier/shift/close";
+        }
+    }
+
+    // ── XÁC NHẬN BÀN GIAO CA ────────────────────────────────────────────
+
+    @GetMapping("/confirm-handover/{id}")
+    public String confirmHandoverForm(@PathVariable Integer id, Model model) {
+        Shift shift = shiftService.getShiftById(id);
+        if (shift.isHandoverConfirmed()) {
+            // Đã có người xác nhận rồi (VD: 2 tab cùng mở) -> cho qua thẳng
+            return "redirect:/cashier/shift/open";
+        }
+        model.addAttribute("shift", shift);
+        model.addAttribute("view", "cashier/shift/confirm-handover");
+        return "layouts/cashier-layout";
+    }
+
+    @PostMapping("/confirm-handover/{id}")
+    public String confirmHandover(@PathVariable Integer id,
+                                  @RequestParam(defaultValue = "true") boolean isMatch,
+                                  @RequestParam(required = false) String note,
+                                  RedirectAttributes ra) {
+        try {
+            shiftService.confirmHandover(id, getCurrentUser(), isMatch, note);
+            ra.addFlashAttribute("successMessage",
+                    isMatch ? "Đã xác nhận bàn giao ca!"
+                            : "Đã ghi nhận báo cáo sai lệch, tiếp tục mở ca mới.");
+            return "redirect:/cashier/shift/open";
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            ra.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/cashier/shift/confirm-handover/" + id;
         }
     }
 

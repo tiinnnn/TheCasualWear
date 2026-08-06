@@ -56,7 +56,10 @@
     <tr th:each="d : ${order.orderDetails}">
         <td>
             <span th:text="${d.variant.product.name}"></span><br>
-            <small th:text="${d.variant.size != null ? d.variant.size.name : ''} + ' / ' + ${d.variant.color != null ? d.variant.color.name : ''}"></small>
+            <small th:text="${d.variant.size != null ? d.variant.size.name : ''} + ' / ' + ${d.variant.color != null ? d.variant.color.name : ''}"></small><br>
+            <small th:if="${d.originalPrice != null and d.originalPrice.compareTo(d.price) > 0}"
+                   th:text="'Giá gốc: ' + ${#numbers.formatDecimal(d.originalPrice, 0, 'COMMA', 0, 'POINT')}
+                             + ' đ (-' + ${#numbers.formatInteger((d.originalPrice - d.price) * 100 / d.originalPrice, 0, 'COMMA')} + '%)'"></small>
         </td>
         <td class="qty" th:text="${d.quantity}"></td>
         <td class="price" th:text="${#numbers.formatDecimal(d.price * d.quantity, 0, 'COMMA', 0, 'POINT')}"></td>
