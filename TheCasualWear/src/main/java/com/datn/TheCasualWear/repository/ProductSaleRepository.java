@@ -48,6 +48,16 @@ public interface ProductSaleRepository extends JpaRepository<ProductSale, Intege
                               @Param("endDate") LocalDateTime endDate,
                               @Param("excludeId") Integer excludeId);
 
+    // ── DASHBOARD: sale bắt đầu từ :since trở lại đây, mới nhất trước ────
+    // Dùng cho ProductSaleService.getSaleEffectiveness() — tránh quét toàn
+    // bộ lịch sử sale khi bảng đã tích lũy nhiều năm dữ liệu.
+    @Query("""
+        SELECT s FROM ProductSale s
+        WHERE s.startDate >= :since
+        ORDER BY s.startDate DESC
+        """)
+    List<ProductSale> findRecentSales(@Param("since") LocalDateTime since);
+
     // Sale đã qua end_date nhưng is_active vẫn true — dùng cho job dọn dẹp
     // định kỳ (SaleScheduler). Việc tính giá không phụ thuộc vào is_active
     // của các bản ghi này (đã tự động loại theo end_date rồi), job này chỉ

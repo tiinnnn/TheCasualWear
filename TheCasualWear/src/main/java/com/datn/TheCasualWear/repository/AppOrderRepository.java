@@ -73,4 +73,46 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
             "WHERE od.order.shift.id = :shiftId " +
             "AND od.order.status = com.datn.TheCasualWear.enums.OrderStatus.COMPLETED")
     Integer sumItemQuantityByShiftId(@Param("shiftId") Integer shiftId);
+
+    // ── DASHBOARD: doanh thu theo kênh bán (ONLINE/COUNTER) ─────────────
+    @Query("""
+        SELECT o.orderType, COALESCE(SUM(o.totalPrice), 0), COUNT(o)
+        FROM AppOrder o
+        WHERE o.status = com.datn.TheCasualWear.enums.OrderStatus.COMPLETED
+          AND o.orderDate BETWEEN :from AND :to
+        GROUP BY o.orderType
+        """)
+    List<Object[]> sumRevenueByOrderType(@Param("from") LocalDateTime from,
+                                         @Param("to") LocalDateTime to);
+
+    // ── DASHBOARD: thống kê lý do hủy/hoàn đơn ──────────────────────────
+    @Query("""
+        SELECT o.cancelReason, COUNT(o)
+        FROM AppOrder o
+        WHERE o.status IN (com.datn.TheCasualWear.enums.OrderStatus.CANCELLED,
+                            com.datn.TheCasualWear.enums.OrderStatus.RETURNED)
+          AND o.cancelReason IS NOT NULL
+        GROUP BY o.cancelReason
+        ORDER BY COUNT(o) DESC
+        """)
+    List<Object[]> countByCancelReason();
+
+    // ── DASHBOARD: khách hàng hủy/hoàn nhiều lần (ứng viên theo dõi) ────
+    // Đếm theo o.customer (chủ đơn), KHÔNG phải cancelledBy — vì cancelledBy
+    // có thể là admin hủy hộ, còn cái cần theo dõi là khách nào hay bị hủy/
+    // hoàn đơn. Loại đơn COUNTER không có customer (khách vãng lai).
+    @Query("""
+        SELECT o.customer,
+               SUM(CASE WHEN o.status = com.datn.TheCasualWear.enums.OrderStatus.CANCELLED THEN 1L ELSE 0L END),
+               SUM(CASE WHEN o.status = com.datn.TheCasualWear.enums.OrderStatus.RETURNED THEN 1L ELSE 0L END),
+               COUNT(o)
+        FROM AppOrder o
+        WHERE o.status IN (com.datn.TheCasualWear.enums.OrderStatus.CANCELLED,
+                            com.datn.TheCasualWear.enums.OrderStatus.RETURNED)
+          AND o.customer IS NOT NULL
+        GROUP BY o.customer
+        HAVING COUNT(o) >= :minCount
+        ORDER BY COUNT(o) DESC
+        """)
+    List<Object[]> findFrequentCancellers(@Param("minCount") long minCount);
 }

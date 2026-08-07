@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface OrderDetailRepository extends JpaRepository<OrderDetail, Integer> {
@@ -30,4 +31,29 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, Intege
     @Query("DELETE FROM OrderDetail od WHERE od.variant.product.id = :productId " +
             "AND od.order.status = com.datn.TheCasualWear.enums.OrderStatus.CANCELLED")
     void deleteByProductId(@Param("productId") Integer productId);
+
+    // ── DASHBOARD: hiệu quả sale — tổng SL bán, doanh thu, tổng tiền giảm
+    // cho 1 sản phẩm trong 1 khoảng thời gian (dùng cho ProductSaleService
+    // .getSaleEffectiveness(), truyền vào [sale.startDate, sale.endDate]).
+    // Chỉ tính đơn COMPLETED. Luôn trả về ĐÚNG 1 dòng (COALESCE xử lý khi
+    // không có đơn nào khớp).
+    //
+    // ⚠️ QUAN TRỌNG: khai báo List<Object[]> chứ KHÔNG phải Object[] trực
+    // tiếp — Spring Data JPA xử lý kiểu trả về mảng như 1 dạng collection
+    // và bọc thêm 1 lớp mảng nữa quanh kết quả thật (Object[1] chứa
+    // Object[3] bên trong), gây ClassCastException khi cast phần tử ra
+    // Long/BigDecimal ở tầng service. List<Object[]> mới là kiểu "collection
+    // execution" đúng chuẩn của Spring Data.
+    @Query("""
+        SELECT COALESCE(SUM(od.quantity), 0),
+               COALESCE(SUM(od.quantity * od.price), 0),
+               COALESCE(SUM(od.quantity * (od.originalPrice - od.price)), 0)
+        FROM OrderDetail od
+        WHERE od.variant.product.id = :productId
+          AND od.order.status = com.datn.TheCasualWear.enums.OrderStatus.COMPLETED
+          AND od.order.orderDate BETWEEN :from AND :to
+        """)
+    List<Object[]> sumSoldForProductBetween(@Param("productId") Integer productId,
+                                            @Param("from") LocalDateTime from,
+                                            @Param("to") LocalDateTime to);
 }

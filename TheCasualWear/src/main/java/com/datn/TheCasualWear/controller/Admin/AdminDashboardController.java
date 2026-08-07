@@ -29,6 +29,8 @@ public class AdminDashboardController {
     private final ProductVariantService variantService;
     private final AppUserService        appUserService;
     private final OrderDetailRepository orderDetailRepository;
+    private final ProductSaleService       productSaleService;    // MỚI: hiệu quả sale
+    private final StockMovementLogService  stockMovementLogService; // MỚI: nhập/xuất kho
 
     @GetMapping({"", "/", "/dashboard"})
     public String dashboard(Model model) {
@@ -127,6 +129,29 @@ public class AdminDashboardController {
                 orderService.getOrdersByStatus(OrderStatus.SHIPPING).size());
         model.addAttribute("completedOrders",
                 orderService.getOrdersByStatus(OrderStatus.COMPLETED).size());
+
+        // ── DASHBOARD MỚI: doanh thu kênh / lý do hủy / hiệu quả sale / kho ──
+        LocalDateTime monthStart = LocalDateTime.now()
+                .withDayOfMonth(1).toLocalDate().atStartOfDay();
+        LocalDateTime now = LocalDateTime.now();
+
+        // 1) Doanh thu ONLINE vs COUNTER trong tháng
+        model.addAttribute("revenueByChannel",
+                orderService.getRevenueByChannel(monthStart, now));
+
+        // 2) Thống kê lý do hủy/hoàn đơn + khách hủy/hoàn nhiều lần (>=3 lần)
+        model.addAttribute("cancelReasonStats", orderService.getCancelReasonStats());
+        model.addAttribute("frequentCancellers", orderService.getFrequentCancellers(3));
+
+        // 3) Hiệu quả các đợt sale bắt đầu trong 30 ngày gần đây
+        List<com.datn.TheCasualWear.entity.ProductSale> recentSales =
+                productSaleService.getRecentSales(now.minusDays(30));
+        model.addAttribute("saleEffectiveness",
+                productSaleService.getSaleEffectiveness(recentSales));
+
+        // 4) Nhập/xuất kho trong tháng, theo loại biến động
+        model.addAttribute("stockMovementSummary",
+                stockMovementLogService.getMovementSummary(monthStart, now));
 
         model.addAttribute("view", "admin/dashboard");
         return "layouts/admin-layout";

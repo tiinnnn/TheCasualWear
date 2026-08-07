@@ -2,296 +2,644 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head><title>Dashboard</title></head>
 <body>
-<h4 class="fw-bold mb-4">Dashboard</h4>
 
-<style>
-    @media (max-width: 767px) {
-        .card h3.fw-bold { font-size: 1.25rem; }
-        .card h4.fw-bold { font-size: 1.1rem; }
-    }
-</style>
+<div class="dm-dash">
+    <div class="dm-glow dm-glow--a"></div>
+    <div class="dm-glow dm-glow--b"></div>
 
-<!-- ==================== TỔNG QUAN ==================== -->
-<div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-        <div class="card border-0 shadow-sm text-center p-3">
-            <i class="bi bi-box-seam text-primary" style="font-size:2rem"></i>
-            <h3 class="fw-bold mt-2" th:text="${totalProducts}"></h3>
-            <p class="text-muted mb-0">Sản phẩm</p>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="card border-0 shadow-sm text-center p-3">
-            <i class="bi bi-people text-success" style="font-size:2rem"></i>
-            <h3 class="fw-bold mt-2" th:text="${totalUsers}"></h3>
-            <p class="text-muted mb-0">Người dùng</p>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="card border-0 shadow-sm text-center p-3">
-            <i class="bi bi-cart-check text-warning" style="font-size:2rem"></i>
-            <h3 class="fw-bold mt-2" th:text="${totalOrders}"></h3>
-            <p class="text-muted mb-0">Đơn hàng</p>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="card border-0 shadow-sm text-center p-3">
-            <i class="bi bi-cash-stack text-danger" style="font-size:2rem"></i>
-            <h3 class="fw-bold mt-2"
-                th:text="${#numbers.formatInteger(totalRevenue, 0, 'COMMA') + ' đ'}"></h3>
-            <p class="text-muted mb-0">Doanh thu</p>
-        </div>
-    </div>
-</div>
+    <div class="dm-content">
 
-<!-- ==================== DOANH THU & LỢI NHUẬN ==================== -->
-<div class="row g-3 mb-4">
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm p-3 border-start border-success border-4">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <p class="text-muted mb-1 small">Tổng lợi nhuận</p>
-                    <h4 class="fw-bold mb-0 text-success"
-                        th:text="${#numbers.formatInteger(totalProfit, 0, 'COMMA') + ' đ'}"></h4>
-                </div>
-                <i class="bi bi-graph-up-arrow text-success" style="font-size:2rem"></i>
+        <!-- ==================== HEADER ==================== -->
+        <div class="dm-header">
+            <div>
+                <p class="dm-eyebrow">Tổng quan vận hành</p>
+                <h1 class="dm-title">Dashboard</h1>
             </div>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm p-3 border-start border-primary border-4">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <p class="text-muted mb-1 small">Doanh thu tuần này</p>
-                    <h4 class="fw-bold mb-0 text-primary"
-                        th:text="${#numbers.formatInteger(weekRevenue, 0, 'COMMA') + ' đ'}"></h4>
-                    <small class="text-muted" th:text="${weekOrders + ' đơn hoàn thành'}"></small>
-                </div>
-                <i class="bi bi-calendar-week text-primary" style="font-size:2rem"></i>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm p-3 border-start border-warning border-4">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <p class="text-muted mb-1 small">Lợi nhuận tuần này</p>
-                    <h4 class="fw-bold mb-0 text-warning"
-                        th:text="${#numbers.formatInteger(weekProfit, 0, 'COMMA') + ' đ'}"></h4>
-                </div>
-                <i class="bi bi-piggy-bank text-warning" style="font-size:2rem"></i>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- ==================== TRẠNG THÁI ĐƠN HÀNG ==================== -->
-<div class="row g-3 mb-4">
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm p-3 border-start border-warning border-4">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <p class="text-muted mb-1">Chờ xác nhận</p>
-                    <h4 class="fw-bold mb-0" th:text="${pendingOrders}"></h4>
-                </div>
-                <i class="bi bi-clock text-warning" style="font-size:2rem"></i>
+        <!-- ==================== TỔNG QUAN ==================== -->
+        <div class="dm-grid dm-grid--4 dm-stagger">
+            <div class="dm-card dm-stat">
+                <div class="dm-icon"><i class="bi bi-box-seam"></i></div>
+                <h3 class="dm-stat-value dm-countup" th:attr="data-value=${totalProducts}">0</h3>
+                <p class="dm-stat-label">Sản phẩm</p>
             </div>
-            <a th:href="@{/admin/orders(status='PENDING')}"
-               class="btn btn-outline-warning btn-sm mt-2">Xem ngay</a>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm p-3 border-start border-primary border-4">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <p class="text-muted mb-1">Đang giao</p>
-                    <h4 class="fw-bold mb-0" th:text="${shippingOrders}"></h4>
-                </div>
-                <i class="bi bi-truck text-primary" style="font-size:2rem"></i>
+            <div class="dm-card dm-stat">
+                <div class="dm-icon"><i class="bi bi-people"></i></div>
+                <h3 class="dm-stat-value dm-countup" th:attr="data-value=${totalUsers}">0</h3>
+                <p class="dm-stat-label">Người dùng</p>
             </div>
-            <a th:href="@{/admin/orders(status='SHIPPING')}"
-               class="btn btn-outline-primary btn-sm mt-2">Xem ngay</a>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm p-3 border-start border-success border-4">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <p class="text-muted mb-1">Hoàn thành</p>
-                    <h4 class="fw-bold mb-0" th:text="${completedOrders}"></h4>
-                </div>
-                <i class="bi bi-check-circle text-success" style="font-size:2rem"></i>
+            <div class="dm-card dm-stat">
+                <div class="dm-icon"><i class="bi bi-cart-check"></i></div>
+                <h3 class="dm-stat-value dm-countup" th:attr="data-value=${totalOrders}">0</h3>
+                <p class="dm-stat-label">Đơn hàng</p>
             </div>
-            <a th:href="@{/admin/orders(status='COMPLETED')}"
-               class="btn btn-outline-success btn-sm mt-2">Xem ngay</a>
+            <div class="dm-card dm-stat dm-stat--accent">
+                <div class="dm-icon"><i class="bi bi-cash-stack"></i></div>
+                <h3 class="dm-stat-value dm-countup" th:attr="data-value=${totalRevenue}" data-suffix=" đ">0</h3>
+                <p class="dm-stat-label">Doanh thu</p>
+            </div>
         </div>
-    </div>
-</div>
 
-<div class="row g-4 mb-4">
-    <!-- ==================== SẢN PHẨM BÁN CHẠY ==================== -->
-    <div class="col-md-6">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-                <h6 class="fw-bold mb-3">
-                    <i class="bi bi-fire text-danger me-2"></i>Top 5 sản phẩm bán chạy
-                </h6>
-                <div th:if="${#lists.isEmpty(topSelling)}"
-                     class="text-muted text-center py-3">Chưa có dữ liệu</div>
-                <div th:each="entry, i : ${topSelling}"
-                     class="d-flex justify-content-between align-items-center mb-3">
-                    <div class="d-flex align-items-center gap-2">
-                        <span th:switch="${i.index}" class="fw-bold" style="width:20px">
-                            <span th:case="0" style="color:gold">①</span>
-                            <span th:case="1" style="color:silver">②</span>
-                            <span th:case="2" style="color:#cd7f32">③</span>
-                            <span th:case="*" th:text="${i.index + 1} + '.'"></span>
+        <!-- ==================== DOANH THU & LỢI NHUẬN ==================== -->
+        <div class="dm-grid dm-grid--3 dm-stagger">
+            <div class="dm-card dm-metric">
+                <div class="dm-metric-top">
+                    <p class="dm-stat-label">Tổng lợi nhuận</p>
+                    <div class="dm-icon dm-icon--good"><i class="bi bi-graph-up-arrow"></i></div>
+                </div>
+                <h4 class="dm-metric-value dm-countup" th:attr="data-value=${totalProfit}" data-suffix=" đ">0</h4>
+            </div>
+            <div class="dm-card dm-metric">
+                <div class="dm-metric-top">
+                    <p class="dm-stat-label">Doanh thu tuần này</p>
+                    <div class="dm-icon"><i class="bi bi-calendar-week"></i></div>
+                </div>
+                <h4 class="dm-metric-value dm-countup" th:attr="data-value=${weekRevenue}" data-suffix=" đ">0</h4>
+                <small class="dm-text-faint" th:text="${weekOrders + ' đơn hoàn thành'}"></small>
+            </div>
+            <div class="dm-card dm-metric">
+                <div class="dm-metric-top">
+                    <p class="dm-stat-label">Lợi nhuận tuần này</p>
+                    <div class="dm-icon dm-icon--warn"><i class="bi bi-piggy-bank"></i></div>
+                </div>
+                <h4 class="dm-metric-value dm-countup" th:attr="data-value=${weekProfit}" data-suffix=" đ">0</h4>
+            </div>
+        </div>
+
+        <!-- ==================== TRẠNG THÁI ĐƠN HÀNG ==================== -->
+        <div class="dm-grid dm-grid--3 dm-stagger">
+            <div class="dm-card dm-metric">
+                <div class="dm-metric-top">
+                    <p class="dm-stat-label">Chờ xác nhận</p>
+                    <div class="dm-icon dm-icon--warn"><i class="bi bi-clock"></i></div>
+                </div>
+                <h4 class="dm-metric-value" th:text="${pendingOrders}"></h4>
+                <a th:href="@{/admin/orders(status='PENDING')}" class="dm-btn">Xem ngay</a>
+            </div>
+            <div class="dm-card dm-metric">
+                <div class="dm-metric-top">
+                    <p class="dm-stat-label">Đang giao</p>
+                    <div class="dm-icon"><i class="bi bi-truck"></i></div>
+                </div>
+                <h4 class="dm-metric-value" th:text="${shippingOrders}"></h4>
+                <a th:href="@{/admin/orders(status='SHIPPING')}" class="dm-btn">Xem ngay</a>
+            </div>
+            <div class="dm-card dm-metric">
+                <div class="dm-metric-top">
+                    <p class="dm-stat-label">Hoàn thành</p>
+                    <div class="dm-icon dm-icon--good"><i class="bi bi-check-circle"></i></div>
+                </div>
+                <h4 class="dm-metric-value" th:text="${completedOrders}"></h4>
+                <a th:href="@{/admin/orders(status='COMPLETED')}" class="dm-btn">Xem ngay</a>
+            </div>
+        </div>
+
+        <!-- ==================== DOANH THU THEO KÊNH & BIẾN ĐỘNG KHO ==================== -->
+        <div class="dm-grid dm-grid--2 dm-stagger">
+            <div class="dm-card">
+                <div class="dm-section-title">
+                    <span><i class="bi bi-shop"></i>Doanh thu theo kênh bán</span>
+                    <span class="dm-text-faint">Tháng này</span>
+                </div>
+                <div th:if="${#lists.isEmpty(revenueByChannel)}" class="dm-empty">Chưa có dữ liệu</div>
+                <div id="dm-channel-list">
+                    <div th:each="ch : ${revenueByChannel}" class="dm-bar-row" th:attr="data-value=${ch.revenue}">
+                        <div class="dm-bar-head">
+                            <div class="dm-bar-label">
+                                <i th:class="${ch.orderType.name() == 'ONLINE'} ? 'bi bi-globe' : 'bi bi-shop-window'"></i>
+                                <span th:text="${ch.orderType.name() == 'ONLINE'} ? 'Online' : 'Tại quầy (POS)'"></span>
+                            </div>
+                            <span class="dm-bar-value"
+                                  th:text="${#numbers.formatInteger(ch.revenue, 0, 'COMMA') + ' đ'}"></span>
+                        </div>
+                        <div class="dm-bar-track"><div class="dm-bar-fill"></div></div>
+                        <small class="dm-text-faint" th:text="${ch.orderCount + ' đơn hoàn thành'}"></small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dm-card">
+                <div class="dm-section-title">
+                    <span><i class="bi bi-box-arrow-in-down"></i>Biến động kho</span>
+                    <span class="dm-text-faint">Tháng này</span>
+                </div>
+                <div th:if="${#lists.isEmpty(stockMovementSummary)}" class="dm-empty">Chưa có dữ liệu</div>
+                <div id="dm-stock-list">
+                    <div th:each="mv : ${stockMovementSummary}" class="dm-bar-row" th:attr="data-value=${mv.totalQty}">
+                        <div class="dm-bar-head">
+                            <div class="dm-bar-label" th:switch="${mv.type.name()}">
+                                <span th:case="'IMPORT'"><i class="bi bi-arrow-down-circle"></i>Nhập kho</span>
+                                <span th:case="'SALE'"><i class="bi bi-arrow-up-right-circle"></i>Bán ra</span>
+                                <span th:case="'CANCEL'"><i class="bi bi-x-circle"></i>Hủy đơn</span>
+                                <span th:case="'RETURN'"><i class="bi bi-arrow-counterclockwise"></i>Hoàn trả</span>
+                                <span th:case="'ADJUST'"><i class="bi bi-sliders"></i>Điều chỉnh</span>
+                                <span th:case="*" th:text="${mv.type}"></span>
+                            </div>
+                            <span class="dm-bar-value" th:text="${mv.totalQty + ' sản phẩm'}"></span>
+                        </div>
+                        <div class="dm-bar-track"><div class="dm-bar-fill dm-bar-fill--alt"></div></div>
+                    </div>
+                </div>
+                <a th:href="@{/admin/warehouse/stock-log}" class="dm-btn dm-btn--block">Xem lịch sử chi tiết</a>
+            </div>
+        </div>
+
+        <!-- ==================== HIỆU QUẢ CÁC ĐỢT SALE ==================== -->
+        <div class="dm-card mb-4">
+            <div class="dm-section-title">
+                <span><i class="bi bi-tag"></i>Hiệu quả các đợt sale</span>
+                <div class="dm-flex-gap">
+                    <span class="dm-text-faint">30 ngày gần đây</span>
+                </div>
+            </div>
+            <div th:if="${#lists.isEmpty(saleEffectiveness)}" class="dm-empty">
+                Không có đợt sale nào bắt đầu trong 30 ngày qua
+            </div>
+            <div class="dm-table-wrap" th:if="${!#lists.isEmpty(saleEffectiveness)}">
+                <table class="dm-table">
+                    <thead>
+                    <tr>
+                        <th>Sản phẩm</th>
+                        <th class="dm-text-center">Giảm giá</th>
+                        <th>Thời gian sale</th>
+                        <th class="dm-text-center">SL đã bán</th>
+                        <th class="dm-text-end">Doanh thu</th>
+                        <th class="dm-text-end">Đã giảm</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="s : ${saleEffectiveness}">
+                        <td th:text="${s.sale.product.name}"></td>
+                        <td class="dm-text-center">
+                            <span class="dm-pill dm-pill--bad" th:text="'-' + ${s.sale.discountPercent} + '%'"></span>
+                        </td>
+                        <td class="dm-text-dim">
+                            <span th:text="${#temporals.format(s.sale.startDate, 'dd/MM')}"></span>
+                            →
+                            <span th:text="${#temporals.format(s.sale.endDate, 'dd/MM')}"></span>
+                        </td>
+                        <td class="dm-text-center dm-cell-strong" th:text="${s.qtySold}"></td>
+                        <td class="dm-text-end dm-cell-good"
+                            th:text="${#numbers.formatInteger(s.revenue, 0, 'COMMA') + ' đ'}"></td>
+                        <td class="dm-text-end dm-cell-bad"
+                            th:text="${#numbers.formatInteger(s.discountGiven, 0, 'COMMA') + ' đ'}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ==================== ĐƠN HÀNG MỚI NHẤT ==================== -->
+        <div class="dm-card mb-4">
+            <div class="dm-section-title">
+                <span><i class="bi bi-receipt"></i>Đơn hàng mới nhất</span>
+                <a th:href="@{/admin/orders}" class="dm-btn">Xem tất cả</a>
+            </div>
+            <div class="dm-table-wrap">
+                <table class="dm-table">
+                    <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Khách hàng</th>
+                        <th>Ngày đặt</th>
+                        <th>Tổng tiền</th>
+                        <th>Trạng thái</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="order : ${recentOrders}">
+                        <td th:text="${order.id}"></td>
+                        <td th:text="${order.customer != null ? order.customer.username
+                                  : (order.cashier != null ? order.cashier.username + ' (POS)' : 'Khách vãng lai')}"></td>
+                        <td class="dm-text-dim" th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy HH:mm')}"></td>
+                        <td class="dm-cell-strong"
+                            th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></td>
+                        <td>
+                        <span th:switch="${order.status.name()}">
+                            <span th:case="'PENDING'"   class="dm-pill dm-pill--warn">Chờ xác nhận</span>
+                            <span th:case="'CONFIRMED'" class="dm-pill dm-pill--accent">Đã xác nhận</span>
+                            <span th:case="'SHIPPING'"  class="dm-pill dm-pill--accent">Đang giao</span>
+                            <span th:case="'DELIVERED'" class="dm-pill dm-pill--good">Đã giao</span>
+                            <span th:case="'COMPLETED'" class="dm-pill dm-pill--good">Hoàn thành</span>
+                            <span th:case="'CANCELLED'" class="dm-pill dm-pill--bad">Đã hủy</span>
+                            <span th:case="'RETURNED'"  class="dm-pill dm-pill--bad">Đã hoàn</span>
                         </span>
+                        </td>
+                        <td>
+                            <a th:href="@{'/admin/orders/' + ${order.id}}" class="dm-btn">Chi tiết</a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ==================== SẢN PHẨM BÁN CHẠY & TỒN KHO CẦN CHÚ Ý ==================== -->
+        <div class="dm-grid dm-grid--2 dm-stagger">
+            <div class="dm-card">
+                <div class="dm-section-title">
+                    <span><i class="bi bi-fire"></i>Top 5 sản phẩm bán chạy</span>
+                </div>
+                <div th:if="${#lists.isEmpty(topSelling)}" class="dm-empty">Chưa có dữ liệu</div>
+                <div th:each="entry, i : ${topSelling}" class="dm-row-item">
+                    <div class="dm-row-left">
+                        <span class="dm-rank" th:classappend="${i.index == 0} ? ' dm-rank--top'"
+                              th:text="${i.index + 1}"></span>
                         <img th:if="${entry.key.images != null and !entry.key.images.isEmpty()}"
-                             th:src="${entry.key.images[0].imageUrl}"
-                             style="width:40px;height:40px;object-fit:cover" class="rounded"/>
+                             th:src="${entry.key.images[0].imageUrl}" class="dm-thumb"/>
                         <div>
-                            <p class="mb-0 small fw-bold" th:text="${entry.key.name}"></p>
-                            <small class="text-muted"
+                            <p class="dm-row-title" th:text="${entry.key.name}"></p>
+                            <small class="dm-text-faint"
                                    th:text="${entry.key.category != null ? entry.key.category.name : ''}"></small>
                         </div>
                     </div>
-                    <span class="badge bg-dark" th:text="${entry.value + ' đã bán'}"></span>
+                    <span class="dm-pill dm-pill--muted" th:text="${entry.value + ' đã bán'}"></span>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- ==================== TỒN KHO CẦN CHÚ Ý ==================== -->
-    <div class="col-md-6">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-                <h6 class="fw-bold mb-3">
-                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>
-                    Tồn kho cần chú ý
-                </h6>
+            <div class="dm-card">
+                <div class="dm-section-title">
+                    <span><i class="bi bi-exclamation-triangle"></i>Tồn kho cần chú ý</span>
+                </div>
 
-                <!-- ✅ Hết hàng — outOfStock là List<ProductVariant> -->
-                <div th:if="${!#lists.isEmpty(outOfStock)}" class="mb-3">
-                    <p class="text-danger small fw-bold mb-2">
-                        <i class="bi bi-x-circle me-1"></i>Hết hàng
+                <div th:if="${!#lists.isEmpty(outOfStock)}" class="dm-subgroup">
+                    <p class="dm-subgroup-title dm-subgroup-title--bad">
+                        <i class="bi bi-x-circle"></i>Hết hàng
                         (<span th:text="${#lists.size(outOfStock)}"></span> biến thể)
                     </p>
-                    <div th:each="v : ${outOfStock}"
-                         class="d-flex justify-content-between align-items-center mb-2">
-                        <div class="d-flex align-items-center gap-2">
+                    <div th:each="v : ${outOfStock}" class="dm-row-item">
+                        <div class="dm-row-left">
                             <img th:if="${v.product.images != null and !v.product.images.isEmpty()}"
-                                 th:src="${v.product.images[0].imageUrl}"
-                                 style="width:35px;height:35px;object-fit:cover" class="rounded"/>
+                                 th:src="${v.product.images[0].imageUrl}" class="dm-thumb dm-thumb--sm"/>
                             <div>
-                                <small class="fw-bold" th:text="${v.product.name}"></small>
-                                <!-- ✅ Hiện size + màu -->
-                                <div class="d-flex gap-1">
-                                    <span th:if="${v.size != null}"
-                                          class="badge bg-dark" style="font-size:0.65rem"
-                                          th:text="${v.size.name}"></span>
-                                    <span th:if="${v.color != null}"
-                                          class="badge bg-secondary" style="font-size:0.65rem"
-                                          th:text="${v.color.name}"></span>
+                                <small class="dm-row-title" th:text="${v.product.name}"></small>
+                                <div class="dm-tag-row">
+                                    <span th:if="${v.size != null}" class="dm-tag" th:text="${v.size.name}"></span>
+                                    <span th:if="${v.color != null}" class="dm-tag" th:text="${v.color.name}"></span>
                                 </div>
                             </div>
                         </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-danger">Hết hàng</span>
+                        <div class="dm-row-right">
+                            <span class="dm-pill dm-pill--bad">Hết hàng</span>
                             <a th:href="@{'/admin/products/' + ${v.product.id} + '/variants'}"
-                               class="btn btn-sm btn-outline-dark py-0">Nhập hàng</a>
+                               class="dm-btn dm-btn--sm">Nhập hàng</a>
                         </div>
                     </div>
                 </div>
 
-                <!-- ✅ Sắp hết — lowStock là List<ProductVariant> -->
-                <div th:if="${!#lists.isEmpty(lowStock)}">
-                    <p class="text-warning small fw-bold mb-2">
-                        <i class="bi bi-exclamation-circle me-1"></i>Sắp hết
+                <div th:if="${!#lists.isEmpty(lowStock)}" class="dm-subgroup">
+                    <p class="dm-subgroup-title dm-subgroup-title--warn">
+                        <i class="bi bi-exclamation-circle"></i>Sắp hết
                         (<span th:text="${#lists.size(lowStock)}"></span> biến thể)
                     </p>
-                    <div th:each="v : ${lowStock}"
-                         class="d-flex justify-content-between align-items-center mb-2">
-                        <div class="d-flex align-items-center gap-2">
+                    <div th:each="v : ${lowStock}" class="dm-row-item">
+                        <div class="dm-row-left">
                             <img th:if="${v.product.images != null and !v.product.images.isEmpty()}"
-                                 th:src="${v.product.images[0].imageUrl}"
-                                 style="width:35px;height:35px;object-fit:cover" class="rounded"/>
+                                 th:src="${v.product.images[0].imageUrl}" class="dm-thumb dm-thumb--sm"/>
                             <div>
-                                <small class="fw-bold" th:text="${v.product.name}"></small>
-                                <div class="d-flex gap-1">
-                                    <span th:if="${v.size != null}"
-                                          class="badge bg-dark" style="font-size:0.65rem"
-                                          th:text="${v.size.name}"></span>
-                                    <span th:if="${v.color != null}"
-                                          class="badge bg-secondary" style="font-size:0.65rem"
-                                          th:text="${v.color.name}"></span>
+                                <small class="dm-row-title" th:text="${v.product.name}"></small>
+                                <div class="dm-tag-row">
+                                    <span th:if="${v.size != null}" class="dm-tag" th:text="${v.size.name}"></span>
+                                    <span th:if="${v.color != null}" class="dm-tag" th:text="${v.color.name}"></span>
                                 </div>
                             </div>
                         </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-warning text-dark"
-                                  th:text="'Còn ' + ${v.stock}"></span>
+                        <div class="dm-row-right">
+                            <span class="dm-pill dm-pill--warn" th:text="'Còn ' + ${v.stock}"></span>
                             <a th:href="@{'/admin/products/' + ${v.product.id} + '/variants'}"
-                               class="btn btn-sm btn-outline-dark py-0">Nhập hàng</a>
+                               class="dm-btn dm-btn--sm">Nhập hàng</a>
                         </div>
                     </div>
                 </div>
 
-                <div th:if="${#lists.isEmpty(outOfStock) and #lists.isEmpty(lowStock)}"
-                     class="text-success text-center py-3">
-                    <i class="bi bi-check-circle me-2"></i>Tất cả biến thể đủ hàng!
+                <div th:if="${#lists.isEmpty(outOfStock) and #lists.isEmpty(lowStock)}" class="dm-empty dm-empty--good">
+                    <i class="bi bi-check-circle"></i>Tất cả biến thể đủ hàng!
                 </div>
             </div>
         </div>
+
+        <!-- ==================== LÝ DO HỦY/HOÀN & KHÁCH CẦN CHÚ Ý ==================== -->
+        <div class="dm-grid dm-grid--2 dm-stagger">
+            <div class="dm-card">
+                <div class="dm-section-title">
+                    <span><i class="bi bi-x-octagon"></i>Lý do hủy/hoàn đơn</span>
+                </div>
+                <div th:if="${#lists.isEmpty(cancelReasonStats)}" class="dm-empty">Chưa có đơn hủy/hoàn nào</div>
+                <div th:each="r : ${cancelReasonStats}" class="dm-row-item dm-row-item--tight">
+                    <span class="dm-row-title" th:text="${#strings.replace(r.reason.name(), '_', ' ')}"></span>
+                    <span class="dm-pill dm-pill--bad" th:text="${r.count}"></span>
+                </div>
+            </div>
+
+            <div class="dm-card">
+                <div class="dm-section-title">
+                    <span><i class="bi bi-person-exclamation"></i>Khách hủy/hoàn nhiều lần</span>
+                    <span class="dm-text-faint">≥3 lần, cần xem xét</span>
+                </div>
+                <div th:if="${#lists.isEmpty(frequentCancellers)}" class="dm-empty dm-empty--good">
+                    Không có khách nào bất thường
+                </div>
+                <div class="dm-table-wrap" th:if="${!#lists.isEmpty(frequentCancellers)}">
+                    <table class="dm-table dm-table--compact">
+                        <thead>
+                        <tr>
+                            <th>Khách hàng</th>
+                            <th class="dm-text-center">Hủy</th>
+                            <th class="dm-text-center">Hoàn</th>
+                            <th class="dm-text-center">Tổng</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="f : ${frequentCancellers}">
+                            <td class="dm-cell-strong" th:text="${f.customer.username}"></td>
+                            <td class="dm-text-center" th:text="${f.cancelledCount}"></td>
+                            <td class="dm-text-center" th:text="${f.returnedCount}"></td>
+                            <td class="dm-text-center">
+                                <span class="dm-pill dm-pill--warn" th:text="${f.totalCount}"></span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
-<!-- ==================== ĐƠN HÀNG MỚI NHẤT ==================== -->
-<div class="card border-0 shadow-sm">
-    <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="fw-bold mb-0">Đơn hàng mới nhất</h6>
-            <a th:href="@{/admin/orders}" class="btn btn-sm btn-outline-dark">Xem tất cả</a>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead class="table-dark">
-                <tr>
-                    <th>#</th>
-                    <th>Khách hàng</th>
-                    <th>Ngày đặt</th>
-                    <th>Tổng tiền</th>
-                    <th>Trạng thái</th>
-                    <th></th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="order : ${recentOrders}">
-                    <td th:text="${order.id}"></td>
-                    <td th:text="${order.customer != null ? order.customer.username
-                              : (order.cashier != null ? order.cashier.username + ' (POS)' : 'Khách vãng lai')}"></td>
-                    <td th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy HH:mm')}"></td>
-                    <td class="text-danger fw-bold"
-                        th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></td>
-                    <td>
-                    <span th:switch="${order.status.name()}">
-                        <span th:case="'PENDING'"   class="badge bg-warning text-dark">Chờ xác nhận</span>
-                        <span th:case="'CONFIRMED'" class="badge bg-info">Đã xác nhận</span>
-                        <span th:case="'SHIPPING'"  class="badge bg-primary">Đang giao</span>
-                        <span th:case="'DELIVERED'" class="badge bg-success">Đã giao</span>
-                        <span th:case="'COMPLETED'" class="badge bg-success">Hoàn thành</span>
-                        <span th:case="'CANCELLED'" class="badge bg-danger">Đã hủy</span>
-                    </span>
-                    </td>
-                    <td>
-                        <a th:href="@{'/admin/orders/' + ${order.id}}"
-                           class="btn btn-sm btn-outline-dark">Chi tiết</a>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
+    .dm-dash {
+        --bg: #0b0d12;
+        --surface: #12151d;
+        --surface-2: #1a1e29;
+        --border: rgba(255,255,255,.07);
+        --border-strong: rgba(255,255,255,.14);
+        --text: #eef0f4;
+        --text-dim: #8d93a6;
+        --text-faint: #5c6178;
+        --accent: #8b7cf6;
+        --accent-soft: rgba(139,124,246,.14);
+        --good: #34d399;
+        --good-soft: rgba(52,211,153,.13);
+        --bad: #f2637a;
+        --bad-soft: rgba(242,99,122,.13);
+        --warn: #f5b95c;
+        --warn-soft: rgba(245,185,92,.13);
+        --radius: 18px;
+
+        position: relative;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--text);
+        font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+        border-radius: 0px;
+        padding: 32px;
+
+        /* Cancel the admin layout's col-md-10 padding (pt-4 px-4 = 24px)
+           so this card fills the content column edge-to-edge instead of
+           floating inside a white/empty border. */
+        margin: -24px -24px 0;
+    }
+    @media (max-width: 767px) {
+        .dm-dash { margin: -24px -24px 0; }
+    }
+
+    .dm-glow {
+        position: absolute;
+        width: 480px;
+        height: 480px;
+        border-radius: 50%;
+        filter: blur(110px);
+        opacity: .16;
+        pointer-events: none;
+        animation: dmDrift 14s ease-in-out infinite alternate;
+    }
+    .dm-glow--a { background: var(--accent); top: -180px; right: -140px; }
+    .dm-glow--b { background: var(--good); bottom: -200px; left: -160px; animation-delay: -6s; }
+
+    @keyframes dmDrift {
+        from { transform: translate(0,0) scale(1); }
+        to   { transform: translate(-30px, 25px) scale(1.12); }
+    }
+
+    .dm-content { position: relative; z-index: 1; }
+
+    .dm-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 28px; }
+    .dm-eyebrow {
+        text-transform: uppercase; letter-spacing: .12em; font-size: .7rem;
+        font-weight: 700; color: var(--accent); margin: 0 0 4px;
+    }
+    .dm-title { font-size: 1.7rem; font-weight: 800; margin: 0; letter-spacing: -.02em; }
+
+    .dm-grid { display: grid; gap: 16px; margin-bottom: 24px; }
+    .dm-grid--2 { grid-template-columns: repeat(2, 1fr); }
+    .dm-grid--3 { grid-template-columns: repeat(3, 1fr); }
+    .dm-grid--4 { grid-template-columns: repeat(4, 1fr); }
+    @media (max-width: 991px) {
+        .dm-grid--4 { grid-template-columns: repeat(2, 1fr); }
+        .dm-grid--3 { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 767px) {
+        .dm-dash { padding: 18px; border-radius: 18px; }
+        .dm-grid--2, .dm-grid--3, .dm-grid--4 { grid-template-columns: 1fr; }
+    }
+
+    .dm-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 22px;
+        transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+    }
+    .dm-card:hover {
+        transform: translateY(-3px);
+        border-color: var(--border-strong);
+        box-shadow: 0 16px 40px rgba(0,0,0,.35);
+    }
+
+    .dm-stagger > * { opacity: 0; animation: dmFadeUp .55s ease forwards; }
+    .dm-stagger > *:nth-child(1) { animation-delay: .02s; }
+    .dm-stagger > *:nth-child(2) { animation-delay: .09s; }
+    .dm-stagger > *:nth-child(3) { animation-delay: .16s; }
+    .dm-stagger > *:nth-child(4) { animation-delay: .23s; }
+    @keyframes dmFadeUp {
+        from { opacity: 0; transform: translateY(14px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .dm-stagger > *, .dm-glow { animation: none !important; opacity: 1 !important; }
+    }
+
+    .dm-icon {
+        width: 40px; height: 40px; border-radius: 12px;
+        background: var(--accent-soft); color: var(--accent);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.05rem; flex-shrink: 0;
+    }
+    .dm-icon--good { background: var(--good-soft); color: var(--good); }
+    .dm-icon--warn { background: var(--warn-soft); color: var(--warn); }
+
+    .dm-stat { display: flex; flex-direction: column; gap: 10px; }
+    .dm-stat--accent { border-color: rgba(139,124,246,.35); }
+    .dm-stat-value { font-size: 1.7rem; font-weight: 800; margin: 0; font-variant-numeric: tabular-nums; }
+    .dm-stat-label { font-size: .82rem; color: var(--text-dim); margin: 0; }
+
+    .dm-metric-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .dm-metric-value { font-size: 1.35rem; font-weight: 800; margin: 2px 0 4px; font-variant-numeric: tabular-nums; }
+    .dm-text-faint { color: var(--text-faint); font-size: .78rem; }
+    .dm-text-dim { color: var(--text-dim); }
+
+    .dm-btn {
+        display: inline-flex; align-items: center; justify-content: center;
+        border: 1px solid var(--border); color: var(--text-dim);
+        background: transparent; border-radius: 999px;
+        font-size: .78rem; font-weight: 600; padding: 6px 14px;
+        text-decoration: none; margin-top: 12px;
+        transition: all .2s ease;
+    }
+    .dm-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+    .dm-btn--block { display: flex; width: 100%; margin-top: 16px; }
+    .dm-btn--sm { padding: 3px 10px; font-size: .72rem; margin-top: 0; }
+
+    .dm-section-title {
+        display: flex; align-items: center; justify-content: space-between;
+        font-weight: 700; font-size: .92rem; margin-bottom: 18px;
+        padding-bottom: 14px; border-bottom: 1px solid var(--border);
+    }
+    .dm-section-title i { margin-right: 8px; color: var(--accent); }
+    .dm-flex-gap { display: flex; align-items: center; gap: 12px; }
+
+    .dm-bar-row { margin-bottom: 18px; }
+    .dm-bar-row:last-child { margin-bottom: 0; }
+    .dm-bar-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .dm-bar-label { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: .85rem; }
+    .dm-bar-label i { color: var(--text-dim); }
+    .dm-bar-value { font-weight: 700; font-size: .85rem; }
+    .dm-bar-track { height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; margin-bottom: 6px; }
+    .dm-bar-fill {
+        height: 100%; width: 0; border-radius: 999px;
+        background: linear-gradient(90deg, var(--accent), #b3a4ff);
+        transition: width 1s cubic-bezier(.22,1,.36,1);
+    }
+    .dm-bar-fill--alt { background: linear-gradient(90deg, var(--good), #7de8c4); }
+
+    .dm-table-wrap { overflow-x: auto; }
+    .dm-table { width: 100%; border-collapse: collapse; font-size: .87rem; }
+    .dm-table thead th {
+        text-align: left; text-transform: uppercase; letter-spacing: .04em;
+        font-size: .68rem; font-weight: 700; color: var(--text-faint);
+        padding: 0 10px 10px; border-bottom: 1px solid var(--border);
+    }
+    .dm-table tbody td { padding: 12px 10px; border-bottom: 1px solid var(--border); }
+    .dm-table tbody tr:last-child td { border-bottom: none; }
+    .dm-table tbody tr { transition: background .2s ease; }
+    .dm-table tbody tr:hover { background: var(--surface-2); }
+    .dm-table--compact td, .dm-table--compact th { padding: 8px 10px; }
+    .dm-text-center { text-align: center; }
+    .dm-text-end { text-align: right; }
+    .dm-cell-strong { font-weight: 700; }
+    .dm-cell-good { color: var(--good); font-weight: 700; }
+    .dm-cell-bad { color: var(--bad); }
+
+    .dm-pill {
+        display: inline-flex; align-items: center; padding: 3px 11px;
+        border-radius: 999px; font-size: .7rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: .03em;
+    }
+    .dm-pill--muted  { background: var(--surface-2); color: var(--text-dim); }
+    .dm-pill--accent { background: var(--accent-soft); color: var(--accent); }
+    .dm-pill--good   { background: var(--good-soft); color: var(--good); }
+    .dm-pill--bad    { background: var(--bad-soft); color: var(--bad); }
+    .dm-pill--warn   { background: var(--warn-soft); color: var(--warn); }
+
+    .dm-row-item {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .dm-row-item:last-child { border-bottom: none; }
+    .dm-row-item--tight { padding: 8px 0; }
+    .dm-row-left { display: flex; align-items: center; gap: 10px; }
+    .dm-row-right { display: flex; align-items: center; gap: 8px; }
+    .dm-row-title { margin: 0; font-weight: 600; font-size: .85rem; }
+
+    .dm-rank {
+        width: 24px; height: 24px; border-radius: 8px; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+        background: var(--surface-2); color: var(--text-dim);
+        font-size: .75rem; font-weight: 700;
+    }
+    .dm-rank--top { background: var(--accent-soft); color: var(--accent); }
+
+    .dm-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 10px; }
+    .dm-thumb--sm { width: 34px; height: 34px; border-radius: 8px; }
+
+    .dm-tag-row { display: flex; gap: 5px; margin-top: 3px; }
+    .dm-tag {
+        font-size: .62rem; padding: 1px 7px; border-radius: 6px;
+        background: var(--surface-2); color: var(--text-dim);
+    }
+
+    .dm-subgroup { margin-bottom: 16px; }
+    .dm-subgroup:last-child { margin-bottom: 0; }
+    .dm-subgroup-title {
+        font-size: .78rem; font-weight: 700; margin: 0 0 8px;
+        display: flex; align-items: center; gap: 6px;
+    }
+    .dm-subgroup-title--bad  { color: var(--bad); }
+    .dm-subgroup-title--warn { color: var(--warn); }
+
+    .dm-empty {
+        text-align: center; padding: 28px 0; color: var(--text-faint); font-size: .85rem;
+    }
+    .dm-empty--good { color: var(--good); }
+    .dm-empty--good i { margin-right: 6px; }
+</style>
+
+<script th:inline="javascript">
+    (function () {
+        // ── Đếm số tăng dần cho các chỉ số lớn ─────────────────────────
+        function formatNumber(n) {
+            return Math.round(n).toLocaleString('en-US');
+        }
+        document.querySelectorAll('.dm-countup').forEach(function (el) {
+            var target = parseFloat(el.getAttribute('data-value')) || 0;
+            var suffix = el.getAttribute('data-suffix') || '';
+            var duration = 900;
+            var start = null;
+            function step(ts) {
+                if (!start) start = ts;
+                var progress = Math.min((ts - start) / duration, 1);
+                var eased = 1 - Math.pow(1 - progress, 3);
+                el.textContent = formatNumber(target * eased) + suffix;
+                if (progress < 1) requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+        });
+
+        // ── Thanh so sánh doanh thu theo kênh / biến động kho ──────────
+        function fillBars(containerId) {
+            var container = document.getElementById(containerId);
+            if (!container) return;
+            var rows = Array.prototype.slice.call(container.querySelectorAll('.dm-bar-row'));
+            var max = rows.reduce(function (m, r) {
+                return Math.max(m, parseFloat(r.getAttribute('data-value')) || 0);
+            }, 0);
+            if (max <= 0) return;
+            rows.forEach(function (r, i) {
+                var value = parseFloat(r.getAttribute('data-value')) || 0;
+                var pct = Math.max((value / max) * 100, 4);
+                var fill = r.querySelector('.dm-bar-fill');
+                setTimeout(function () { fill.style.width = pct + '%'; }, 150 + i * 120);
+            });
+        }
+        fillBars('dm-channel-list');
+        fillBars('dm-stock-list');
+    })();
+</script>
+
 </body>
 </html>

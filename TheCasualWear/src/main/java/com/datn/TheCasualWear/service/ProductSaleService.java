@@ -1,8 +1,10 @@
 package com.datn.TheCasualWear.service;
 
 import com.datn.TheCasualWear.config.ResourceNotFoundException;
+import com.datn.TheCasualWear.dto.SaleEffectivenessDTO;
 import com.datn.TheCasualWear.entity.Product;
 import com.datn.TheCasualWear.entity.ProductSale;
+import com.datn.TheCasualWear.repository.OrderDetailRepository;
 import com.datn.TheCasualWear.repository.ProductSaleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -11,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -22,6 +25,7 @@ import java.util.stream.Collectors;
 public class ProductSaleService {
 
     private final ProductSaleRepository saleRepository;
+    private final OrderDetailRepository orderDetailRepository; // MỚI: đo hiệu quả sale cho dashboard
 
     // ── TÍNH GIÁ (dùng ở CartService, CounterCart, trang shop...) ──────────
 
@@ -126,6 +130,33 @@ public class ProductSaleService {
     @Transactional
     public void deleteSale(Integer saleId) {
         saleRepository.delete(getSaleById(saleId));
+    }
+
+    // ── DASHBOARD ────────────────────────────────────────────────────────
+
+    // Sale bắt đầu từ :since trở lại đây — dùng làm input cho getSaleEffectiveness()
+    public List<ProductSale> getRecentSales(LocalDateTime since) {
+        return saleRepository.findRecentSales(since);
+    }
+
+    // Với mỗi sale: tổng SL bán, doanh thu, tổng tiền đã giảm — trong đúng
+    // khoảng [sale.startDate, sale.endDate], chỉ tính đơn COMPLETED.
+    // Sắp xếp SL bán giảm dần để thấy ngay sale nào hiệu quả nhất.
+    public List<SaleEffectivenessDTO> getSaleEffectiveness(List<ProductSale> sales) {
+        return sales.stream()
+                .map(sale -> {
+                    List<Object[]> rows = orderDetailRepository.sumSoldForProductBetween(
+                            sale.getProduct().getId(), sale.getStartDate(), sale.getEndDate());
+                    // Query luôn có COALESCE nên rows sẽ có đúng 1 phần tử;
+                    // vẫn phòng hờ rows rỗng để không NPE nếu logic sau này đổi.
+                    Object[] r = rows.isEmpty()
+                            ? new Object[]{0L, BigDecimal.ZERO, BigDecimal.ZERO}
+                            : rows.get(0);
+                    return new SaleEffectivenessDTO(
+                            sale, (Long) r[0], (BigDecimal) r[1], (BigDecimal) r[2]);
+                })
+                .sorted(Comparator.comparingLong(SaleEffectivenessDTO::qtySold).reversed())
+                .toList();
     }
 
     // ── JOB DỌN DẸP (gọi từ SaleScheduler) ──────────────────────────────

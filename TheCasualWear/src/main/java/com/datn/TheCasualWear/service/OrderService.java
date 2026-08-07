@@ -1,7 +1,10 @@
 package com.datn.TheCasualWear.service;
 
 import com.datn.TheCasualWear.config.ResourceNotFoundException;
+import com.datn.TheCasualWear.dto.CancelReasonStatDTO;
+import com.datn.TheCasualWear.dto.FrequentCancellerDTO;
 import com.datn.TheCasualWear.dto.OrderListDTO;
+import com.datn.TheCasualWear.dto.RevenueByChannelDTO;
 import org.springframework.data.domain.PageImpl;
 import com.datn.TheCasualWear.entity.*;
 import com.datn.TheCasualWear.enums.CancelReason;
@@ -379,6 +382,36 @@ public class OrderService {
         toDelete.stream()
                 .filter(o -> o.getOrderDate().isBefore(oneMonthAgo))
                 .forEach(orderRepository::delete);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // DASHBOARD
+    // ─────────────────────────────────────────────────────────────
+
+    // Doanh thu ONLINE vs COUNTER trong khoảng thời gian (chỉ đơn COMPLETED)
+    public List<RevenueByChannelDTO> getRevenueByChannel(LocalDateTime from, LocalDateTime to) {
+        return orderRepository.sumRevenueByOrderType(from, to).stream()
+                .map(r -> new RevenueByChannelDTO(
+                        (com.datn.TheCasualWear.enums.OrderType) r[0],
+                        (BigDecimal) r[1],
+                        (Long) r[2]))
+                .toList();
+    }
+
+    // Thống kê lý do hủy/hoàn đơn, nhiều nhất trước
+    public List<CancelReasonStatDTO> getCancelReasonStats() {
+        return orderRepository.countByCancelReason().stream()
+                .map(r -> new CancelReasonStatDTO((CancelReason) r[0], (Long) r[1]))
+                .toList();
+    }
+
+    // Khách hàng có >= minCount đơn CANCELLED/RETURNED — chỉ để admin xem xét
+    // thủ công, KHÔNG tự động chặn mua hàng (xem ghi chú ở FrequentCancellerDTO).
+    public List<FrequentCancellerDTO> getFrequentCancellers(long minCount) {
+        return orderRepository.findFrequentCancellers(minCount).stream()
+                .map(r -> new FrequentCancellerDTO(
+                        (AppUser) r[0], (Long) r[1], (Long) r[2], (Long) r[3]))
+                .toList();
     }
 
     // ─────────────────────────────────────────────────────────────

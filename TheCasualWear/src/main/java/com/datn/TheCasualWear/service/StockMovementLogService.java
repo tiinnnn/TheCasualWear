@@ -1,6 +1,7 @@
 package com.datn.TheCasualWear.service;
 
 import com.datn.TheCasualWear.config.ResourceNotFoundException;
+import com.datn.TheCasualWear.dto.StockMovementSummaryDTO;
 import com.datn.TheCasualWear.entity.AppUser;
 import com.datn.TheCasualWear.entity.ProductVariant;
 import com.datn.TheCasualWear.entity.StockMovementLog;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 // ĐIỂM DUY NHẤT nên dùng để thay đổi ProductVariant.stock trong toàn hệ thống
 // (thay cho variant.setStock(...) rải rác nhiều nơi), để đảm bảo mọi thay đổi
@@ -81,6 +83,27 @@ public class StockMovementLogService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Không tìm thấy variant với id: " + variantId));
         return logMovement(variant, changeType, changeQty, refType, refId, note, createdBy);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // DASHBOARD
+    // ─────────────────────────────────────────────────────────────
+
+    // Tổng khối lượng biến động kho theo loại (IMPORT/SALE/CANCEL/RETURN/ADJUST)
+    // trong khoảng thời gian — dùng vẽ biểu đồ nhập/xuất kho. totalQty luôn
+    // dương (lấy trị tuyệt đối changeQty), vì dấu +/- chỉ để tính balance,
+    // không cần thiết khi hiển thị "khối lượng đã xử lý".
+    // Lưu ý: đang group bằng Java stream (dựa trên getLogsBetween() có sẵn) —
+    // nếu khối lượng log lớn (hàng chục nghìn dòng/kỳ báo cáo), nên đổi sang
+    // JPQL "GROUP BY changeType" ở StockMovementLogRepository để đỡ tải RAM.
+    public List<StockMovementSummaryDTO> getMovementSummary(LocalDateTime from, LocalDateTime to) {
+        return getLogsBetween(from, to).stream()
+                .collect(Collectors.groupingBy(
+                        StockMovementLog::getChangeType,
+                        Collectors.summingLong(l -> Math.abs(l.getChangeQty()))))
+                .entrySet().stream()
+                .map(e -> new StockMovementSummaryDTO(e.getKey(), e.getValue()))
+                .toList();
     }
 
     // ─────────────────────────────────────────────────────────────
