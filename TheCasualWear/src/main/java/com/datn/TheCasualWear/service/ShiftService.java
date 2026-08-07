@@ -2,9 +2,11 @@ package com.datn.TheCasualWear.service;
 
 import com.datn.TheCasualWear.config.ResourceNotFoundException;
 import com.datn.TheCasualWear.entity.AppUser;
+import com.datn.TheCasualWear.entity.PosCounter;
 import com.datn.TheCasualWear.entity.Shift;
 import com.datn.TheCasualWear.enums.ShiftStatus;
 import com.datn.TheCasualWear.repository.AppOrderRepository;
+import com.datn.TheCasualWear.repository.PosCounterRepository;
 import com.datn.TheCasualWear.repository.ShiftRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,7 @@ public class ShiftService {
 
     private final ShiftRepository     shiftRepository;
     private final AppOrderRepository  orderRepository;
+    private final PosCounterRepository counterRepository;
 
     // Giá trị paymentMethod dùng để tính "tiền mặt thu trong ca" khi đóng ca.
     // ⚠️ CHỈNH LẠI chuỗi này cho khớp với giá trị thực tế mà form POS gửi lên
@@ -47,8 +50,13 @@ public class ShiftService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ca làm việc"));
     }
 
+    // Quầy này có đang bị cashier khác chiếm (ca OPEN) không.
+    public boolean isCounterOccupied(Integer counterId) {
+        return shiftRepository.findByCounterIdAndStatus(counterId, ShiftStatus.OPEN).isPresent();
+    }
+
     @Transactional
-    public Shift openShift(AppUser cashier, BigDecimal openingCash) {
+    public Shift openShift(AppUser cashier, Integer counterId, BigDecimal openingCash) {
         if (hasOpenShift(cashier)) {
             throw new IllegalStateException(
                     "Bạn đang có 1 ca chưa đóng! Vui lòng đóng ca hiện tại trước khi mở ca mới.");
@@ -57,8 +65,20 @@ public class ShiftService {
             throw new IllegalArgumentException("Tiền quỹ đầu ca không được âm!");
         }
 
+        PosCounter counter = counterRepository.findById(counterId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy quầy!"));
+
+        // Check lại lần cuối ngay trước khi lưu (phòng race condition — 2
+        // cashier cùng bấm "Vào quầy" gần như đồng thời). Unique filtered
+        // index UX_shift_counter_open ở DB là lớp chặn cuối cùng, chắc chắn.
+        if (isCounterOccupied(counterId)) {
+            throw new IllegalStateException(
+                    "Quầy " + counter.getCode() + " đang có người sử dụng, vui lòng chọn quầy khác!");
+        }
+
         Shift shift = new Shift();
         shift.setCashier(cashier);
+        shift.setCounter(counter);
         shift.setOpeningCash(openingCash);
         shift.setOpenedAt(LocalDateTime.now());
         shift.setStatus(ShiftStatus.OPEN);
@@ -118,12 +138,12 @@ public class ShiftService {
     // XÁC NHẬN BÀN GIAO CA (handover confirmation)
     // ─────────────────────────────────────────────────────────────
 
-    // Ca CLOSED gần nhất (toàn hệ thống) mà chưa ai xác nhận bàn giao —
-    // nếu có, cashier chuẩn bị mở ca mới phải xem & xác nhận số liệu ca
-    // này trước, chặn không cho mở ca tiếp cho tới khi xác nhận xong.
-    public Optional<Shift> getLatestUnconfirmedClosedShift() {
-        return shiftRepository.findFirstByStatusAndHandoverConfirmedByIsNullOrderByClosedAtDesc(
-                ShiftStatus.CLOSED);
+    // Ca CLOSED gần nhất TẠI ĐÚNG QUẦY NÀY mà chưa ai xác nhận bàn giao —
+    // scope theo quầy (không còn toàn hệ thống) để cashier ở quầy khác
+    // không bị bắt xác nhận số liệu không liên quan.
+    public Optional<Shift> getLatestUnconfirmedClosedShiftForCounter(Integer counterId) {
+        return shiftRepository.findFirstByCounterIdAndStatusAndHandoverConfirmedByIsNullOrderByClosedAtDesc(
+                counterId, ShiftStatus.CLOSED);
     }
 
     /**
@@ -151,6 +171,12 @@ public class ShiftService {
         shift.setHandoverNote(isMatch ? note : "[SAI LỆCH] " + note);
 
         return shiftRepository.save(shift);
+    }
+
+    // Toàn bộ đơn (COMPLETED + CANCELLED) thuộc 1 ca — dùng cho trang xem
+    // log sản phẩm đã bán/hủy theo ca.
+    public List<com.datn.TheCasualWear.entity.AppOrder> getOrdersForShift(Integer shiftId) {
+        return orderRepository.findByShiftIdOrderByOrderDateDesc(shiftId);
     }
 
     public List<Shift> getHistory(AppUser cashier) {

@@ -14,6 +14,7 @@
         <table class="table table-hover align-middle mb-0">
             <thead class="table-dark">
             <tr>
+                <th>Quầy</th>
                 <th>Thu ngân</th>
                 <th>Mở ca</th>
                 <th>Đóng ca</th>
@@ -23,13 +24,15 @@
                 <th>Chênh lệch</th>
                 <th>Trạng thái</th>
                 <th>Ghi chú</th>
+                <th>Chi tiết</th>
             </tr>
             </thead>
             <tbody>
             <tr th:if="${#lists.isEmpty(shifts)}">
-                <td colspan="9" class="text-center text-muted py-4">Chưa có ca làm việc nào.</td>
+                <td colspan="11" class="text-center text-muted py-4">Chưa có ca làm việc nào.</td>
             </tr>
             <tr th:each="s : ${shifts}">
+                <td th:text="${s.counter != null ? s.counter.code : '-'}"></td>
                 <td th:text="${s.cashier.username}"></td>
                 <td th:text="${#temporals.format(s.openedAt, 'HH:mm dd/MM/yyyy')}"></td>
                 <td th:text="${s.closedAt != null ? #temporals.format(s.closedAt, 'HH:mm dd/MM/yyyy') : '-'}"></td>
@@ -52,6 +55,12 @@
                     th:text="${s.note != null and !s.note.isBlank()
                                ? (s.note.length() > 40 ? s.note.substring(0,40) + '…' : s.note)
                                : '-'}"></td>
+                <td>
+                    <a th:href="@{'/admin/shifts/' + ${s.id} + '/items'}"
+                       class="btn btn-sm btn-outline-primary" title="Xem sản phẩm đã bán">
+                        <i class="bi bi-list-ul"></i>
+                    </a>
+                </td>
             </tr>
             </tbody>
         </table>

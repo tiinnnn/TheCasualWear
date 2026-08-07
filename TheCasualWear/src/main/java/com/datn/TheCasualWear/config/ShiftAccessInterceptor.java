@@ -38,7 +38,7 @@ public class ShiftAccessInterceptor implements HandlerInterceptor {
         }
 
         if (!shiftService.hasOpenShift(cashier)) {
-            response.sendRedirect(request.getContextPath() + "/cashier/shift/open");
+            response.sendRedirect(request.getContextPath() + "/cashier/shift/select-counter");
             return false;
         }
         return true;

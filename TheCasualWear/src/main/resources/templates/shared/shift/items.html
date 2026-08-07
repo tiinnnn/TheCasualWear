@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Sản phẩm đã bán trong ca</title></head>
+<body>
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <h4 class="fw-bold mb-0">
+        Sản phẩm đã bán — Ca #<span th:text="${shift.id}"></span>
+        <small class="text-muted fs-6"
+               th:text="'(Quầy ' + ${shift.counter != null ? shift.counter.code : '-'} + ' — ' + ${shift.cashier.username} + ')'"></small>
+    </h4>
+    <a th:href="@{${backUrl}}" class="btn btn-outline-secondary btn-sm">← Quay lại</a>
+</div>
+
+<div th:if="${#lists.isEmpty(orders)}" class="card border-0 shadow-sm">
+    <div class="card-body text-center text-muted py-5">
+        Ca này chưa có đơn hàng nào.
+    </div>
+</div>
+
+<div th:each="order : ${orders}" class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+            <div>
+                <span class="fw-bold">Đơn #<span th:text="${order.id}"></span></span>
+                <span class="text-muted small ms-2"
+                      th:text="${#temporals.format(order.orderDate, 'HH:mm dd/MM/yyyy')}"></span>
+                <span class="text-muted small ms-2">
+                    <span th:if="${order.customer != null}" th:text="${order.customer.username}"></span>
+                    <span th:if="${order.customer == null}">Khách lẻ</span>
+                </span>
+            </div>
+            <div>
+                <span th:if="${order.status.name() == 'COMPLETED'}" class="badge bg-success">Hoàn thành</span>
+                <span th:if="${order.status.name() == 'CANCELLED'}" class="badge bg-danger">Đã hủy</span>
+                <span class="badge bg-light text-dark border ms-1" th:text="${order.paymentMethod}"></span>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th>Sản phẩm</th>
+                    <th>Size / Màu</th>
+                    <th class="text-center">SL</th>
+                    <th class="text-end">Đơn giá</th>
+                    <th class="text-end">Thành tiền</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="d : ${order.orderDetails}">
+                    <td th:text="${d.variant.product.name}"></td>
+                    <td th:text="${(d.variant.size != null ? d.variant.size.name : '?')
+                                   + ' / ' + (d.variant.color != null ? d.variant.color.name : '?')}"></td>
+                    <td class="text-center" th:text="${d.quantity}"></td>
+                    <td class="text-end" th:text="${#numbers.formatInteger(d.price, 0, 'COMMA') + ' đ'}"></td>
+                    <td class="text-end fw-semibold"
+                        th:text="${#numbers.formatInteger(d.price.doubleValue() * d.quantity, 0, 'COMMA') + ' đ'}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

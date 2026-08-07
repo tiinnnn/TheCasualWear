@@ -98,4 +98,23 @@ public class StockMovementLogService {
     public List<StockMovementLog> getLogsByRef(StockRefType refType, Integer refId) {
         return logRepository.findByRefTypeAndRefId(refType, refId);
     }
+
+    // Tìm kiếm nâng cao: theo tên sản phẩm, mã SKU, loại biến động, khoảng ngày.
+    // Chuỗi rỗng/blank được coi như không lọc theo tiêu chí đó.
+    public List<StockMovementLog> searchLogs(String productName,
+                                             String sku,
+                                             StockMovementType changeType,
+                                             LocalDateTime from,
+                                             LocalDateTime to) {
+        return logRepository.search(
+                blankToNull(productName),
+                blankToNull(sku),
+                changeType,
+                from,
+                to);
+    }
+
+    private String blankToNull(String value) {
+        return (value == null || value.isBlank()) ? null : value.trim();
+    }
 }

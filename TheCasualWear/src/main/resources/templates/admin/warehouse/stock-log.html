@@ -4,20 +4,35 @@
     <div class="card shadow-sm mb-3">
         <div class="card-body">
             <form th:action="@{/admin/warehouse/stock-log}" method="get" class="row g-2 align-items-end">
-                <div class="col-md-3">
-                    <label class="form-label">Mã biến thể (variant ID)</label>
-                    <input type="number" class="form-control" name="variantId" th:value="${variantId}"
-                           placeholder="Để trống nếu lọc theo ngày"/>
+                <div class="col-md-2">
+                    <label class="form-label">Sản phẩm</label>
+                    <input type="text" class="form-control" name="productName" th:value="${productName}"
+                           placeholder="Tên sản phẩm"/>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
+                    <label class="form-label">SKU</label>
+                    <input type="text" class="form-control" name="sku" th:value="${sku}"
+                           placeholder="Mã SKU"/>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Loại biến động</label>
+                    <select class="form-select" name="changeType">
+                        <option value="">Tất cả</option>
+                        <option th:each="type : ${changeTypes}"
+                                th:value="${type}"
+                                th:text="${type}"
+                                th:selected="${changeType != null and changeType == type}"></option>
+                    </select>
+                </div>
+                <div class="col-md-2">
                     <label class="form-label">Từ ngày</label>
                     <input type="date" class="form-control" name="fromDate" th:value="${fromDate}"/>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">Đến ngày</label>
                     <input type="date" class="form-control" name="toDate" th:value="${toDate}"/>
                 </div>
-                <div class="col-md-3 d-flex gap-2">
+                <div class="col-md-2 d-flex gap-2">
                     <button type="submit" class="btn btn-dark flex-fill">
                         <i class="bi bi-search me-1"></i>Lọc
                     </button>
@@ -27,7 +42,7 @@
                 </div>
             </form>
             <p class="text-muted small mt-2 mb-0">
-                Lưu ý: nếu nhập "Mã biến thể", hệ thống sẽ ưu tiên lọc theo biến thể và bỏ qua khoảng ngày.
+                Lưu ý: có thể kết hợp lọc theo sản phẩm / SKU / loại biến động trong khoảng ngày.
                 Mặc định không lọc gì sẽ hiển thị 30 ngày gần nhất.
             </p>
         </div>

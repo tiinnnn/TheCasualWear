@@ -20,6 +20,10 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
 
     List<AppOrder> findByCustomerIdAndStatus(Integer customerId, String status);
 
+    // Toàn bộ đơn (cả COMPLETED lẫn CANCELLED) thuộc 1 ca — dùng cho trang
+    // xem log sản phẩm đã bán/hủy theo ca.
+    List<AppOrder> findByShiftIdOrderByOrderDateDesc(Integer shiftId);
+
     @Query("SELECT o FROM AppOrder o ORDER BY " +
             "CASE o.status " +
             "WHEN 'PENDING'   THEN 1 " +

@@ -13,15 +13,19 @@
 
             <div class="alert alert-warning">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                Ca trước (<strong th:text="${shift.cashier.username}"></strong>) vừa đóng ca.
+                Ca trước tại quầy <strong th:text="${shift.counter.code}"></strong>
+                (<strong th:text="${shift.cashier.username}"></strong>) vừa đóng ca.
                 Bạn cần kiểm tra và xác nhận số liệu dưới đây khớp với thực tế
-                trước khi được mở ca mới cho mình.
+                trước khi được mở ca mới tại quầy này.
             </div>
 
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-body">
                     <h6 class="fw-bold mb-3">Số liệu ca trước</h6>
                     <div class="row g-2">
+                        <div class="col-6 text-muted">Quầy</div>
+                        <div class="col-6 text-end fw-semibold" th:text="${shift.counter.code}"></div>
+
                         <div class="col-6 text-muted">Nhân viên</div>
                         <div class="col-6 text-end" th:text="${shift.cashier.username}"></div>
 

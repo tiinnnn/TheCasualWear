@@ -17,9 +17,13 @@ public interface ShiftRepository extends JpaRepository<Shift, Integer> {
 
     List<Shift> findAllByOrderByOpenedAtDesc();
 
-    // Ca đã CLOSED gần nhất (toàn hệ thống, không phân biệt cashier nào đóng)
-    // mà chưa có ai ở ca sau xác nhận bàn giao — dùng để chặn mở ca mới cho
-    // tới khi số liệu ca trước được xác nhận.
-    Optional<Shift> findFirstByStatusAndHandoverConfirmedByIsNullOrderByClosedAtDesc(
-            ShiftStatus status);
+    // Quầy này có đang bị ai chiếm (ca OPEN) không — dùng để chặn 2 cashier
+    // cùng vào 1 quầy song song.
+    Optional<Shift> findByCounterIdAndStatus(Integer counterId, ShiftStatus status);
+
+    // Ca CLOSED gần nhất TẠI ĐÚNG QUẦY NÀY mà chưa ai xác nhận bàn giao —
+    // scope theo counterId (KHÔNG còn toàn hệ thống nữa) để tránh cashier ở
+    // quầy khác bị bắt xác nhận số liệu không liên quan tới mình.
+    Optional<Shift> findFirstByCounterIdAndStatusAndHandoverConfirmedByIsNullOrderByClosedAtDesc(
+            Integer counterId, ShiftStatus status);
 }

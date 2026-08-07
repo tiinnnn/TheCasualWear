@@ -13,12 +13,26 @@
         <div class="col-md-6">
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
+                    <div class="alert alert-light border d-flex align-items-center gap-2">
+                        <i class="bi bi-shop-window fs-5"></i>
+                        <div>
+                            Đang mở ca tại quầy
+                            <strong th:text="${counter.code}"></strong>
+                            <span th:if="${counter.name != null and !counter.name.isBlank()}"
+                                  class="text-muted" th:text="'(' + ${counter.name} + ')'"></span>
+                            —
+                            <a th:href="@{/cashier/shift/select-counter}" class="small">đổi quầy khác</a>
+                        </div>
+                    </div>
+
                     <p class="text-muted">
                         Nhập số tiền mặt hiện có trong quầy trước khi bắt đầu bán hàng.
                         Hệ thống sẽ dùng số này để đối chiếu khi đóng ca.
                     </p>
 
                     <form th:action="@{/cashier/shift/open}" method="post" id="openShiftForm">
+                        <input type="hidden" name="counterId" th:value="${counter.id}"/>
+
                         <div class="mb-3">
                             <label class="form-label">Tiền quỹ đầu ca <span class="text-danger">*</span></label>
                             <div class="input-group" style="max-width: 220px">

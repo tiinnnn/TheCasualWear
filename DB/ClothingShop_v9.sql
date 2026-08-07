@@ -1,5 +1,9 @@
 -- ============================================================
 --  ClothingShop  –  Schema sạch + Seed Data
+--  v9 – Gộp migration sau v8:
+--       + shift: thêm counter_id (REFERENCES pos_counter) + unique index
+--         chỉ 1 ca OPEN / quầy tại 1 thời điểm
+--
 --  v8 – Gộp các migration sau v7 thành 1 baseline duy nhất:
 --       + shift: thêm xác nhận bàn giao ca (items_sold_count,
 --         handover_confirmed_by, handover_confirmed_at, handover_note)
@@ -646,11 +650,11 @@ INSERT INTO pos_counter (code, name, is_active) VALUES
 (N'Q2', N'Quầy 2 - khu thử đồ',     1);
 GO
 
--- ── SHIFTS (từ shift_migration.sql + shift_handover_migration.sql) ──
--- cashier1 = user 8; ca CLOSED đã được owner (user 2) xác nhận bàn giao
-INSERT INTO shift (cashier_id, opened_at, closed_at, opening_cash, expected_cash, actual_cash, cash_difference, status, note, items_sold_count, handover_confirmed_by, handover_confirmed_at, handover_note) VALUES
-(8, DATEADD(DAY,-2,GETDATE()), DATEADD(HOUR,8,DATEADD(DAY,-2,GETDATE())), 500000, 1848000, 1848000, 0, N'CLOSED', N'Ca sáng, khớp quỹ', 6, 2, DATEADD(HOUR,9,DATEADD(DAY,-2,GETDATE())), N'Đã kiểm tra quỹ và hàng tồn, khớp'),
-(8, DATEADD(HOUR,-3,GETDATE()), NULL,                                    500000, NULL,    NULL,    NULL, N'OPEN',   NULL,                 NULL, NULL, NULL, NULL);
+-- ── SHIFTS (từ shift_migration.sql + shift_handover_migration.sql + shift_counter_migration.sql) ──
+-- cashier1 = user 8; ca CLOSED đã được owner (user 2) xác nhận bàn giao; cả 2 ca đều ở quầy Q1 (id=1)
+INSERT INTO shift (cashier_id, counter_id, opened_at, closed_at, opening_cash, expected_cash, actual_cash, cash_difference, status, note, items_sold_count, handover_confirmed_by, handover_confirmed_at, handover_note) VALUES
+(8, 1, DATEADD(DAY,-2,GETDATE()), DATEADD(HOUR,8,DATEADD(DAY,-2,GETDATE())), 500000, 1848000, 1848000, 0, N'CLOSED', N'Ca sáng, khớp quỹ', 6, 2, DATEADD(HOUR,9,DATEADD(DAY,-2,GETDATE())), N'Đã kiểm tra quỹ và hàng tồn, khớp'),
+(8, 1, DATEADD(HOUR,-3,GETDATE()), NULL,                                    500000, NULL,    NULL,    NULL, N'OPEN',   NULL,                 NULL, NULL, NULL, NULL);
 GO
 
 -- ── GOODS RECEIPTS (từ warehouse_migration.sql) ─────────────

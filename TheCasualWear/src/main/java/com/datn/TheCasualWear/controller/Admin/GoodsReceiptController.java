@@ -19,6 +19,8 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -42,9 +44,33 @@ public class GoodsReceiptController {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản đăng nhập"));
     }
 
+    // Lọc theo mã phiếu / nhà cung cấp / khoảng ngày tạo.
+    // Không truyền gì thì hiển thị toàn bộ danh sách (giữ hành vi cũ).
     @GetMapping
-    public String list(Model model) {
-        model.addAttribute("receipts", goodsReceiptService.getAllReceipts());
+    public String list(@RequestParam(required = false) String code,
+                       @RequestParam(required = false) String supplierName,
+                       @RequestParam(required = false) String fromDate,
+                       @RequestParam(required = false) String toDate,
+                       Model model) {
+
+        LocalDateTime from = (fromDate == null || fromDate.isBlank())
+                ? null : LocalDate.parse(fromDate).atStartOfDay();
+        LocalDateTime to = (toDate == null || toDate.isBlank())
+                ? null : LocalDate.parse(toDate).atTime(23, 59, 59);
+
+        boolean noFilter = (code == null || code.isBlank())
+                && (supplierName == null || supplierName.isBlank())
+                && from == null && to == null;
+
+        List<GoodsReceipt> receipts = noFilter
+                ? goodsReceiptService.getAllReceipts()
+                : goodsReceiptService.searchReceipts(code, supplierName, from, to);
+
+        model.addAttribute("receipts", receipts);
+        model.addAttribute("code", code);
+        model.addAttribute("supplierName", supplierName);
+        model.addAttribute("fromDate", fromDate);
+        model.addAttribute("toDate", toDate);
         model.addAttribute("view", "admin/warehouse/receipt-list");
         return "layouts/admin-layout";
     }

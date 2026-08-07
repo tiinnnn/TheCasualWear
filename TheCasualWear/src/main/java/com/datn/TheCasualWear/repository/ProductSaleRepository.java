@@ -47,4 +47,15 @@ public interface ProductSaleRepository extends JpaRepository<ProductSale, Intege
                               @Param("startDate") LocalDateTime startDate,
                               @Param("endDate") LocalDateTime endDate,
                               @Param("excludeId") Integer excludeId);
+
+    // Sale đã qua end_date nhưng is_active vẫn true — dùng cho job dọn dẹp
+    // định kỳ (SaleScheduler). Việc tính giá không phụ thuộc vào is_active
+    // của các bản ghi này (đã tự động loại theo end_date rồi), job này chỉ
+    // để cập nhật trạng thái hiển thị cho gọn trong admin/product/sales.html.
+    @Query("""
+        SELECT s FROM ProductSale s
+        WHERE s.isActive = true
+          AND s.endDate < :now
+        """)
+    List<ProductSale> findExpiredButStillActive(@Param("now") LocalDateTime now);
 }

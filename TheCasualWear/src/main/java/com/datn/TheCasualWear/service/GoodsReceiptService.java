@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -38,6 +39,22 @@ public class GoodsReceiptService {
 
     public List<GoodsReceipt> getAllReceipts() {
         return receiptRepository.findAllByOrderByCreatedAtDesc();
+    }
+
+    // Tìm kiếm theo mã phiếu / nhà cung cấp / khoảng ngày tạo.
+    // Chuỗi rỗng/blank được coi như không lọc theo tiêu chí đó;
+    // không truyền tham số nào thì trả về toàn bộ danh sách.
+    public List<GoodsReceipt> searchReceipts(String code, String supplierName,
+                                             LocalDateTime from, LocalDateTime to) {
+        return receiptRepository.search(
+                blankToNull(code),
+                blankToNull(supplierName),
+                from,
+                to);
+    }
+
+    private String blankToNull(String value) {
+        return (value == null || value.isBlank()) ? null : value.trim();
     }
 
     /**

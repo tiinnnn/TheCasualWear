@@ -127,4 +127,19 @@ public class ProductSaleService {
     public void deleteSale(Integer saleId) {
         saleRepository.delete(getSaleById(saleId));
     }
+
+    // ── JOB DỌN DẸP (gọi từ SaleScheduler) ──────────────────────────────
+
+    // Set is_active=false cho các sale đã qua end_date. Không ảnh hưởng đến
+    // việc tính giá (getEffectivePrice/getActiveSale đã tự loại theo
+    // end_date rồi) — chỉ để trạng thái hiển thị trong
+    // admin/product/sales.html gọn hơn theo thời gian, tránh tồn đọng danh
+    // sách sale "Chưa/hết hạn" mãi mãi.
+    @Transactional
+    public int deactivateExpiredSales() {
+        List<ProductSale> expired = saleRepository.findExpiredButStillActive(LocalDateTime.now());
+        expired.forEach(s -> s.setIsActive(false));
+        saleRepository.saveAll(expired);
+        return expired.size();
+    }
 }

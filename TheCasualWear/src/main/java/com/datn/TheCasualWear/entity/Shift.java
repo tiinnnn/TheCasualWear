@@ -20,6 +20,12 @@ public class Shift {
     @JoinColumn(name = "cashier_id", nullable = false)
     private AppUser cashier;
 
+    // Quầy vật lý mà ca này diễn ra — bắt buộc chọn khi mở ca (Việc 2).
+    // Nullable ở tầng DB vì các ca cũ (trước khi có tính năng quầy) không có.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "counter_id")
+    private PosCounter counter;
+
     @Column(name = "opened_at", nullable = false)
     private LocalDateTime openedAt = LocalDateTime.now();
 
