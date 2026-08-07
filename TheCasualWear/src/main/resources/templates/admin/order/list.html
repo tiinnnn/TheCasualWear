@@ -2,102 +2,250 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head><title>Quản lý đơn hàng</title></head>
 <body>
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="fw-bold">
-        Quản lý đơn hàng
-        <small class="text-muted fs-6"
-               th:text="'(' + ${totalItems} + ' đơn)'"></small>
-    </h4>
-</div>
+<div class="ac-scope">
+    <style>
+        .ac-scope { color: var(--adm-text); }
+        .ac-scope h4, .ac-scope h5, .ac-scope h6 { color: var(--adm-text); }
+        .ac-scope small, .ac-scope .text-muted { color: var(--adm-text-dim) !important; }
 
-<!-- Search + Filter -->
-<form th:action="@{/admin/orders}" method="get" class="mb-3">
-    <div class="d-flex flex-wrap gap-2 align-items-end">
+        .ac-scope .card {
+            background: var(--adm-surface);
+            border: 1px solid var(--adm-border) !important;
+            color: var(--adm-text);
+        }
+        .ac-scope .card-header.bg-dark {
+            background: var(--adm-surface-2) !important;
+            border-bottom: 1px solid var(--adm-border);
+        }
 
-        <!-- Keyword -->
-        <div>
-            <label class="form-label small text-muted mb-1">Tên khách hàng</label>
-            <input type="text" name="keyword" th:value="${keyword}"
-                   class="form-control form-control-sm"
-                   style="min-width:180px;flex:1 1 180px"
-                   placeholder="Tìm theo tên khách..."/>
-        </div>
+        .ac-scope .table {
+            --bs-table-bg: transparent;
+            --bs-table-color: var(--adm-text);
+            --bs-table-border-color: var(--adm-border);
+            --bs-table-hover-bg: var(--adm-surface-2);
+            --bs-table-hover-color: var(--adm-text);
+            --bs-table-active-bg: var(--adm-surface-2);
+            --bs-table-active-color: var(--adm-text);
+            color: var(--adm-text);
+        }
+        .ac-scope .table > :not(caption) > * > * {
+            background-color: var(--bs-table-bg) !important;
+            color: var(--bs-table-color) !important;
+            border-bottom-color: var(--bs-table-border-color) !important;
+            box-shadow: none !important;
+        }
+        .ac-scope .table > thead {
+            --bs-table-bg: var(--adm-surface-2);
+            --bs-table-color: var(--adm-text-dim);
+        }
+        .ac-scope .table-hover > tbody > tr:hover > * {
+            background-color: var(--adm-surface-2) !important;
+            color: var(--adm-text) !important;
+        }
 
-        <!-- Trạng thái -->
-        <div>
-            <label class="form-label small text-muted mb-1">Trạng thái</label>
-            <select name="status" class="form-select form-select-sm" style="min-width:150px">
-                <option value="">Tất cả</option>
-                <option value="PENDING"   th:selected="${selectedStatus == 'PENDING'}">Chờ xác nhận</option>
-                <option value="CONFIRMED" th:selected="${selectedStatus == 'CONFIRMED'}">Đã xác nhận</option>
-                <option value="SHIPPING"  th:selected="${selectedStatus == 'SHIPPING'}">Đang giao</option>
-                <option value="COMPLETED" th:selected="${selectedStatus == 'COMPLETED'}">Hoàn thành</option>
-                <option value="CANCELLED" th:selected="${selectedStatus == 'CANCELLED'}">Đã hủy</option>
-                <option value="RETURNED"  th:selected="${selectedStatus == 'RETURNED'}">Đã hoàn hàng</option>
-            </select>
-        </div>
+        .ac-scope .btn { font-weight: 600; }
+        .ac-scope .btn-dark { background: var(--adm-accent); border-color: var(--adm-accent); }
+        .ac-scope .btn-dark:hover { background: #7a6af0; border-color: #7a6af0; }
+        .ac-scope .btn-success { background: var(--adm-good); border-color: var(--adm-good); }
+        .ac-scope .btn-danger { background: var(--adm-bad); border-color: var(--adm-bad); }
+        .ac-scope .btn-outline-secondary,
+        .ac-scope .btn-outline-dark {
+            border-color: rgba(255,255,255,.22); color: var(--adm-text); background: transparent;
+        }
+        .ac-scope .btn-outline-secondary:hover,
+        .ac-scope .btn-outline-dark:hover {
+            border-color: var(--adm-accent); color: var(--adm-accent); background: var(--adm-accent-soft);
+        }
+        .ac-scope .btn-outline-primary {
+            border-color: rgba(139,124,246,.5); color: var(--adm-accent); background: transparent;
+        }
+        .ac-scope .btn-outline-primary:hover { background: var(--adm-accent-soft); border-color: var(--adm-accent); }
+        .ac-scope .btn-outline-success {
+            border-color: rgba(52,211,153,.5); color: var(--adm-good); background: transparent;
+        }
+        .ac-scope .btn-outline-success:hover { background: var(--adm-good-soft); border-color: var(--adm-good); }
+        .ac-scope .btn-outline-danger {
+            border-color: rgba(242,99,122,.5); color: var(--adm-bad); background: transparent;
+        }
+        .ac-scope .btn-outline-danger:hover { background: var(--adm-bad-soft); border-color: var(--adm-bad); }
+        .ac-scope .btn-outline-warning {
+            border-color: rgba(245,185,92,.5); color: var(--adm-warn); background: transparent;
+        }
+        .ac-scope .btn-outline-warning:hover { background: var(--adm-warn-soft); border-color: var(--adm-warn); }
 
-        <!-- Từ ngày -->
-        <div>
-            <label class="form-label small text-muted mb-1">Từ ngày</label>
-            <input type="date" name="fromDate" th:value="${fromDate}"
-                   class="form-control form-control-sm"/>
-        </div>
+        .ac-scope .form-control, .ac-scope .form-select {
+            background: var(--adm-surface-2); border-color: var(--adm-border); color: var(--adm-text);
+        }
+        .ac-scope .form-control::placeholder { color: var(--adm-text-faint); }
+        .ac-scope .form-control:focus, .ac-scope .form-select:focus {
+            background: var(--adm-surface-2); border-color: var(--adm-accent); color: var(--adm-text);
+            box-shadow: 0 0 0 .2rem var(--adm-accent-soft);
+        }
+        .ac-scope .form-control:disabled { background: var(--adm-surface); color: var(--adm-text-faint); }
+        .ac-scope .input-group-text { background: var(--adm-surface-2); border-color: var(--adm-border); color: var(--adm-text-dim); }
+        .ac-scope .form-label { color: var(--adm-text); }
+        .ac-scope code { color: var(--adm-accent); background: var(--adm-accent-soft); padding: 1px 5px; border-radius: 4px; }
 
-        <!-- Đến ngày -->
-        <div>
-            <label class="form-label small text-muted mb-1">Đến ngày</label>
-            <input type="date" name="toDate" th:value="${toDate}"
-                   class="form-control form-control-sm"/>
-        </div>
+        .ac-scope .badge.bg-danger { background: var(--adm-bad) !important; }
+        .ac-scope .badge.bg-success { background: var(--adm-good) !important; }
+        .ac-scope .badge.bg-secondary { background: var(--adm-surface-2) !important; color: var(--adm-text-dim) !important; border: 1px solid var(--adm-border); }
+        .ac-scope .badge.bg-dark { background: var(--adm-surface-2) !important; color: var(--adm-text) !important; border: 1px solid var(--adm-border); }
+        .ac-scope .badge.bg-light { background: var(--adm-surface-2) !important; color: var(--adm-text-faint) !important; border: 1px solid var(--adm-border); }
 
-        <!-- Buttons -->
-        <div class="d-flex gap-2 align-self-end">
-            <button type="submit" class="btn btn-dark btn-sm">
-                <i class="bi bi-search me-1"></i>Tìm
-            </button>
-            <a th:if="${keyword != null or selectedStatus != null or fromDate != null or toDate != null}"
-               th:href="@{/admin/orders}"
-               class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-x-lg me-1"></i>Xóa lọc
-            </a>
-        </div>
+        .ac-scope .alert-info {
+            background: var(--adm-accent-soft); border-color: rgba(139,124,246,.3); color: var(--adm-text);
+        }
 
+        .ac-scope .breadcrumb-item a { color: var(--adm-text-dim); text-decoration: none; }
+        .ac-scope .breadcrumb-item a:hover { color: var(--adm-accent); }
+        .ac-scope .breadcrumb-item.active { color: var(--adm-text-faint); }
+        .ac-scope .breadcrumb-item + .breadcrumb-item::before { color: var(--adm-text-faint); }
+
+        .ac-scope .pagination .page-link { background: var(--adm-surface); border-color: var(--adm-border); color: var(--adm-text-dim); }
+        .ac-scope .pagination .page-link:hover { background: var(--adm-surface-2); color: var(--adm-accent); }
+        .ac-scope .pagination .page-item.active .page-link { background: var(--adm-accent); border-color: var(--adm-accent); color: #fff; }
+        .ac-scope .pagination .page-item.disabled .page-link { background: var(--adm-surface); color: var(--adm-text-faint); opacity: .5; }
+
+        .ac-scope .border { border-color: var(--adm-border) !important; }
+        .ac-scope .bg-light { background: var(--adm-surface-2) !important; color: var(--adm-text); }
+
+        .ac-scope .accordion-item { background: var(--adm-surface); border-color: var(--adm-border) !important; }
+        .ac-scope .accordion-button {
+            background: var(--adm-surface); color: var(--adm-text);
+        }
+        .ac-scope .accordion-button:not(.collapsed) {
+            background: var(--adm-surface-2); color: var(--adm-text); box-shadow: none;
+        }
+        .ac-scope .accordion-button::after { filter: invert(1) grayscale(1) brightness(1.6); }
+        .ac-scope .accordion-body { background: var(--adm-surface); }
+
+        .ac-scope .modal-content { background: var(--adm-surface); color: var(--adm-text); border: 1px solid var(--adm-border); }
+        .ac-scope .modal-header, .ac-scope .modal-footer { border-color: var(--adm-border); }
+        .ac-scope .btn-close { filter: invert(1) grayscale(1) brightness(1.8); }
+
+        .ac-scope .opacity-50 { opacity: .45 !important; }
+        .ac-scope .text-dark { color: var(--adm-text) !important; }
+
+        .ac-scope .form-check-input {
+            background-color: var(--adm-surface-2); border-color: var(--adm-border);
+        }
+        .ac-scope .form-check-input:checked {
+            background-color: var(--adm-accent); border-color: var(--adm-accent);
+        }
+        .ac-scope .form-check-label { color: var(--adm-text); }
+
+        .ac-scope .alert-warning {
+            background: var(--adm-warn-soft); border-color: rgba(245,185,92,.3); color: var(--adm-text);
+        }
+        .ac-scope .alert-danger {
+            background: var(--adm-bad-soft); border-color: rgba(242,99,122,.3); color: var(--adm-text);
+        }
+
+        .ac-scope .list-group-item {
+            background: transparent; border-color: var(--adm-border); color: var(--adm-text);
+        }
+        .ac-scope .btn-secondary {
+            background: var(--adm-surface-2); border-color: rgba(255,255,255,.22); color: var(--adm-text);
+        }
+        .ac-scope .btn-secondary:hover { background: var(--adm-surface); border-color: rgba(255,255,255,.32); color: var(--adm-text); }
+    </style>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold">
+            Quản lý đơn hàng
+            <small class="text-muted fs-6"
+                   th:text="'(' + ${totalItems} + ' đơn)'"></small>
+        </h4>
     </div>
-</form>
 
-<div class="card border-0 shadow-sm">
-    <div class="card-body p-0 table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-dark">
-            <tr>
-                <th>#</th>
-                <th>Khách hàng</th>
-                <th>Ngày đặt</th>
-                <th>Tổng tiền</th>
-                <th>Trạng thái</th>
-                <th>Mã vận đơn</th>
-                <th>Hành động</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:if="${#lists.isEmpty(orders)}">
-                <td colspan="7" class="text-center text-muted py-4">
-                    Không tìm thấy đơn hàng nào!
-                </td>
-            </tr>
-            <tr th:each="order : ${orders}">
-                <td th:text="${order.id}"></td>
-                <td>
-                    <p class="mb-0 fw-bold"
-                       th:text="${order.customerUsername}"></p>
-                    <small class="text-muted"
-                           th:text="${order.customerPhone}"></small>
-                </td>
-                <td th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy HH:mm')}"></td>
-                <td class="text-danger fw-bold"
-                    th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></td>
-                <td>
+    <!-- Search + Filter -->
+    <form th:action="@{/admin/orders}" method="get" class="mb-3">
+        <div class="d-flex flex-wrap gap-2 align-items-end">
+
+            <!-- Keyword -->
+            <div>
+                <label class="form-label small text-muted mb-1">Tên khách hàng</label>
+                <input type="text" name="keyword" th:value="${keyword}"
+                       class="form-control form-control-sm"
+                       style="min-width:180px;flex:1 1 180px"
+                       placeholder="Tìm theo tên khách..."/>
+            </div>
+
+            <!-- Trạng thái -->
+            <div>
+                <label class="form-label small text-muted mb-1">Trạng thái</label>
+                <select name="status" class="form-select form-select-sm" style="min-width:150px">
+                    <option value="">Tất cả</option>
+                    <option value="PENDING"   th:selected="${selectedStatus == 'PENDING'}">Chờ xác nhận</option>
+                    <option value="CONFIRMED" th:selected="${selectedStatus == 'CONFIRMED'}">Đã xác nhận</option>
+                    <option value="SHIPPING"  th:selected="${selectedStatus == 'SHIPPING'}">Đang giao</option>
+                    <option value="COMPLETED" th:selected="${selectedStatus == 'COMPLETED'}">Hoàn thành</option>
+                    <option value="CANCELLED" th:selected="${selectedStatus == 'CANCELLED'}">Đã hủy</option>
+                    <option value="RETURNED"  th:selected="${selectedStatus == 'RETURNED'}">Đã hoàn hàng</option>
+                </select>
+            </div>
+
+            <!-- Từ ngày -->
+            <div>
+                <label class="form-label small text-muted mb-1">Từ ngày</label>
+                <input type="date" name="fromDate" th:value="${fromDate}"
+                       class="form-control form-control-sm"/>
+            </div>
+
+            <!-- Đến ngày -->
+            <div>
+                <label class="form-label small text-muted mb-1">Đến ngày</label>
+                <input type="date" name="toDate" th:value="${toDate}"
+                       class="form-control form-control-sm"/>
+            </div>
+
+            <!-- Buttons -->
+            <div class="d-flex gap-2 align-self-end">
+                <button type="submit" class="btn btn-dark btn-sm">
+                    <i class="bi bi-search me-1"></i>Tìm
+                </button>
+                <a th:if="${keyword != null or selectedStatus != null or fromDate != null or toDate != null}"
+                   th:href="@{/admin/orders}"
+                   class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x-lg me-1"></i>Xóa lọc
+                </a>
+            </div>
+
+        </div>
+    </form>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0 table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Khách hàng</th>
+                    <th>Ngày đặt</th>
+                    <th>Tổng tiền</th>
+                    <th>Trạng thái</th>
+                    <th>Mã vận đơn</th>
+                    <th>Hành động</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${#lists.isEmpty(orders)}">
+                    <td colspan="7" class="text-center text-muted py-4">
+                        Không tìm thấy đơn hàng nào!
+                    </td>
+                </tr>
+                <tr th:each="order : ${orders}">
+                    <td th:text="${order.id}"></td>
+                    <td>
+                        <p class="mb-0 fw-bold"
+                           th:text="${order.customerUsername}"></p>
+                        <small class="text-muted"
+                               th:text="${order.customerPhone}"></small>
+                    </td>
+                    <td th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy HH:mm')}"></td>
+                    <td class="text-danger fw-bold"
+                        th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></td>
+                    <td>
                     <span th:switch="${order.status.name()}">
                         <span th:case="'PENDING'"   class="badge bg-warning text-dark">Chờ xác nhận</span>
                         <span th:case="'CONFIRMED'" class="badge bg-info">Đã xác nhận</span>
@@ -106,67 +254,68 @@
                         <span th:case="'CANCELLED'" class="badge bg-danger">Đã hủy</span>
                         <span th:case="'RETURNED'"  class="badge bg-secondary">Đã hoàn hàng</span>
                     </span>
-                </td>
-                <td>
-                    <!-- Đã có mã vận đơn (SHIPPING / COMPLETED) -->
-                    <a th:if="${order.trackingCode != null}"
-                       th:href="@{'https://tracking.ghn.dev/?order_code=' + ${order.trackingCode}}"
-                       target="_blank" rel="noopener"
-                       class="badge bg-primary text-decoration-none"
-                       title="Bấm để tra cứu hành trình đơn hàng trên GHN">
-                        <i class="bi bi-truck me-1"></i>
-                        <span th:text="${order.trackingCode}"></span>
-                    </a>
-                    <!-- Chưa có mã vận đơn -->
-                    <span th:if="${order.trackingCode == null}"
-                          class="text-muted small">-</span>
-                </td>
-                <td>
-                    <a th:href="@{'/admin/orders/' + ${order.id}}"
-                       class="btn btn-sm btn-outline-dark">Chi tiết</a>
-                </td>
-            </tr>
-            </tbody>
-        </table>
+                    </td>
+                    <td>
+                        <!-- Đã có mã vận đơn (SHIPPING / COMPLETED) -->
+                        <a th:if="${order.trackingCode != null}"
+                           th:href="@{'https://tracking.ghn.dev/?order_code=' + ${order.trackingCode}}"
+                           target="_blank" rel="noopener"
+                           class="badge bg-primary text-decoration-none"
+                           title="Bấm để tra cứu hành trình đơn hàng trên GHN">
+                            <i class="bi bi-truck me-1"></i>
+                            <span th:text="${order.trackingCode}"></span>
+                        </a>
+                        <!-- Chưa có mã vận đơn -->
+                        <span th:if="${order.trackingCode == null}"
+                              class="text-muted small">-</span>
+                    </td>
+                    <td>
+                        <a th:href="@{'/admin/orders/' + ${order.id}}"
+                           class="btn btn-sm btn-outline-dark">Chi tiết</a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
 
-<!-- Pagination — giữ fromDate/toDate khi chuyển trang -->
-<div th:if="${totalPages > 1}"
-     class="d-flex justify-content-center mt-4 overflow-auto">
-    <nav>
-        <ul class="pagination flex-nowrap">
-            <li class="page-item"
-                th:classappend="${currentPage == 0} ? 'disabled'">
-                <a class="page-link"
-                   th:href="@{/admin/orders(page=${currentPage-1},
+    <!-- Pagination — giữ fromDate/toDate khi chuyển trang -->
+    <div th:if="${totalPages > 1}"
+         class="d-flex justify-content-center mt-4 overflow-auto">
+        <nav>
+            <ul class="pagination flex-nowrap">
+                <li class="page-item"
+                    th:classappend="${currentPage == 0} ? 'disabled'">
+                    <a class="page-link"
+                       th:href="@{/admin/orders(page=${currentPage-1},
                                            keyword=${keyword},
                                            status=${selectedStatus},
                                            fromDate=${fromDate},
                                            toDate=${toDate})}">←</a>
-            </li>
-            <li th:each="i : ${#numbers.sequence(0, totalPages-1)}"
-                class="page-item"
-                th:classappend="${i == currentPage} ? 'active'">
-                <a class="page-link"
-                   th:href="@{/admin/orders(page=${i},
+                </li>
+                <li th:each="i : ${#numbers.sequence(0, totalPages-1)}"
+                    class="page-item"
+                    th:classappend="${i == currentPage} ? 'active'">
+                    <a class="page-link"
+                       th:href="@{/admin/orders(page=${i},
                                            keyword=${keyword},
                                            status=${selectedStatus},
                                            fromDate=${fromDate},
                                            toDate=${toDate})}"
-                   th:text="${i + 1}"></a>
-            </li>
-            <li class="page-item"
-                th:classappend="${currentPage == totalPages-1} ? 'disabled'">
-                <a class="page-link"
-                   th:href="@{/admin/orders(page=${currentPage+1},
+                       th:text="${i + 1}"></a>
+                </li>
+                <li class="page-item"
+                    th:classappend="${currentPage == totalPages-1} ? 'disabled'">
+                    <a class="page-link"
+                       th:href="@{/admin/orders(page=${currentPage+1},
                                            keyword=${keyword},
                                            status=${selectedStatus},
                                            fromDate=${fromDate},
                                            toDate=${toDate})}">→</a>
-            </li>
-        </ul>
-    </nav>
+                </li>
+            </ul>
+        </nav>
+    </div>
 </div>
 </body>
 </html>

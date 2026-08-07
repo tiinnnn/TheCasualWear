@@ -2,136 +2,284 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head><title>Quản lý sản phẩm</title></head>
 <body>
-<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-    <h4 class="fw-bold mb-0">
-        Quản lý sản phẩm
-        <small class="text-muted fs-6" th:text="'(' + ${totalItems} + ' sản phẩm)'"></small>
-    </h4>
-    <div class="d-flex gap-2">
-        <a th:href="@{/admin/products/deleted}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-trash me-1"></i>Đã xóa
-        </a>
-        <a th:href="@{/admin/products/add}" class="btn btn-dark btn-sm">
-            <i class="bi bi-plus-lg me-1"></i>Thêm sản phẩm
-        </a>
+<div class="ac-scope">
+    <style>
+        .ac-scope { color: var(--adm-text); }
+        .ac-scope h4, .ac-scope h5, .ac-scope h6 { color: var(--adm-text); }
+        .ac-scope small, .ac-scope .text-muted { color: var(--adm-text-dim) !important; }
+
+        .ac-scope .card {
+            background: var(--adm-surface);
+            border: 1px solid var(--adm-border) !important;
+            color: var(--adm-text);
+        }
+        .ac-scope .card-header.bg-dark {
+            background: var(--adm-surface-2) !important;
+            border-bottom: 1px solid var(--adm-border);
+        }
+
+        .ac-scope .table {
+            --bs-table-bg: transparent;
+            --bs-table-color: var(--adm-text);
+            --bs-table-border-color: var(--adm-border);
+            --bs-table-hover-bg: var(--adm-surface-2);
+            --bs-table-hover-color: var(--adm-text);
+            --bs-table-active-bg: var(--adm-surface-2);
+            --bs-table-active-color: var(--adm-text);
+            color: var(--adm-text);
+        }
+        .ac-scope .table > :not(caption) > * > * {
+            background-color: var(--bs-table-bg) !important;
+            color: var(--bs-table-color) !important;
+            border-bottom-color: var(--bs-table-border-color) !important;
+            box-shadow: none !important;
+        }
+        .ac-scope .table > thead {
+            --bs-table-bg: var(--adm-surface-2);
+            --bs-table-color: var(--adm-text-dim);
+        }
+        .ac-scope .table-hover > tbody > tr:hover > * {
+            background-color: var(--adm-surface-2) !important;
+            color: var(--adm-text) !important;
+        }
+
+        .ac-scope .btn { font-weight: 600; }
+        .ac-scope .btn-dark { background: var(--adm-accent); border-color: var(--adm-accent); }
+        .ac-scope .btn-dark:hover { background: #7a6af0; border-color: #7a6af0; }
+        .ac-scope .btn-success { background: var(--adm-good); border-color: var(--adm-good); }
+        .ac-scope .btn-danger { background: var(--adm-bad); border-color: var(--adm-bad); }
+        .ac-scope .btn-outline-secondary,
+        .ac-scope .btn-outline-dark {
+            border-color: rgba(255,255,255,.22); color: var(--adm-text); background: transparent;
+        }
+        .ac-scope .btn-outline-secondary:hover,
+        .ac-scope .btn-outline-dark:hover {
+            border-color: var(--adm-accent); color: var(--adm-accent); background: var(--adm-accent-soft);
+        }
+        .ac-scope .btn-outline-primary {
+            border-color: rgba(139,124,246,.5); color: var(--adm-accent); background: transparent;
+        }
+        .ac-scope .btn-outline-primary:hover { background: var(--adm-accent-soft); border-color: var(--adm-accent); }
+        .ac-scope .btn-outline-success {
+            border-color: rgba(52,211,153,.5); color: var(--adm-good); background: transparent;
+        }
+        .ac-scope .btn-outline-success:hover { background: var(--adm-good-soft); border-color: var(--adm-good); }
+        .ac-scope .btn-outline-danger {
+            border-color: rgba(242,99,122,.5); color: var(--adm-bad); background: transparent;
+        }
+        .ac-scope .btn-outline-danger:hover { background: var(--adm-bad-soft); border-color: var(--adm-bad); }
+        .ac-scope .btn-outline-warning {
+            border-color: rgba(245,185,92,.5); color: var(--adm-warn); background: transparent;
+        }
+        .ac-scope .btn-outline-warning:hover { background: var(--adm-warn-soft); border-color: var(--adm-warn); }
+
+        .ac-scope .form-control, .ac-scope .form-select {
+            background: var(--adm-surface-2); border-color: var(--adm-border); color: var(--adm-text);
+        }
+        .ac-scope .form-control::placeholder { color: var(--adm-text-faint); }
+        .ac-scope .form-control:focus, .ac-scope .form-select:focus {
+            background: var(--adm-surface-2); border-color: var(--adm-accent); color: var(--adm-text);
+            box-shadow: 0 0 0 .2rem var(--adm-accent-soft);
+        }
+        .ac-scope .form-control:disabled { background: var(--adm-surface); color: var(--adm-text-faint); }
+        .ac-scope .input-group-text { background: var(--adm-surface-2); border-color: var(--adm-border); color: var(--adm-text-dim); }
+        .ac-scope .form-label { color: var(--adm-text); }
+        .ac-scope code { color: var(--adm-accent); background: var(--adm-accent-soft); padding: 1px 5px; border-radius: 4px; }
+
+        .ac-scope .badge.bg-danger { background: var(--adm-bad) !important; }
+        .ac-scope .badge.bg-success { background: var(--adm-good) !important; }
+        .ac-scope .badge.bg-secondary { background: var(--adm-surface-2) !important; color: var(--adm-text-dim) !important; border: 1px solid var(--adm-border); }
+        .ac-scope .badge.bg-dark { background: var(--adm-surface-2) !important; color: var(--adm-text) !important; border: 1px solid var(--adm-border); }
+        .ac-scope .badge.bg-light { background: var(--adm-surface-2) !important; color: var(--adm-text-faint) !important; border: 1px solid var(--adm-border); }
+
+        .ac-scope .alert-info {
+            background: var(--adm-accent-soft); border-color: rgba(139,124,246,.3); color: var(--adm-text);
+        }
+
+        .ac-scope .breadcrumb-item a { color: var(--adm-text-dim); text-decoration: none; }
+        .ac-scope .breadcrumb-item a:hover { color: var(--adm-accent); }
+        .ac-scope .breadcrumb-item.active { color: var(--adm-text-faint); }
+        .ac-scope .breadcrumb-item + .breadcrumb-item::before { color: var(--adm-text-faint); }
+
+        .ac-scope .pagination .page-link { background: var(--adm-surface); border-color: var(--adm-border); color: var(--adm-text-dim); }
+        .ac-scope .pagination .page-link:hover { background: var(--adm-surface-2); color: var(--adm-accent); }
+        .ac-scope .pagination .page-item.active .page-link { background: var(--adm-accent); border-color: var(--adm-accent); color: #fff; }
+        .ac-scope .pagination .page-item.disabled .page-link { background: var(--adm-surface); color: var(--adm-text-faint); opacity: .5; }
+
+        .ac-scope .border { border-color: var(--adm-border) !important; }
+        .ac-scope .bg-light { background: var(--adm-surface-2) !important; color: var(--adm-text); }
+
+        .ac-scope .accordion-item { background: var(--adm-surface); border-color: var(--adm-border) !important; }
+        .ac-scope .accordion-button {
+            background: var(--adm-surface); color: var(--adm-text);
+        }
+        .ac-scope .accordion-button:not(.collapsed) {
+            background: var(--adm-surface-2); color: var(--adm-text); box-shadow: none;
+        }
+        .ac-scope .accordion-button::after { filter: invert(1) grayscale(1) brightness(1.6); }
+        .ac-scope .accordion-body { background: var(--adm-surface); }
+
+        .ac-scope .modal-content { background: var(--adm-surface); color: var(--adm-text); border: 1px solid var(--adm-border); }
+        .ac-scope .modal-header, .ac-scope .modal-footer { border-color: var(--adm-border); }
+        .ac-scope .btn-close { filter: invert(1) grayscale(1) brightness(1.8); }
+
+        .ac-scope .opacity-50 { opacity: .45 !important; }
+        .ac-scope .text-dark { color: var(--adm-text) !important; }
+
+        .ac-scope .form-check-input {
+            background-color: var(--adm-surface-2); border-color: var(--adm-border);
+        }
+        .ac-scope .form-check-input:checked {
+            background-color: var(--adm-accent); border-color: var(--adm-accent);
+        }
+        .ac-scope .form-check-label { color: var(--adm-text); }
+
+        .ac-scope .alert-warning {
+            background: var(--adm-warn-soft); border-color: rgba(245,185,92,.3); color: var(--adm-text);
+        }
+        .ac-scope .alert-danger {
+            background: var(--adm-bad-soft); border-color: rgba(242,99,122,.3); color: var(--adm-text);
+        }
+
+        .ac-scope .list-group-item {
+            background: transparent; border-color: var(--adm-border); color: var(--adm-text);
+        }
+        .ac-scope .btn-secondary {
+            background: var(--adm-surface-2); border-color: rgba(255,255,255,.22); color: var(--adm-text);
+        }
+        .ac-scope .btn-secondary:hover { background: var(--adm-surface); border-color: rgba(255,255,255,.32); color: var(--adm-text); }
+    </style>
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+        <h4 class="fw-bold mb-0">
+            Quản lý sản phẩm
+            <small class="text-muted fs-6" th:text="'(' + ${totalItems} + ' sản phẩm)'"></small>
+        </h4>
+        <div class="d-flex gap-2">
+            <a th:href="@{/admin/products/deleted}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-trash me-1"></i>Đã xóa
+            </a>
+            <a th:href="@{/admin/products/add}" class="btn btn-dark btn-sm">
+                <i class="bi bi-plus-lg me-1"></i>Thêm sản phẩm
+            </a>
+        </div>
     </div>
-</div>
 
-<!-- Search -->
-<form th:action="@{/admin/products}" method="get" class="d-flex flex-wrap gap-2 mb-3">
-    <input type="text" name="keyword" th:value="${keyword}"
-           class="form-control" style="min-width:200px;flex:1 1 200px"
-           placeholder="Tìm kiếm theo tên sản phẩm..."/>
-    <button type="submit" class="btn btn-dark">Tìm</button>
-    <a th:if="${keyword != null}" th:href="@{/admin/products}"
-       class="btn btn-outline-secondary">✕</a>
-</form>
+    <!-- Search -->
+    <form th:action="@{/admin/products}" method="get" class="d-flex flex-wrap gap-2 mb-3">
+        <input type="text" name="keyword" th:value="${keyword}"
+               class="form-control" style="min-width:200px;flex:1 1 200px"
+               placeholder="Tìm kiếm theo tên sản phẩm..."/>
+        <button type="submit" class="btn btn-dark">Tìm</button>
+        <a th:if="${keyword != null}" th:href="@{/admin/products}"
+           class="btn btn-outline-secondary">✕</a>
+    </form>
 
-<div class="card border-0 shadow-sm">
-    <div class="card-body p-0 table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-dark">
-            <tr>
-                <th>#</th>
-                <th>Ảnh</th>
-                <th>Tên sản phẩm</th>
-                <th>Danh mục</th>
-                <th>Giá</th>
-                <!-- ✅ Bỏ cột Tồn kho / SKU / Màu cũ — thay bằng cột Biến thể -->
-                <th class="text-center">Biến thể</th>
-                <th>Hành động</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:if="${#lists.isEmpty(products)}">
-                <td colspan="7" class="text-center text-muted py-4">
-                    Không tìm thấy sản phẩm nào!
-                </td>
-            </tr>
-            <tr th:each="p : ${products}" th:with="sale=${activeSales.get(p.id)}">
-                <td th:text="${p.id}"></td>
-                <td>
-                    <img th:if="${p.images != null and !p.images.isEmpty()}"
-                         th:src="${p.images[0].imageUrl}"
-                         style="width:50px;height:50px;object-fit:cover" class="rounded"/>
-                    <img th:unless="${p.images != null and !p.images.isEmpty()}"
-                         src="/images/no-image.png"
-                         style="width:50px;height:50px;object-fit:cover" class="rounded"/>
-                </td>
-                <td>
-                    <p class="mb-0 fw-bold" th:text="${p.name}"></p>
-                    <small class="text-muted"
-                           th:text="${p.description != null and p.description.length() > 40
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0 table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Ảnh</th>
+                    <th>Tên sản phẩm</th>
+                    <th>Danh mục</th>
+                    <th>Giá</th>
+                    <!-- ✅ Bỏ cột Tồn kho / SKU / Màu cũ — thay bằng cột Biến thể -->
+                    <th class="text-center">Biến thể</th>
+                    <th>Hành động</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${#lists.isEmpty(products)}">
+                    <td colspan="7" class="text-center text-muted py-4">
+                        Không tìm thấy sản phẩm nào!
+                    </td>
+                </tr>
+                <tr th:each="p : ${products}" th:with="sale=${activeSales.get(p.id)}">
+                    <td th:text="${p.id}"></td>
+                    <td>
+                        <img th:if="${p.images != null and !p.images.isEmpty()}"
+                             th:src="${p.images[0].imageUrl}"
+                             style="width:50px;height:50px;object-fit:cover" class="rounded"/>
+                        <img th:unless="${p.images != null and !p.images.isEmpty()}"
+                             src="/images/no-image.png"
+                             style="width:50px;height:50px;object-fit:cover" class="rounded"/>
+                    </td>
+                    <td>
+                        <p class="mb-0 fw-bold" th:text="${p.name}"></p>
+                        <small class="text-muted"
+                               th:text="${p.description != null and p.description.length() > 40
                                       ? p.description.substring(0,40) + '…'
                                       : p.description}"></small>
-                </td>
-                <td th:text="${p.category != null ? p.category.name : '-'}"></td>
-                <td>
-                    <div th:if="${sale != null}">
+                    </td>
+                    <td th:text="${p.category != null ? p.category.name : '-'}"></td>
+                    <td>
+                        <div th:if="${sale != null}">
                         <span class="badge bg-danger mb-1"
                               th:text="'-' + ${#numbers.formatDecimal(sale.discountPercent,1,0)} + '%'"></span>
-                        <div class="text-muted text-decoration-line-through small"
-                             th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></div>
-                        <div class="fw-bold text-danger"
-                             th:text="${#numbers.formatInteger(
+                            <div class="text-muted text-decoration-line-through small"
+                                 th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></div>
+                            <div class="fw-bold text-danger"
+                                 th:text="${#numbers.formatInteger(
                                    p.price - (p.price * sale.discountPercent / 100),
                                    0, 'COMMA') + ' đ'}"></div>
-                    </div>
-                    <span th:unless="${sale != null}"
-                          th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></span>
-                </td>
-                <!-- ✅ Link vào trang quản lý variant -->
-                <td class="text-center">
-                    <a th:href="@{'/admin/products/' + ${p.id} + '/variants'}"
-                       class="btn btn-sm btn-outline-primary mb-1">
-                        <i class="bi bi-grid me-1"></i>Xem biến thể
-                    </a>
-                    <a th:href="@{'/admin/products/' + ${p.id} + '/sales'}"
-                       class="btn btn-sm btn-outline-warning mb-1">
-                        <i class="bi bi-percent me-1"></i>Sale
-                    </a>
-                </td>
-                <td>
-                    <a th:href="@{'/admin/products/edit/' + ${p.id}}"
-                       class="btn btn-sm btn-outline-secondary me-1" title="Sửa thông tin">
-                        <i class="bi bi-pencil"></i>
-                    </a>
-                    <a th:href="@{'/admin/products/copy/' + ${p.id}}"
-                       class="btn btn-sm btn-outline-success me-1" title="Tạo bản sao">
-                        <i class="bi bi-copy"></i>
-                    </a>
-                    <a th:href="@{'/admin/products/delete/' + ${p.id}}"
-                       class="btn btn-sm btn-outline-danger"
-                       onclick="return confirm('Ẩn sản phẩm này?')" title="Ẩn">
-                        <i class="bi bi-trash"></i>
-                    </a>
-                </td>
-            </tr>
-            </tbody>
-        </table>
+                        </div>
+                        <span th:unless="${sale != null}"
+                              th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></span>
+                    </td>
+                    <!-- ✅ Link vào trang quản lý variant -->
+                    <td class="text-center">
+                        <a th:href="@{'/admin/products/' + ${p.id} + '/variants'}"
+                           class="btn btn-sm btn-outline-primary mb-1">
+                            <i class="bi bi-grid me-1"></i>Xem biến thể
+                        </a>
+                        <a th:href="@{'/admin/products/' + ${p.id} + '/sales'}"
+                           class="btn btn-sm btn-outline-warning mb-1">
+                            <i class="bi bi-percent me-1"></i>Sale
+                        </a>
+                    </td>
+                    <td>
+                        <a th:href="@{'/admin/products/edit/' + ${p.id}}"
+                           class="btn btn-sm btn-outline-secondary me-1" title="Sửa thông tin">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <a th:href="@{'/admin/products/copy/' + ${p.id}}"
+                           class="btn btn-sm btn-outline-success me-1" title="Tạo bản sao">
+                            <i class="bi bi-copy"></i>
+                        </a>
+                        <a th:href="@{'/admin/products/delete/' + ${p.id}}"
+                           class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('Ẩn sản phẩm này?')" title="Ẩn">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
 
-<!-- Pagination -->
-<div th:if="${totalPages > 1}" class="d-flex justify-content-center mt-4 overflow-auto">
-    <nav>
-        <ul class="pagination flex-nowrap">
-            <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
-                <a class="page-link"
-                   th:href="@{/admin/products(page=${currentPage-1}, keyword=${keyword})}">←</a>
-            </li>
-            <li th:each="i : ${#numbers.sequence(0, totalPages-1)}"
-                class="page-item" th:classappend="${i == currentPage} ? 'active'">
-                <a class="page-link"
-                   th:href="@{/admin/products(page=${i}, keyword=${keyword})}"
-                   th:text="${i + 1}"></a>
-            </li>
-            <li class="page-item" th:classappend="${currentPage == totalPages-1} ? 'disabled'">
-                <a class="page-link"
-                   th:href="@{/admin/products(page=${currentPage+1}, keyword=${keyword})}">→</a>
-            </li>
-        </ul>
-    </nav>
+    <!-- Pagination -->
+    <div th:if="${totalPages > 1}" class="d-flex justify-content-center mt-4 overflow-auto">
+        <nav>
+            <ul class="pagination flex-nowrap">
+                <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                    <a class="page-link"
+                       th:href="@{/admin/products(page=${currentPage-1}, keyword=${keyword})}">←</a>
+                </li>
+                <li th:each="i : ${#numbers.sequence(0, totalPages-1)}"
+                    class="page-item" th:classappend="${i == currentPage} ? 'active'">
+                    <a class="page-link"
+                       th:href="@{/admin/products(page=${i}, keyword=${keyword})}"
+                       th:text="${i + 1}"></a>
+                </li>
+                <li class="page-item" th:classappend="${currentPage == totalPages-1} ? 'disabled'">
+                    <a class="page-link"
+                       th:href="@{/admin/products(page=${currentPage+1}, keyword=${keyword})}">→</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
 </div>
 </body>
 </html>

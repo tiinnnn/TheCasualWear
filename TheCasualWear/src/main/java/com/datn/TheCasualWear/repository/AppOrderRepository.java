@@ -115,4 +115,13 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
         ORDER BY COUNT(o) DESC
         """)
     List<Object[]> findFrequentCancellers(@Param("minCount") long minCount);
+
+    // Tổng doanh thu TOÀN BỘ phương thức thanh toán (CASH+TRANSFER+VNPAY)
+    // của danh sách ca — dùng cho báo cáo tổng kết cuối ngày (khác với
+    // sumTotalPriceByShiftIdAndPaymentMethod chỉ tính CASH để đối chiếu ngăn kéo).
+    @Query("SELECT COALESCE(SUM(o.totalPrice), 0) FROM AppOrder o " +
+            "WHERE o.shift.id IN :shiftIds " +
+            "AND o.status = com.datn.TheCasualWear.enums.OrderStatus.COMPLETED")
+    BigDecimal sumTotalPriceByShiftIds(@Param("shiftIds") List<Integer> shiftIds);
+
 }

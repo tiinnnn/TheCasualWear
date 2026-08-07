@@ -43,6 +43,19 @@
             .navbar-brand span { font-size: 1rem; }
             .ticker-text { font-size: 0.8rem; }
         }
+
+        /* Khoảng trống chuyên dùng để hiện thông báo (alerts), nằm ngay dưới
+           thanh ticker, tách khỏi phần nội dung chính. Rỗng thì không chiếm chỗ. */
+        #notificationArea {
+            padding: 0 1rem;
+        }
+        #notificationArea:has(.app-alert-slot:not(:empty)) {
+            padding: 1rem 1rem 0;
+        }
+        #notificationArea .app-alert-slot {
+            max-width: 1320px;
+            margin: 0 auto;
+        }
     </style>
 </head>
 <body>
@@ -236,10 +249,11 @@
     </div>
 </div>
 
+<div id="notificationArea">
+    <div th:replace="~{fragments/alerts :: alerts}"></div>
+</div>
+
 <div style="min-height: 600px;">
-    <div class="container">
-        <div th:replace="~{fragments/alerts :: alerts}"></div>
-    </div>
     <div th:replace="~{${view}}"></div>
 </div>
 

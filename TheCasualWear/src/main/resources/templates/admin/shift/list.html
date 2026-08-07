@@ -7,6 +7,9 @@
         Ca làm việc
         <small class="text-muted fs-6" th:text="'(' + ${#lists.size(shifts)} + ' ca)'"></small>
     </h4>
+    <a th:href="@{/admin/shifts/daily-summary}" class="btn btn-dark btn-sm">
+        <i class="bi bi-graph-up me-1"></i>Tổng kết cuối ngày
+    </a>
 </div>
 
 <div class="card border-0 shadow-sm">
@@ -22,14 +25,16 @@
                 <th>Tiền lẽ ra có</th>
                 <th>Tiền đếm thực tế</th>
                 <th>Chênh lệch</th>
+                <th>SL bán</th>
                 <th>Trạng thái</th>
+                <th>Bàn giao</th>
                 <th>Ghi chú</th>
                 <th>Chi tiết</th>
             </tr>
             </thead>
             <tbody>
             <tr th:if="${#lists.isEmpty(shifts)}">
-                <td colspan="11" class="text-center text-muted py-4">Chưa có ca làm việc nào.</td>
+                <td colspan="13" class="text-center text-muted py-4">Chưa có ca làm việc nào.</td>
             </tr>
             <tr th:each="s : ${shifts}">
                 <td th:text="${s.counter != null ? s.counter.code : '-'}"></td>
@@ -46,9 +51,27 @@
                           th:text="${(s.cashDifference.signum() > 0 ? '+' : '') + #numbers.formatInteger(s.cashDifference, 0, 'COMMA') + ' đ'}"></span>
                     <span th:if="${s.cashDifference == null}">-</span>
                 </td>
+                <td th:text="${s.itemsSoldCount != null ? s.itemsSoldCount : '-'}"></td>
                 <td>
                     <span th:if="${s.status.name() == 'OPEN'}" class="badge bg-success">Đang mở</span>
                     <span th:if="${s.status.name() == 'CLOSED'}" class="badge bg-secondary">Đã đóng</span>
+                </td>
+                <td>
+                    <span th:if="${s.status.name() == 'OPEN'}" class="text-muted small">-</span>
+                    <span th:if="${s.status.name() == 'CLOSED' and s.handoverConfirmedBy != null}"
+                          class="badge bg-success" th:title="${s.handoverNote}">
+                        <i class="bi bi-check2"></i> [[${s.handoverConfirmedBy.username}]]
+                    </span>
+                    <div th:if="${s.status.name() == 'CLOSED' and s.handoverConfirmedBy == null}">
+                        <span class="badge bg-warning text-dark d-block mb-1">Chờ xác nhận</span>
+                        <form th:action="@{'/admin/shifts/' + ${s.id} + '/confirm-handover'}"
+                              method="post"
+                              onsubmit="return confirm('Xác nhận số liệu ca này thay cho ca sau?')">
+                            <button type="submit" class="btn btn-sm btn-outline-success">
+                                Xác nhận (Admin)
+                            </button>
+                        </form>
+                    </div>
                 </td>
                 <td class="small text-muted" style="max-width: 220px"
                     th:title="${s.note}"

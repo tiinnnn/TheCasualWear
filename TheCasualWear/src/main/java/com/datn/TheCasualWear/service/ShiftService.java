@@ -1,6 +1,7 @@
 package com.datn.TheCasualWear.service;
 
 import com.datn.TheCasualWear.config.ResourceNotFoundException;
+import com.datn.TheCasualWear.dto.DailySummaryDTO;
 import com.datn.TheCasualWear.entity.AppUser;
 import com.datn.TheCasualWear.entity.PosCounter;
 import com.datn.TheCasualWear.entity.Shift;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -185,5 +187,50 @@ public class ShiftService {
 
     public List<Shift> getAllHistory() {
         return shiftRepository.findAllByOrderByOpenedAtDesc();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // TỔNG KẾT CUỐI NGÀY (daily summary)
+    // ─────────────────────────────────────────────────────────────
+
+    // Ca CLOSED trong ngày `date` — nhóm theo closedAt (thời điểm chốt sổ),
+    // KHÔNG phải openedAt, để nhất quán với cách các máy POS thực tế xuất
+    // báo cáo cuối ca (Z-report).
+    public List<Shift> getShiftsClosedOnDate(LocalDate date) {
+        LocalDateTime from = date.atStartOfDay();
+        LocalDateTime to = date.atTime(23, 59, 59);
+        return shiftRepository.findByStatusAndClosedAtBetweenOrderByClosedAtDesc(
+                ShiftStatus.CLOSED, from, to);
+    }
+
+    // Mọi ca đang OPEN toàn hệ thống — phần "đang diễn ra, tạm tính".
+    public List<Shift> getAllOpenShifts() {
+        return shiftRepository.findByStatus(ShiftStatus.OPEN);
+    }
+
+    // Tổng hợp số liệu các ca ĐÃ CHỐT trong ngày — không bao gồm ca OPEN.
+    public DailySummaryDTO getDailySummary(LocalDate date) {
+        List<Shift> closedShifts = getShiftsClosedOnDate(date);
+
+        List<Integer> shiftIds = closedShifts.stream().map(Shift::getId).toList();
+        BigDecimal totalRevenue = shiftIds.isEmpty()
+                ? BigDecimal.ZERO
+                : orderRepository.sumTotalPriceByShiftIds(shiftIds);
+        if (totalRevenue == null) totalRevenue = BigDecimal.ZERO;
+
+        int totalItemsSold = closedShifts.stream()
+                .mapToInt(s -> s.getItemsSoldCount() != null ? s.getItemsSoldCount() : 0)
+                .sum();
+
+        BigDecimal totalCashDifference = closedShifts.stream()
+                .map(s -> s.getCashDifference() != null ? s.getCashDifference() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        int mismatchCount = (int) closedShifts.stream()
+                .filter(s -> s.getCashDifference() != null && s.getCashDifference().signum() != 0)
+                .count();
+
+        return new DailySummaryDTO(totalRevenue, totalItemsSold, closedShifts.size(),
+                totalCashDifference, mismatchCount);
     }
 }

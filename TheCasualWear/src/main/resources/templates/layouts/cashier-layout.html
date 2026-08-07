@@ -9,6 +9,16 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"/>
     <link rel="stylesheet" href="/css/style.css"/>
     <link rel="icon" type="image/png" href="/images/footer.png"/>
+    <style>
+        /* Khoảng trống chuyên dùng để hiện thông báo (alerts), nằm ngay dưới
+           navbar, tách khỏi phần nội dung chính. Rỗng thì không chiếm chỗ. */
+        #notificationArea {
+            padding: 0 1.5rem;
+        }
+        #notificationArea:has(.app-alert-slot:not(:empty)) {
+            padding-top: 1rem;
+        }
+    </style>
 </head>
 <body>
 <!-- Navbar -->
@@ -50,10 +60,13 @@
     </div>
 </nav>
 
+<div id="notificationArea">
+    <div th:replace="~{fragments/alerts :: alerts}"></div>
+</div>
+
 <div class="container-fluid">
     <div class="row">
         <div class="col-12 pt-4 px-4">
-            <div th:replace="~{fragments/alerts :: alerts}"></div>
             <div th:replace="~{${view}}"></div>
         </div>
     </div>

@@ -17,7 +17,24 @@
             --adm-border: rgba(255,255,255,.07);
             --adm-accent: #8b7cf6;
             --adm-accent-soft: rgba(139,124,246,.14);
+            --adm-text: #eef0f4;
             --adm-text-dim: #8d93a6;
+            --adm-text-faint: #5c6178;
+            --adm-good: #34d399;
+            --adm-good-soft: rgba(52,211,153,.14);
+            --adm-bad: #f2637a;
+            --adm-bad-soft: rgba(242,99,122,.14);
+            --adm-warn: #f5b95c;
+            --adm-warn-soft: rgba(245,185,92,.14);
+
+            /* Alert đậm cho theme tối: nền màu xanh/đỏ đậm đặc (không phải tint mờ),
+               chữ trắng in đậm để tương phản rõ trên nền tối */
+            --alert-success-bg: #146c43;
+            --alert-success-border: #0f5132;
+            --alert-success-text: #ffffff;
+            --alert-danger-bg: #8b1e2b;
+            --alert-danger-border: #5c1420;
+            --alert-danger-text: #ffffff;
         }
 
         html, body {
@@ -75,6 +92,17 @@
             color: #aaa;
             background-color: #fff;
             border-color: #dee2e6;
+        }
+
+        /* Khoảng trống chuyên dùng để hiện thông báo (alerts), tách khỏi phần
+           nội dung chính (col-md-10) để không phụ thuộc padding của view.
+           Rỗng thì không chiếm chỗ; có alert thì đẩy nội dung xuống. */
+        #notificationArea {
+            padding: 0 1.5rem;
+            background: var(--adm-bg);
+        }
+        #notificationArea:has(.app-alert-slot:not(:empty)) {
+            padding-top: 1rem;
         }
     </style>
 </head>
@@ -154,6 +182,10 @@
     </div>
 </nav>
 
+<div id="notificationArea">
+    <div th:replace="~{fragments/alerts :: alerts}"></div>
+</div>
+
 <div class="container-fluid">
     <div class="row">
         <!-- Sidebar (offcanvas trên mobile, cố định từ md trở lên) -->
@@ -230,6 +262,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link text-white py-3 px-4" th:href="@{/admin/shifts/daily-summary}">
+                            <i class="bi bi-graph-up me-2"></i>Tổng kết ngày
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link text-white py-3 px-4" th:href="@{/admin/pos-counters}">
                             <i class="bi bi-shop-window me-2"></i>Quầy POS
                         </a>
@@ -245,7 +282,6 @@
 
         <!-- Nội dung chính -->
         <div class="col-md-10 pt-4 px-4">
-            <div th:replace="~{fragments/alerts :: alerts}"></div>
             <div th:replace="~{${view}}"></div>
         </div>
     </div>

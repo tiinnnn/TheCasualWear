@@ -2,25 +2,109 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 <div th:fragment="alerts">
-    <!-- Success thông thường -->
-    <div th:if="${successMessage != null and cartLink == null}"
-         class="alert alert-success alert-dismissible fade show" role="alert">
-        <span th:text="${successMessage}"></span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <!--
+      Style đặt NGAY TRONG div th:fragment: nếu để ngoài (sibling của div này),
+      th:replace="~{fragments/alerts :: alerts}" sẽ chỉ lấy đúng div fragment,
+      bỏ luôn thẻ style bên ngoài -> CSS không bao giờ được render ra trang.
+
+      #notificationArea là khoảng trống CHUYÊN DÙNG cho thông báo, được khai báo
+      sẵn trong từng layout (ngay dưới navbar, tách khỏi phần nội dung chính).
+      Fragment này chỉ render NẰM TRONG khoảng trống đó theo flow bình thường
+      (không còn position:fixed đè lên nội dung nữa) -> alert xuất hiện đúng chỗ
+      dành riêng cho nó, không che nội dung trang, và tự thu gọn lại khi JS xóa
+      alert đi sau vài giây vì nó không còn chiếm không gian cố định.
+    -->
+    <style>
+        .app-alert-slot {
+            width: 100%;
+        }
+        .app-alert-slot .app-alert {
+            margin-bottom: 10px;
+            animation: appAlertSlideIn .25s ease-out;
+        }
+        .app-alert-slot .app-alert:last-child {
+            margin-bottom: 0;
+        }
+        @keyframes appAlertSlideIn {
+            from { transform: translateY(-10px); opacity: 0; }
+            to   { transform: translateY(0);     opacity: 1; }
+        }
+        .app-alert {
+            border: none;
+            border-left: 5px solid transparent;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 14px rgba(0,0,0,.12);
+        }
+        .app-alert.alert-success {
+            background: var(--alert-success-bg, #146c43);
+            border-left-color: var(--alert-success-border, #0f5132);
+            color: var(--alert-success-text, #ffffff);
+        }
+        .app-alert.alert-success .alert-link {
+            color: var(--alert-success-text, #ffffff);
+            font-weight: 700;
+            text-decoration: underline;
+        }
+        .app-alert.alert-danger {
+            background: var(--alert-danger-bg, #8b1e2b);
+            border-left-color: var(--alert-danger-border, #5c1420);
+            color: var(--alert-danger-text, #ffffff);
+        }
+        .app-alert i.bi {
+            color: inherit;
+        }
+        .app-alert .btn-close {
+            filter: brightness(0) invert(1);
+            opacity: .85;
+        }
+        .app-alert .btn-close:hover {
+            opacity: 1;
+        }
+    </style>
+
+    <div id="appAlertSlot" class="app-alert-slot">
+        <!-- Success thông thường -->
+        <div th:if="${successMessage != null and cartLink == null}"
+             class="alert app-alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <span th:text="${successMessage}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <div th:if="${successMessage != null and cartLink != null}"
+             class="alert app-alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <span th:text="${successMessage}"></span>
+            <a href="/cart" class="alert-link ms-1">Xem giỏ hàng →</a>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <div th:if="${errorMessage}"
+             class="alert app-alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <span th:text="${errorMessage}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
     </div>
 
-    <div th:if="${successMessage != null and cartLink != null}"
-         class="alert alert-success alert-dismissible fade show" role="alert">
-        <span th:text="${successMessage}"></span>
-        <a href="/cart" class="alert-link ms-1">Xem giỏ hàng →</a>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-
-    <div th:if="${errorMessage}"
-         class="alert alert-danger alert-dismissible fade show" role="alert">
-        <span th:text="${errorMessage}"></span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
+    <script>
+        // Tự động ẩn alert sau 4 giây. Đăng ký lắng nghe DOMContentLoaded thay vì
+        // chạy ngay, vì script bootstrap.bundle.min.js được load ở cuối body -
+        // để chắc chắn không lỗi nếu sau này cần dùng API của bootstrap.
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('#appAlertSlot .app-alert').forEach(function (el) {
+                setTimeout(function () {
+                    el.classList.remove('show');
+                    setTimeout(function () {
+                        el.remove();
+                    }, 200); // khớp thời gian fade .15s của Bootstrap
+                }, 3000);
+            });
+        });
+    </script>
 </div>
 </body>
 </html>

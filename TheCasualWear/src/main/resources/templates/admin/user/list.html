@@ -2,169 +2,314 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head><title>Quản lý user</title></head>
 <body>
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="fw-bold">
-        Quản lý người dùng
-        <small class="text-muted fs-6"
-               th:text="'(' + ${totalItems} + ' người dùng)'"></small>
-    </h4>
-</div>
 
-<!-- Search + Filter -->
-<form th:action="@{/admin/users}" method="get" class="mb-3">
-    <div class="d-flex flex-wrap gap-2 align-items-end">
+<div class="dm-dash">
+    <div class="dm-glow dm-glow--a"></div>
+    <div class="dm-glow dm-glow--b"></div>
 
-        <!-- Keyword: username / email / phone -->
-        <div>
-            <label class="form-label small text-muted mb-1">Tìm kiếm</label>
-            <input type="text" name="keyword" th:value="${keyword}"
-                   class="form-control form-control-sm"
-                   style="min-width:220px;flex:1 1 220px"
-                   placeholder="Tên đăng nhập, email hoặc SĐT..."/>
+    <div class="dm-content">
+
+        <!-- ==================== HEADER ==================== -->
+        <div class="dm-header">
+            <div>
+                <p class="dm-eyebrow">Tài khoản</p>
+                <h1 class="dm-title">
+                    Quản lý người dùng
+                    <span class="dm-text-faint dm-title-count" th:text="'(' + ${totalItems} + ' người dùng)'"></span>
+                </h1>
+            </div>
         </div>
 
-        <!-- Role -->
-        <div>
-            <label class="form-label small text-muted mb-1">Role</label>
-            <select name="roleName" class="form-select form-select-sm" style="min-width:160px">
-                <option value="">Tất cả</option>
-                <option th:each="r : ${allRoles}"
-                        th:value="${r.name}"
-                        th:selected="${selectedRole == r.name}"
-                        th:text="${r.name.replace('ROLE_', '')}"></option>
-            </select>
+        <!-- ==================== FILTER ==================== -->
+        <div class="dm-card mb-4">
+            <form th:action="@{/admin/users}" method="get" class="dm-filter-row">
+                <div class="dm-form-group dm-form-group--grow">
+                    <label class="dm-label">Tìm kiếm</label>
+                    <input type="text" name="keyword" th:value="${keyword}" class="dm-input"
+                           placeholder="Tên đăng nhập, email hoặc SĐT..."/>
+                </div>
+                <div class="dm-form-group">
+                    <label class="dm-label">Role</label>
+                    <select name="roleName" class="dm-select">
+                        <option value="">Tất cả</option>
+                        <option th:each="r : ${allRoles}"
+                                th:value="${r.name}"
+                                th:selected="${selectedRole == r.name}"
+                                th:text="${r.name.replace('ROLE_', '')}"></option>
+                    </select>
+                </div>
+                <div class="dm-filter-actions">
+                    <button type="submit" class="dm-btn dm-btn--solid">
+                        <i class="bi bi-search"></i>Tìm
+                    </button>
+                    <a th:if="${keyword != null or selectedRole != null}"
+                       th:href="@{/admin/users}" class="dm-btn">
+                        <i class="bi bi-x-lg"></i>Xóa lọc
+                    </a>
+                </div>
+            </form>
         </div>
 
-        <!-- Buttons -->
-        <div class="d-flex gap-2 align-self-end">
-            <button type="submit" class="btn btn-dark btn-sm">
-                <i class="bi bi-search me-1"></i>Tìm
-            </button>
-            <a th:if="${keyword != null or selectedRole != null}"
-               th:href="@{/admin/users}"
-               class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-x-lg me-1"></i>Xóa lọc
-            </a>
+        <!-- ==================== TABLE ==================== -->
+        <div class="dm-card">
+            <div class="dm-table-wrap">
+                <table class="dm-table">
+                    <colgroup>
+                        <col style="width:5%">
+                        <col style="width:14%">
+                        <col style="width:20%">
+                        <col style="width:12%">
+                        <col style="width:14%">
+                        <col style="width:10%">
+                        <col style="width:25%">
+                    </colgroup>
+                    <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Role</th>
+                        <th>Trạng thái</th>
+                        <th>Hành động</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(users)}">
+                        <td colspan="7" class="dm-empty">Không tìm thấy người dùng nào</td>
+                    </tr>
+                    <tr th:each="u : ${users}">
+                        <td class="dm-text-dim" th:text="${u.id}"></td>
+                        <td class="dm-cell-strong dm-truncate" th:title="${u.username}" th:text="${u.username}"></td>
+                        <td class="dm-text-dim dm-truncate" th:title="${u.email}" th:text="${u.email}"></td>
+                        <td class="dm-text-dim dm-truncate" th:text="${u.phone}"></td>
+                        <td>
+                            <div class="dm-role-badges">
+                                <span th:each="r : ${u.roles}" class="dm-pill dm-pill--muted"
+                                      th:text="${r.name.replace('ROLE_', '')}"></span>
+                            </div>
+                        </td>
+                        <td>
+                            <span th:if="${u.enabled}" class="dm-pill dm-pill--good">Hoạt động</span>
+                            <span th:unless="${u.enabled}" class="dm-pill dm-pill--bad">Đã khóa</span>
+                        </td>
+                        <td>
+                            <div class="dm-action-stack">
+                                <a th:if="${u.enabled}"
+                                   th:href="@{'/admin/users/' + ${u.id} + '/lock'}"
+                                   class="dm-btn dm-btn--bad-outline dm-btn--block"
+                                   onclick="return confirm('Khóa tài khoản này?')">
+                                    <i class="bi bi-lock"></i>Khóa
+                                </a>
+                                <a th:unless="${u.enabled}"
+                                   th:href="@{'/admin/users/' + ${u.id} + '/unlock'}"
+                                   class="dm-btn dm-btn--good-outline dm-btn--block"
+                                   onclick="return confirm('Mở khóa tài khoản này?')">
+                                    <i class="bi bi-unlock"></i>Mở khóa
+                                </a>
+
+                                <form th:action="@{'/admin/users/' + ${u.id} + '/role/add'}" method="post" class="dm-inline-form">
+                                    <select name="roleName" class="dm-select dm-select--sm">
+                                        <option value="ROLE_CUSTOMER">CUSTOMER</option>
+                                        <option value="ROLE_CASHIER">CASHIER</option>
+                                        <option th:if="${isOwner}" value="ROLE_ADMIN">ADMIN</option>
+                                        <option th:if="${isOwner}" value="ROLE_OWNER">OWNER</option>
+                                    </select>
+                                    <button type="submit" class="dm-icon-btn dm-icon-btn--good" title="Thêm role">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </button>
+                                </form>
+
+                                <form th:action="@{'/admin/users/' + ${u.id} + '/role/remove'}" method="post" class="dm-inline-form">
+                                    <select name="roleName" class="dm-select dm-select--sm">
+                                        <option value="ROLE_CUSTOMER">CUSTOMER</option>
+                                        <option value="ROLE_CASHIER">CASHIER</option>
+                                        <option th:if="${isOwner}" value="ROLE_ADMIN">ADMIN</option>
+                                        <option th:if="${isOwner}" value="ROLE_OWNER">OWNER</option>
+                                    </select>
+                                    <button type="submit" class="dm-icon-btn dm-icon-btn--bad" title="Xóa role"
+                                            onclick="return confirm('Xóa role này khỏi user?')">
+                                        <i class="bi bi-dash-lg"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ==================== PAGINATION ==================== -->
+        <div th:if="${totalPages > 1}" class="dm-pagination-wrap">
+            <ul class="dm-pagination">
+                <li>
+                    <a th:if="${currentPage > 0}" class="dm-page-link"
+                       th:href="@{/admin/users(page=${currentPage-1}, keyword=${keyword}, roleName=${selectedRole})}">&#x2190;</a>
+                    <span th:unless="${currentPage > 0}" class="dm-page-link dm-page-link--disabled">&#x2190;</span>
+                </li>
+                <li th:each="i : ${#numbers.sequence(0, totalPages-1)}">
+                    <a class="dm-page-link" th:classappend="${i == currentPage} ? ' dm-page-link--active'"
+                       th:href="@{/admin/users(page=${i}, keyword=${keyword}, roleName=${selectedRole})}"
+                       th:text="${i + 1}"></a>
+                </li>
+                <li>
+                    <a th:if="${currentPage < totalPages-1}" class="dm-page-link"
+                       th:href="@{/admin/users(page=${currentPage+1}, keyword=${keyword}, roleName=${selectedRole})}">&#x2192;</a>
+                    <span th:unless="${currentPage < totalPages-1}" class="dm-page-link dm-page-link--disabled">&#x2192;</span>
+                </li>
+            </ul>
         </div>
 
     </div>
-</form>
-
-<div class="card border-0 shadow-sm">
-    <div class="card-body p-0 table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-dark">
-            <tr>
-                <th>#</th>
-                <th>Username</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Role</th>
-                <th>Trạng thái</th>
-                <th>Hành động</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:if="${#lists.isEmpty(users)}">
-                <td colspan="7" class="text-center text-muted py-4">
-                    Không tìm thấy người dùng nào!
-                </td>
-            </tr>
-            <tr th:each="u : ${users}">
-                <td th:text="${u.id}"></td>
-                <td th:text="${u.username}"></td>
-                <td th:text="${u.email}"></td>
-                <td th:text="${u.phone}"></td>
-                <td>
-                    <span th:each="r : ${u.roles}"
-                          class="badge bg-secondary me-1"
-                          th:text="${r.name.replace('ROLE_', '')}"></span>
-                </td>
-
-                <td>
-                    <span th:if="${u.enabled}"
-                          class="badge bg-success">Hoạt động</span>
-                    <span th:unless="${u.enabled}"
-                          class="badge bg-danger">Đã khóa</span>
-                </td>
-                <td>
-                    <div class="d-flex flex-column gap-1" style="min-width:180px">
-                        <!-- Lock / Unlock -->
-                        <a th:if="${u.enabled}"
-                           th:href="@{'/admin/users/' + ${u.id} + '/lock'}"
-                           class="btn btn-sm btn-outline-danger w-100"
-                           onclick="return confirm('Khóa tài khoản này?')">
-                            <i class="bi bi-lock me-1"></i>Khóa
-                        </a>
-                        <a th:unless="${u.enabled}"
-                           th:href="@{'/admin/users/' + ${u.id} + '/unlock'}"
-                           class="btn btn-sm btn-outline-success w-100"
-                           onclick="return confirm('Mở khóa tài khoản này?')">
-                            <i class="bi bi-unlock me-1"></i>Mở khóa
-                        </a>
-                        <!-- Add role -->
-                        <form th:action="@{'/admin/users/' + ${u.id} + '/role/add'}" method="post"
-                              class="input-group input-group-sm">
-                            <select name="roleName" class="form-select">
-                                <option value="ROLE_CUSTOMER">CUSTOMER</option>
-                                <option value="ROLE_CASHIER">CASHIER</option>
-                                <option th:if="${isOwner}" value="ROLE_ADMIN">ADMIN</option>
-                                <option th:if="${isOwner}" value="ROLE_OWNER">OWNER</option>
-                            </select>
-                            <button type="submit" class="btn btn-outline-primary" title="Thêm role">
-                                <i class="bi bi-plus-lg"></i>
-                            </button>
-                        </form>
-                        <!-- Remove role -->
-                        <form th:action="@{'/admin/users/' + ${u.id} + '/role/remove'}" method="post"
-                              class="input-group input-group-sm">
-                            <select name="roleName" class="form-select">
-                                <option value="ROLE_CUSTOMER">CUSTOMER</option>
-                                <option value="ROLE_CASHIER">CASHIER</option>
-                                <option th:if="${isOwner}" value="ROLE_ADMIN">ADMIN</option>
-                                <option th:if="${isOwner}" value="ROLE_OWNER">OWNER</option>
-                            </select>
-                            <button type="submit" class="btn btn-outline-danger" title="Xóa role"
-                                    onclick="return confirm('Xóa role này khỏi user?')">
-                                <i class="bi bi-dash-lg"></i>
-                            </button>
-                        </form>
-                    </div>
-                </td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
 </div>
 
-<!-- Pagination -->
-<div th:if="${totalPages > 1}"
-     class="d-flex justify-content-center mt-4 overflow-auto">
-    <nav>
-        <ul class="pagination flex-nowrap">
-            <li class="page-item"
-                th:classappend="${currentPage == 0} ? 'disabled'">
-                <a class="page-link"
-                   th:href="@{/admin/users(page=${currentPage-1},
-                                          keyword=${keyword},
-                                          roleName=${selectedRole})}">&#x2190;</a>
-            </li>
-            <li th:each="i : ${#numbers.sequence(0, totalPages-1)}"
-                class="page-item"
-                th:classappend="${i == currentPage} ? 'active'">
-                <a class="page-link"
-                   th:href="@{/admin/users(page=${i}, keyword=${keyword}, roleName=${selectedRole})}"
-                   th:text="${i + 1}"></a>
-            </li>
-            <li class="page-item"
-                th:classappend="${currentPage == totalPages-1} ? 'disabled'">
-                <a class="page-link"
-                   th:href="@{/admin/users(page=${currentPage+1},
-                                          keyword=${keyword},
-                                          roleName=${selectedRole})}">&#x2192;</a>
-            </li>
-        </ul>
-    </nav>
-</div>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
+    .dm-dash {
+        --bg: #0b0d12;
+        --surface: #12151d;
+        --surface-2: #1a1e29;
+        --border: rgba(255,255,255,.07);
+        --border-strong: rgba(255,255,255,.14);
+        --text: #f5f6f9;
+        --text-dim: #d3d6e0;
+        --text-faint: #a6abbd;
+        --accent: #8b7cf6;
+        --accent-soft: rgba(139,124,246,.14);
+        --good: #34d399;
+        --good-soft: rgba(52,211,153,.13);
+        --bad: #f2637a;
+        --bad-soft: rgba(242,99,122,.13);
+        --warn: #f5b95c;
+        --warn-soft: rgba(245,185,92,.13);
+        --radius: 18px;
+
+        position: relative;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--text);
+        font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+        border-radius: 0px;
+        padding: 32px;
+        margin: -24px -24px 0;
+    }
+    @media (max-width: 767px) { .dm-dash { padding: 18px; margin: -24px -24px 0; } }
+
+    .dm-glow {
+        position: absolute; width: 480px; height: 480px; border-radius: 50%;
+        filter: blur(110px); opacity: .16; pointer-events: none;
+        animation: dmDrift 14s ease-in-out infinite alternate;
+    }
+    .dm-glow--a { background: var(--accent); top: -180px; right: -140px; }
+    .dm-glow--b { background: var(--good); bottom: -200px; left: -160px; animation-delay: -6s; }
+    @keyframes dmDrift { from { transform: translate(0,0) scale(1); } to { transform: translate(-30px, 25px) scale(1.12); } }
+    @media (prefers-reduced-motion: reduce) { .dm-glow { animation: none !important; opacity: 1 !important; } }
+
+    .dm-content { position: relative; z-index: 1; }
+
+    .dm-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 28px; gap: 12px; flex-wrap: wrap; }
+    .dm-eyebrow { text-transform: uppercase; letter-spacing: .12em; font-size: .7rem; font-weight: 700; color: var(--accent); margin: 0 0 4px; }
+    .dm-title { font-size: 1.7rem; font-weight: 800; margin: 0; letter-spacing: -.02em; }
+    .dm-title-count { font-size: 1rem; font-weight: 600; margin-left: 6px; }
+
+    .dm-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
+    .mb-4 { margin-bottom: 24px; }
+
+    .dm-text-faint { color: var(--text-faint); font-size: .78rem; }
+    .dm-text-dim { color: var(--text-dim); }
+    .dm-cell-strong { font-weight: 700; }
+
+    .dm-filter-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+    .dm-filter-actions { display: flex; gap: 8px; }
+    .dm-form-group { display: flex; flex-direction: column; gap: 6px; }
+    .dm-form-group--grow { flex: 1 1 240px; min-width: 200px; }
+    .dm-label { font-size: .78rem; font-weight: 600; color: var(--text-dim); }
+
+    .dm-input, .dm-select {
+        background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+        border-radius: 10px; padding: 9px 12px; font-size: .87rem; font-family: inherit;
+        outline: none; transition: border-color .2s ease; width: 100%; box-sizing: border-box;
+    }
+    .dm-input:focus, .dm-select:focus { border-color: var(--accent); }
+    .dm-input::placeholder { color: var(--text-faint); }
+    .dm-select { min-width: 150px; }
+    .dm-select--sm { padding: 6px 8px; font-size: .76rem; min-width: 0; }
+
+    .dm-table-wrap { overflow-x: hidden; }
+    .dm-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: .84rem; }
+    .dm-table thead th {
+        text-align: left; text-transform: uppercase; letter-spacing: .03em;
+        font-size: .64rem; font-weight: 700; color: var(--text-faint);
+        padding: 0 8px 10px; border-bottom: 1px solid var(--border);
+    }
+    .dm-table tbody td { padding: 12px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .dm-table tbody tr:last-child td { border-bottom: none; }
+    .dm-table tbody tr { transition: background .2s ease; }
+    .dm-table tbody tr:hover { background: var(--surface-2); }
+    .dm-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .dm-role-badges { display: flex; flex-wrap: wrap; gap: 4px; }
+
+    .dm-pill {
+        display: inline-flex; align-items: center; padding: 3px 10px;
+        border-radius: 999px; font-size: .66rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: .03em; white-space: nowrap;
+    }
+    .dm-pill--muted { background: var(--surface-2); color: var(--text-dim); }
+    .dm-pill--good  { background: var(--good-soft); color: var(--good); }
+    .dm-pill--bad   { background: var(--bad-soft); color: var(--bad); }
+
+    .dm-empty { text-align: center; padding: 24px 0; color: var(--text-faint); font-size: .85rem; }
+
+    .dm-action-stack { display: flex; flex-direction: column; gap: 6px; min-width: 150px; }
+    .dm-inline-form { display: flex; gap: 6px; }
+    .dm-inline-form .dm-select { flex: 1; }
+
+    .dm-btn {
+        display: inline-flex; align-items: center; gap: 6px; justify-content: center;
+        border: 1px solid var(--border); color: var(--text-dim);
+        background: transparent; border-radius: 999px;
+        font-size: .78rem; font-weight: 600; padding: 6px 12px;
+        text-decoration: none; transition: all .2s ease; cursor: pointer;
+    }
+    .dm-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+    .dm-btn--solid { background: var(--accent); border-color: var(--accent); color: #fff; padding: 8px 16px; font-size: .82rem; }
+    .dm-btn--solid:hover { background: #7a6af0; border-color: #7a6af0; color: #fff; }
+    .dm-btn--block { width: 100%; }
+    .dm-btn--bad-outline { border-color: var(--bad); color: var(--bad); }
+    .dm-btn--bad-outline:hover { background: var(--bad-soft); }
+    .dm-btn--good-outline { border-color: var(--good); color: var(--good); }
+    .dm-btn--good-outline:hover { background: var(--good-soft); }
+
+    .dm-icon-btn {
+        display: inline-flex; align-items: center; justify-content: center;
+        flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px;
+        border: 1px solid var(--border); color: var(--text-dim); background: transparent;
+        cursor: pointer; transition: all .2s ease;
+    }
+    .dm-icon-btn--good:hover { border-color: var(--good); color: var(--good); background: var(--good-soft); }
+    .dm-icon-btn--bad:hover { border-color: var(--bad); color: var(--bad); background: var(--bad-soft); }
+
+    .dm-pagination-wrap { display: flex; justify-content: center; margin-top: 20px; overflow-x: auto; }
+    .dm-pagination { list-style: none; display: flex; gap: 6px; margin: 0; padding: 0; }
+    .dm-page-link {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-width: 34px; height: 34px; padding: 0 6px; border-radius: 9px;
+        border: 1px solid var(--border); color: var(--text-dim); text-decoration: none;
+        font-size: .84rem; font-weight: 600; transition: all .2s ease;
+    }
+    .dm-page-link:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+    .dm-page-link--active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .dm-page-link--disabled { opacity: .35; pointer-events: none; }
+
+    @media (max-width: 680px) {
+        .dm-table-wrap { overflow-x: auto; }
+        .dm-table { table-layout: auto; min-width: 720px; }
+        .dm-truncate { white-space: nowrap; overflow: visible; text-overflow: clip; }
+    }
+</style>
+
 </body>
 </html>

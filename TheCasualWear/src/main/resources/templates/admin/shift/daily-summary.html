@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Tổng kết cuối ngày</title></head>
+<body>
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <h4 class="fw-bold mb-0">Tổng kết cuối ngày</h4>
+    <form th:action="@{/admin/shifts/daily-summary}" method="get" class="d-flex gap-2">
+        <input type="date" name="date" th:value="${selectedDate}"
+               class="form-control form-control-sm" onchange="this.form.submit()"/>
+    </form>
+</div>
+
+<!-- Số tổng đã chốt -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="text-muted small">Tổng doanh thu</div>
+                <div class="fs-5 fw-bold text-primary"
+                     th:text="${#numbers.formatInteger(summary.totalRevenue, 0, 'COMMA') + ' đ'}"></div>
+                <div class="text-muted small">(mọi phương thức)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="text-muted small">SL sản phẩm bán ra</div>
+                <div class="fs-5 fw-bold" th:text="${summary.totalItemsSold}"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="text-muted small">Số ca đã chốt</div>
+                <div class="fs-5 fw-bold" th:text="${summary.shiftCount}"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="text-muted small">Chênh lệch tiền mặt</div>
+                <div class="fs-5 fw-bold"
+                     th:classappend="${summary.totalCashDifference.signum() < 0 ? 'text-danger' : 'text-success'}"
+                     th:text="${(summary.totalCashDifference.signum() > 0 ? '+' : '')
+                                + #numbers.formatInteger(summary.totalCashDifference, 0, 'COMMA') + ' đ'}"></div>
+                <div class="text-muted small" th:if="${summary.mismatchCount > 0}"
+                     th:text="${summary.mismatchCount + ' ca có sai lệch'}"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ca đang diễn ra (chỉ hiện khi xem ngày hôm nay) -->
+<div th:if="${openPreviews != null and !#lists.isEmpty(openPreviews)}" class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <h6 class="fw-bold mb-1">
+            <i class="bi bi-hourglass-split text-warning me-1"></i>Đang diễn ra
+        </h6>
+        <p class="text-muted small mb-3">
+            Các ca dưới đây chưa đóng — số liệu chỉ là <strong>tạm tính</strong>, chưa cộng vào tổng ở trên.
+        </p>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th>Quầy</th><th>Thu ngân</th><th>Mở ca lúc</th>
+                    <th class="text-end">Tiền mặt tạm tính</th><th class="text-end">SL bán tạm tính</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="p : ${openPreviews}">
+                    <td th:text="${p.shift.counter != null ? p.shift.counter.code : '-'}"></td>
+                    <td th:text="${p.shift.cashier.username}"></td>
+                    <td th:text="${#temporals.format(p.shift.openedAt, 'HH:mm')}"></td>
+                    <td class="text-end" th:text="${#numbers.formatInteger(p.previewCash, 0, 'COMMA') + ' đ'}"></td>
+                    <td class="text-end" th:text="${p.previewItems}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Danh sách ca đã chốt trong ngày -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+            <tr>
+                <th>Quầy</th>
+                <th>Thu ngân</th>
+                <th>Mở ca</th>
+                <th>Đóng ca</th>
+                <th class="text-end">Tiền mặt đếm (CASH)</th>
+                <th class="text-end">Chênh lệch</th>
+                <th class="text-end">SL bán</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:if="${#lists.isEmpty(closedShifts)}">
+                <td colspan="7" class="text-center text-muted py-4">
+                    Không có ca nào được chốt trong ngày này.
+                </td>
+            </tr>
+            <tr th:each="s : ${closedShifts}">
+                <td th:text="${s.counter != null ? s.counter.code : '-'}"></td>
+                <td th:text="${s.cashier.username}"></td>
+                <td>
+                    <span th:text="${#temporals.format(s.openedAt, 'HH:mm dd/MM')}"></span>
+                    <i th:if="${s.openedAt.toLocalDate() != s.closedAt.toLocalDate()}"
+                       class="bi bi-exclamation-triangle-fill text-warning ms-1"
+                       title="Ca này bắt đầu từ hôm trước"></i>
+                </td>
+                <td th:text="${#temporals.format(s.closedAt, 'HH:mm dd/MM')}"></td>
+                <td class="text-end"
+                    th:text="${s.actualCash != null ? #numbers.formatInteger(s.actualCash, 0, 'COMMA') + ' đ' : '-'}"></td>
+                <td class="text-end fw-semibold"
+                    th:classappend="${s.cashDifference != null and s.cashDifference.signum() < 0 ? 'text-danger' : 'text-success'}"
+                    th:text="${s.cashDifference != null
+                               ? (s.cashDifference.signum() > 0 ? '+' : '') + #numbers.formatInteger(s.cashDifference, 0, 'COMMA') + ' đ'
+                               : '-'}"></td>
+                <td class="text-end" th:text="${s.itemsSoldCount != null ? s.itemsSoldCount : '-'}"></td>
+            </tr>
+            </tbody>
+            <tfoot th:if="${!#lists.isEmpty(closedShifts)}">
+            <tr class="table-light fw-bold">
+                <td colspan="4" class="text-end">Tổng cộng</td>
+                <td class="text-end text-muted small">(xem doanh thu đa phương thức ở thẻ phía trên)</td>
+                <td class="text-end"
+                    th:classappend="${summary.totalCashDifference.signum() < 0 ? 'text-danger' : 'text-success'}"
+                    th:text="${(summary.totalCashDifference.signum() > 0 ? '+' : '')
+                               + #numbers.formatInteger(summary.totalCashDifference, 0, 'COMMA') + ' đ'}"></td>
+                <td class="text-end" th:text="${summary.totalItemsSold}"></td>
+            </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+</body>
+</html>

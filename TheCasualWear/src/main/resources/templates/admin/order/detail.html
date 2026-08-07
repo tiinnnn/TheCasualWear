@@ -2,125 +2,273 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head><title>Chi tiết đơn hàng</title></head>
 <body>
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="fw-bold">Đơn hàng #<span th:text="${order.id}"></span></h4>
-    <a th:href="@{/admin/orders}" class="btn btn-outline-secondary btn-sm">← Quay lại</a>
-</div>
+<div class="ac-scope">
+    <style>
+        .ac-scope { color: var(--adm-text); }
+        .ac-scope h4, .ac-scope h5, .ac-scope h6 { color: var(--adm-text); }
+        .ac-scope small, .ac-scope .text-muted { color: var(--adm-text-dim) !important; }
 
-<div class="row g-4">
-    <div class="col-md-8">
-        <!-- Sản phẩm -->
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-body">
-                <h6 class="fw-bold mb-3">Sản phẩm đã đặt</h6>
-                <div th:each="detail : ${order.orderDetails}"
-                     class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
-                    <div class="d-flex gap-3 align-items-center">
-                        <img th:if="${detail.variant.product.images != null and !detail.variant.product.images.isEmpty()}"
-                             th:src="${detail.variant.product.images[0].imageUrl}"
-                             style="width:65px;height:65px;object-fit:cover" class="rounded"/>
-                        <img th:unless="${detail.variant.product.images != null and !detail.variant.product.images.isEmpty()}"
-                             src="/images/no-image.png"
-                             style="width:65px;height:65px;object-fit:cover" class="rounded"/>
-                        <div>
-                            <p class="mb-1 fw-bold" th:text="${detail.variant.product.name}"></p>
-                            <!-- Size + màu + SKU -->
-                            <div class="d-flex gap-1 flex-wrap mb-1"
-                                 th:if="${detail.variant != null}">
+        .ac-scope .card {
+            background: var(--adm-surface);
+            border: 1px solid var(--adm-border) !important;
+            color: var(--adm-text);
+        }
+        .ac-scope .card-header.bg-dark {
+            background: var(--adm-surface-2) !important;
+            border-bottom: 1px solid var(--adm-border);
+        }
+
+        .ac-scope .table {
+            --bs-table-bg: transparent;
+            --bs-table-color: var(--adm-text);
+            --bs-table-border-color: var(--adm-border);
+            --bs-table-hover-bg: var(--adm-surface-2);
+            --bs-table-hover-color: var(--adm-text);
+            --bs-table-active-bg: var(--adm-surface-2);
+            --bs-table-active-color: var(--adm-text);
+            color: var(--adm-text);
+        }
+        .ac-scope .table > :not(caption) > * > * {
+            background-color: var(--bs-table-bg) !important;
+            color: var(--bs-table-color) !important;
+            border-bottom-color: var(--bs-table-border-color) !important;
+            box-shadow: none !important;
+        }
+        .ac-scope .table > thead {
+            --bs-table-bg: var(--adm-surface-2);
+            --bs-table-color: var(--adm-text-dim);
+        }
+        .ac-scope .table-hover > tbody > tr:hover > * {
+            background-color: var(--adm-surface-2) !important;
+            color: var(--adm-text) !important;
+        }
+
+        .ac-scope .btn { font-weight: 600; }
+        .ac-scope .btn-dark { background: var(--adm-accent); border-color: var(--adm-accent); }
+        .ac-scope .btn-dark:hover { background: #7a6af0; border-color: #7a6af0; }
+        .ac-scope .btn-success { background: var(--adm-good); border-color: var(--adm-good); }
+        .ac-scope .btn-danger { background: var(--adm-bad); border-color: var(--adm-bad); }
+        .ac-scope .btn-outline-secondary,
+        .ac-scope .btn-outline-dark {
+            border-color: rgba(255,255,255,.22); color: var(--adm-text); background: transparent;
+        }
+        .ac-scope .btn-outline-secondary:hover,
+        .ac-scope .btn-outline-dark:hover {
+            border-color: var(--adm-accent); color: var(--adm-accent); background: var(--adm-accent-soft);
+        }
+        .ac-scope .btn-outline-primary {
+            border-color: rgba(139,124,246,.5); color: var(--adm-accent); background: transparent;
+        }
+        .ac-scope .btn-outline-primary:hover { background: var(--adm-accent-soft); border-color: var(--adm-accent); }
+        .ac-scope .btn-outline-success {
+            border-color: rgba(52,211,153,.5); color: var(--adm-good); background: transparent;
+        }
+        .ac-scope .btn-outline-success:hover { background: var(--adm-good-soft); border-color: var(--adm-good); }
+        .ac-scope .btn-outline-danger {
+            border-color: rgba(242,99,122,.5); color: var(--adm-bad); background: transparent;
+        }
+        .ac-scope .btn-outline-danger:hover { background: var(--adm-bad-soft); border-color: var(--adm-bad); }
+        .ac-scope .btn-outline-warning {
+            border-color: rgba(245,185,92,.5); color: var(--adm-warn); background: transparent;
+        }
+        .ac-scope .btn-outline-warning:hover { background: var(--adm-warn-soft); border-color: var(--adm-warn); }
+
+        .ac-scope .form-control, .ac-scope .form-select {
+            background: var(--adm-surface-2); border-color: var(--adm-border); color: var(--adm-text);
+        }
+        .ac-scope .form-control::placeholder { color: var(--adm-text-faint); }
+        .ac-scope .form-control:focus, .ac-scope .form-select:focus {
+            background: var(--adm-surface-2); border-color: var(--adm-accent); color: var(--adm-text);
+            box-shadow: 0 0 0 .2rem var(--adm-accent-soft);
+        }
+        .ac-scope .form-control:disabled { background: var(--adm-surface); color: var(--adm-text-faint); }
+        .ac-scope .input-group-text { background: var(--adm-surface-2); border-color: var(--adm-border); color: var(--adm-text-dim); }
+        .ac-scope .form-label { color: var(--adm-text); }
+        .ac-scope code { color: var(--adm-accent); background: var(--adm-accent-soft); padding: 1px 5px; border-radius: 4px; }
+
+        .ac-scope .badge.bg-danger { background: var(--adm-bad) !important; }
+        .ac-scope .badge.bg-success { background: var(--adm-good) !important; }
+        .ac-scope .badge.bg-secondary { background: var(--adm-surface-2) !important; color: var(--adm-text-dim) !important; border: 1px solid var(--adm-border); }
+        .ac-scope .badge.bg-dark { background: var(--adm-surface-2) !important; color: var(--adm-text) !important; border: 1px solid var(--adm-border); }
+        .ac-scope .badge.bg-light { background: var(--adm-surface-2) !important; color: var(--adm-text-faint) !important; border: 1px solid var(--adm-border); }
+
+        .ac-scope .alert-info {
+            background: var(--adm-accent-soft); border-color: rgba(139,124,246,.3); color: var(--adm-text);
+        }
+
+        .ac-scope .breadcrumb-item a { color: var(--adm-text-dim); text-decoration: none; }
+        .ac-scope .breadcrumb-item a:hover { color: var(--adm-accent); }
+        .ac-scope .breadcrumb-item.active { color: var(--adm-text-faint); }
+        .ac-scope .breadcrumb-item + .breadcrumb-item::before { color: var(--adm-text-faint); }
+
+        .ac-scope .pagination .page-link { background: var(--adm-surface); border-color: var(--adm-border); color: var(--adm-text-dim); }
+        .ac-scope .pagination .page-link:hover { background: var(--adm-surface-2); color: var(--adm-accent); }
+        .ac-scope .pagination .page-item.active .page-link { background: var(--adm-accent); border-color: var(--adm-accent); color: #fff; }
+        .ac-scope .pagination .page-item.disabled .page-link { background: var(--adm-surface); color: var(--adm-text-faint); opacity: .5; }
+
+        .ac-scope .border { border-color: var(--adm-border) !important; }
+        .ac-scope .bg-light { background: var(--adm-surface-2) !important; color: var(--adm-text); }
+
+        .ac-scope .accordion-item { background: var(--adm-surface); border-color: var(--adm-border) !important; }
+        .ac-scope .accordion-button {
+            background: var(--adm-surface); color: var(--adm-text);
+        }
+        .ac-scope .accordion-button:not(.collapsed) {
+            background: var(--adm-surface-2); color: var(--adm-text); box-shadow: none;
+        }
+        .ac-scope .accordion-button::after { filter: invert(1) grayscale(1) brightness(1.6); }
+        .ac-scope .accordion-body { background: var(--adm-surface); }
+
+        .ac-scope .modal-content { background: var(--adm-surface); color: var(--adm-text); border: 1px solid var(--adm-border); }
+        .ac-scope .modal-header, .ac-scope .modal-footer { border-color: var(--adm-border); }
+        .ac-scope .btn-close { filter: invert(1) grayscale(1) brightness(1.8); }
+
+        .ac-scope .opacity-50 { opacity: .45 !important; }
+        .ac-scope .text-dark { color: var(--adm-text) !important; }
+
+        .ac-scope .form-check-input {
+            background-color: var(--adm-surface-2); border-color: var(--adm-border);
+        }
+        .ac-scope .form-check-input:checked {
+            background-color: var(--adm-accent); border-color: var(--adm-accent);
+        }
+        .ac-scope .form-check-label { color: var(--adm-text); }
+
+        .ac-scope .alert-warning {
+            background: var(--adm-warn-soft); border-color: rgba(245,185,92,.3); color: var(--adm-text);
+        }
+        .ac-scope .alert-danger {
+            background: var(--adm-bad-soft); border-color: rgba(242,99,122,.3); color: var(--adm-text);
+        }
+
+        .ac-scope .list-group-item {
+            background: transparent; border-color: var(--adm-border); color: var(--adm-text);
+        }
+        .ac-scope .btn-secondary {
+            background: var(--adm-surface-2); border-color: rgba(255,255,255,.22); color: var(--adm-text);
+        }
+        .ac-scope .btn-secondary:hover { background: var(--adm-surface); border-color: rgba(255,255,255,.32); color: var(--adm-text); }
+    </style>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold">Đơn hàng #<span th:text="${order.id}"></span></h4>
+        <a th:href="@{/admin/orders}" class="btn btn-outline-secondary btn-sm">← Quay lại</a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-8">
+            <!-- Sản phẩm -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">Sản phẩm đã đặt</h6>
+                    <div th:each="detail : ${order.orderDetails}"
+                         class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                        <div class="d-flex gap-3 align-items-center">
+                            <img th:if="${detail.variant.product.images != null and !detail.variant.product.images.isEmpty()}"
+                                 th:src="${detail.variant.product.images[0].imageUrl}"
+                                 style="width:65px;height:65px;object-fit:cover" class="rounded"/>
+                            <img th:unless="${detail.variant.product.images != null and !detail.variant.product.images.isEmpty()}"
+                                 src="/images/no-image.png"
+                                 style="width:65px;height:65px;object-fit:cover" class="rounded"/>
+                            <div>
+                                <p class="mb-1 fw-bold" th:text="${detail.variant.product.name}"></p>
+                                <!-- Size + màu + SKU -->
+                                <div class="d-flex gap-1 flex-wrap mb-1"
+                                     th:if="${detail.variant != null}">
                                 <span th:if="${detail.variant.size != null}"
                                       class="badge bg-dark"
                                       th:text="'Size ' + ${detail.variant.size.name}"></span>
-                                <span th:if="${detail.variant.color != null}"
-                                      class="badge bg-secondary"
-                                      th:text="${detail.variant.color.name}"></span>
-                                <span th:if="${detail.variant.sku != null}"
-                                      class="badge bg-light text-dark border"
-                                      th:text="'SKU: ' + ${detail.variant.sku}"></span>
-                            </div>
-                            <!-- Giá đơn vị × số lượng — kèm badge sale nếu đơn này mua lúc đang giảm giá -->
-                            <small class="text-muted d-flex align-items-center gap-1 flex-wrap">
+                                    <span th:if="${detail.variant.color != null}"
+                                          class="badge bg-secondary"
+                                          th:text="${detail.variant.color.name}"></span>
+                                    <span th:if="${detail.variant.sku != null}"
+                                          class="badge bg-light text-dark border"
+                                          th:text="'SKU: ' + ${detail.variant.sku}"></span>
+                                </div>
+                                <!-- Giá đơn vị × số lượng — kèm badge sale nếu đơn này mua lúc đang giảm giá -->
+                                <small class="text-muted d-flex align-items-center gap-1 flex-wrap">
                                 <span th:if="${detail.originalPrice != null and detail.originalPrice.compareTo(detail.price) > 0}"
                                       class="badge bg-danger"
                                       th:text="'-' + ${#numbers.formatInteger(
                                             (detail.originalPrice - detail.price) * 100 / detail.originalPrice,
                                             0,'COMMA') + '%'}"></span>
-                                <span th:if="${detail.originalPrice != null and detail.originalPrice.compareTo(detail.price) > 0}"
-                                      class="text-decoration-line-through"
-                                      th:text="${#numbers.formatInteger(detail.originalPrice, 0, 'COMMA') + ' đ'}"></span>
-                                <span th:text="${#numbers.formatInteger(detail.price, 0, 'COMMA')
+                                    <span th:if="${detail.originalPrice != null and detail.originalPrice.compareTo(detail.price) > 0}"
+                                          class="text-decoration-line-through"
+                                          th:text="${#numbers.formatInteger(detail.originalPrice, 0, 'COMMA') + ' đ'}"></span>
+                                    <span th:text="${#numbers.formatInteger(detail.price, 0, 'COMMA')
                                                  + ' đ  ×  ' + detail.quantity}"></span>
-                            </small>
+                                </small>
+                            </div>
                         </div>
-                    </div>
-                    <span class="fw-bold"
-                          th:text="${#numbers.formatInteger(
+                        <span class="fw-bold"
+                              th:text="${#numbers.formatInteger(
                               detail.price.doubleValue() * detail.quantity, 0, 'COMMA') + ' đ'}"></span>
-                </div>
-                <hr/>
-                <div th:with="discount=${order.orderVoucher != null ? order.orderVoucher.discountAmount : 0}, subtotal=${order.totalPrice + discount}">
-                    <div th:if="${order.orderVoucher != null}" class="d-flex justify-content-between mb-1">
-                        <span class="text-muted">Tạm tính:</span>
-                        <span th:text="${#numbers.formatInteger(subtotal, 0, 'COMMA') + ' đ'}"></span>
                     </div>
-                    <div th:if="${order.orderVoucher != null}" class="d-flex justify-content-between mb-1">
+                    <hr/>
+                    <div th:with="discount=${order.orderVoucher != null ? order.orderVoucher.discountAmount : 0}, subtotal=${order.totalPrice + discount}">
+                        <div th:if="${order.orderVoucher != null}" class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">Tạm tính:</span>
+                            <span th:text="${#numbers.formatInteger(subtotal, 0, 'COMMA') + ' đ'}"></span>
+                        </div>
+                        <div th:if="${order.orderVoucher != null}" class="d-flex justify-content-between mb-1">
                         <span class="text-muted">
                             Voucher
                             <span class="badge bg-light text-dark border" th:text="${order.orderVoucher.voucher.code}"></span>
                         </span>
-                        <span class="text-success" th:text="'- ' + ${#numbers.formatInteger(discount, 0, 'COMMA') + ' đ'}"></span>
+                            <span class="text-success" th:text="'- ' + ${#numbers.formatInteger(discount, 0, 'COMMA') + ' đ'}"></span>
+                        </div>
+                        <div class="d-flex justify-content-between fw-bold fs-5"
+                             th:classappend="${order.orderVoucher != null} ? 'mt-2 pt-2 border-top' : ''">
+                            <span>Tổng cộng:</span>
+                            <span class="text-danger"
+                                  th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></span>
+                        </div>
                     </div>
-                    <div class="d-flex justify-content-between fw-bold fs-5"
-                         th:classappend="${order.orderVoucher != null} ? 'mt-2 pt-2 border-top' : ''">
-                        <span>Tổng cộng:</span>
-                        <span class="text-danger"
-                              th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></span>
+                    <div class="d-flex justify-content-between mt-2">
+                        <span>Thanh toán:</span>
+                        <span th:if="${order.paymentMethod == 'VNPAY'}"
+                              class="badge bg-success">VNPay ✓</span>
+                        <span th:if="${order.paymentMethod == 'COD' and order.isPaid}"
+                              class="badge bg-success">COD - Đã thu tiền ✓</span>
+                        <span th:if="${order.paymentMethod == 'COD' and !order.isPaid}"
+                              class="badge bg-warning text-dark">COD - Chưa thu tiền</span>
+                        <span th:if="${order.paymentMethod == 'CASH'}"
+                              class="badge bg-success">Tiền mặt ✓</span>
+                        <span th:if="${order.paymentMethod == 'TRANSFER'}"
+                              class="badge bg-success">Chuyển khoản ✓</span>
                     </div>
-                </div>
-                <div class="d-flex justify-content-between mt-2">
-                    <span>Thanh toán:</span>
-                    <span th:if="${order.paymentMethod == 'VNPAY'}"
-                          class="badge bg-success">VNPay ✓</span>
-                    <span th:if="${order.paymentMethod == 'COD' and order.isPaid}"
-                          class="badge bg-success">COD - Đã thu tiền ✓</span>
-                    <span th:if="${order.paymentMethod == 'COD' and !order.isPaid}"
-                          class="badge bg-warning text-dark">COD - Chưa thu tiền</span>
-                    <span th:if="${order.paymentMethod == 'CASH'}"
-                          class="badge bg-success">Tiền mặt ✓</span>
-                    <span th:if="${order.paymentMethod == 'TRANSFER'}"
-                          class="badge bg-success">Chuyển khoản ✓</span>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="col-md-4">
-        <!-- Thông tin đơn hàng -->
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-body">
-                <h6 class="fw-bold mb-3">Thông tin đơn hàng</h6>
-                <p class="mb-1">
-                    <strong>Khách hàng:</strong>
-                    <span th:if="${order.customer != null}" th:text="${order.customer.username}"></span>
-                    <span th:if="${order.customer == null}">Khách lẻ</span>
-                </p>
-                <p class="mb-1" th:if="${order.orderType != null and order.orderType.name() == 'COUNTER'}">
-                    <strong>Loại đơn:</strong>
-                    <span class="badge bg-success">Bán tại quầy</span>
-                    <span th:if="${order.cashier != null}" class="text-muted small">
+        <div class="col-md-4">
+            <!-- Thông tin đơn hàng -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">Thông tin đơn hàng</h6>
+                    <p class="mb-1">
+                        <strong>Khách hàng:</strong>
+                        <span th:if="${order.customer != null}" th:text="${order.customer.username}"></span>
+                        <span th:if="${order.customer == null}">Khách lẻ</span>
+                    </p>
+                    <p class="mb-1" th:if="${order.orderType != null and order.orderType.name() == 'COUNTER'}">
+                        <strong>Loại đơn:</strong>
+                        <span class="badge bg-success">Bán tại quầy</span>
+                        <span th:if="${order.cashier != null}" class="text-muted small">
                         (Thu ngân: <span th:text="${order.cashier.username}"></span>)
                     </span>
-                </p>
-                <p class="mb-1" th:if="${order.orderVoucher != null}">
-                    <strong>Voucher:</strong>
-                    <span class="badge bg-warning text-dark" th:text="${order.orderVoucher.voucher.code}"></span>
-                </p>
-                <p class="mb-1">
-                    <strong>Ngày đặt:</strong>
-                    <span th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy HH:mm')}"></span>
-                </p>
-                <p class="mb-1">
-                    <strong>Trạng thái:</strong>
-                    <span th:switch="${order.status.name()}">
+                    </p>
+                    <p class="mb-1" th:if="${order.orderVoucher != null}">
+                        <strong>Voucher:</strong>
+                        <span class="badge bg-warning text-dark" th:text="${order.orderVoucher.voucher.code}"></span>
+                    </p>
+                    <p class="mb-1">
+                        <strong>Ngày đặt:</strong>
+                        <span th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy HH:mm')}"></span>
+                    </p>
+                    <p class="mb-1">
+                        <strong>Trạng thái:</strong>
+                        <span th:switch="${order.status.name()}">
                         <span th:case="'PENDING'"   class="badge bg-warning text-dark">Chờ xác nhận</span>
                         <span th:case="'CONFIRMED'" class="badge bg-info">Đã xác nhận</span>
                         <span th:case="'SHIPPING'"  class="badge bg-primary">Đang giao</span>
@@ -128,10 +276,10 @@
                         <span th:case="'CANCELLED'" class="badge bg-danger">Đã hủy</span>
                         <span th:case="'RETURNED'"  class="badge bg-secondary">Đã hoàn hàng</span>
                     </span>
-                </p>
-                <div th:if="${order.cancelReason != null}" class="small text-muted mb-1">
-                    <strong>Lý do:</strong>
-                    <span th:switch="${order.cancelReason.name()}">
+                    </p>
+                    <div th:if="${order.cancelReason != null}" class="small text-muted mb-1">
+                        <strong>Lý do:</strong>
+                        <span th:switch="${order.cancelReason.name()}">
                         <span th:case="'CUSTOMER_REQUEST'">Khách yêu cầu / đổi ý</span>
                         <span th:case="'OUT_OF_STOCK'">Hết hàng</span>
                         <span th:case="'PAYMENT_ISSUE'">Vấn đề thanh toán</span>
@@ -141,262 +289,264 @@
                         <span th:case="'DUPLICATE_ORDER'">Đơn trùng/tạo nhầm</span>
                         <span th:case="'OTHER'">Khác</span>
                     </span>
-                    <span th:if="${order.cancelNote != null}" th:text="'— ' + ${order.cancelNote}"></span>
-                    <br/>
-                    <span th:if="${order.cancelledBy != null}"
-                          th:text="'Bởi: ' + ${order.cancelledBy.username} + ' lúc ' + ${#temporals.format(order.cancelledAt, 'HH:mm dd/MM/yyyy')}"></span>
-                </div>
-                <p class="mb-1" th:if="${order.trackingCode != null}">
-                    <strong>Mã vận đơn:</strong>
-                    <span class="badge bg-primary" th:text="${order.trackingCode}"></span>
-                    <a th:href="@{'https://tracking.ghn.dev/?order_code=' + ${order.trackingCode}}"
-                       target="_blank" rel="noopener"
-                       class="ms-1 small"
-                       title="Tra cứu hành trình đơn hàng trên GHN">
-                        <i class="bi bi-box-arrow-up-right"></i> Tra cứu
-                    </a>
-                </p>
-                <p class="mb-0" th:if="${order.shippedAt != null}">
-                    <strong>Ngày gửi:</strong>
-                    <span th:text="${#temporals.format(order.shippedAt, 'dd/MM/yyyy HH:mm')}"></span>
-                </p>
-                <hr/>
-                <h6 class="fw-bold">Địa chỉ giao hàng</h6>
-                <div th:if="${order.shippingAddress != null}">
-                    <p class="mb-1"      th:text="${order.shippingAddress.fullName}"></p>
-                    <p class="mb-1 text-muted" th:text="${order.shippingAddress.phone}"></p>
-                    <p class="mb-0 small"
-                       th:text="${order.shippingAddress.street + ', ' +
+                        <span th:if="${order.cancelNote != null}" th:text="'— ' + ${order.cancelNote}"></span>
+                        <br/>
+                        <span th:if="${order.cancelledBy != null}"
+                              th:text="'Bởi: ' + ${order.cancelledBy.username} + ' lúc ' + ${#temporals.format(order.cancelledAt, 'HH:mm dd/MM/yyyy')}"></span>
+                    </div>
+                    <p class="mb-1" th:if="${order.trackingCode != null}">
+                        <strong>Mã vận đơn:</strong>
+                        <span class="badge bg-primary" th:text="${order.trackingCode}"></span>
+                        <a th:href="@{'https://tracking.ghn.dev/?order_code=' + ${order.trackingCode}}"
+                           target="_blank" rel="noopener"
+                           class="ms-1 small"
+                           title="Tra cứu hành trình đơn hàng trên GHN">
+                            <i class="bi bi-box-arrow-up-right"></i> Tra cứu
+                        </a>
+                    </p>
+                    <p class="mb-0" th:if="${order.shippedAt != null}">
+                        <strong>Ngày gửi:</strong>
+                        <span th:text="${#temporals.format(order.shippedAt, 'dd/MM/yyyy HH:mm')}"></span>
+                    </p>
+                    <hr/>
+                    <h6 class="fw-bold">Địa chỉ giao hàng</h6>
+                    <div th:if="${order.shippingAddress != null}">
+                        <p class="mb-1"      th:text="${order.shippingAddress.fullName}"></p>
+                        <p class="mb-1 text-muted" th:text="${order.shippingAddress.phone}"></p>
+                        <p class="mb-0 small"
+                           th:text="${order.shippingAddress.street + ', ' +
                                   order.shippingAddress.district + ', ' +
                                   order.shippingAddress.city}"></p>
+                    </div>
+                    <p class="mb-0 small text-muted" th:if="${order.shippingAddress == null}">
+                        Không có (khách nhận hàng trực tiếp tại quầy)
+                    </p>
                 </div>
-                <p class="mb-0 small text-muted" th:if="${order.shippingAddress == null}">
-                    Không có (khách nhận hàng trực tiếp tại quầy)
-                </p>
             </div>
-        </div>
 
-        <!-- Cập nhật trạng thái -->
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-body">
-                <h6 class="fw-bold mb-3">Cập nhật trạng thái</h6>
-                <div class="d-grid gap-2">
-                    <a th:if="${order.status.name() == 'PENDING'}"
-                       th:href="@{'/admin/orders/' + ${order.id} + '/confirm'}"
-                       class="btn btn-info">
-                        <i class="bi bi-check-lg me-1"></i>Xác nhận đơn
-                    </a>
+            <!-- Cập nhật trạng thái -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">Cập nhật trạng thái</h6>
+                    <div class="d-grid gap-2">
+                        <a th:if="${order.status.name() == 'PENDING'}"
+                           th:href="@{'/admin/orders/' + ${order.id} + '/confirm'}"
+                           class="btn btn-info">
+                            <i class="bi bi-check-lg me-1"></i>Xác nhận đơn
+                        </a>
 
-                    <button th:if="${order.status.name() != 'COMPLETED'
+                        <button th:if="${order.status.name() != 'COMPLETED'
                                 and order.status.name() != 'CANCELLED'
                                 and order.status.name() != 'RETURNED'}"
-                            type="button"
-                            class="btn btn-outline-danger"
-                            data-bs-toggle="modal" data-bs-target="#cancelModal">
-                        <i class="bi bi-x-lg me-1"></i>Hủy đơn
-                    </button>
+                                type="button"
+                                class="btn btn-outline-danger"
+                                data-bs-toggle="modal" data-bs-target="#cancelModal">
+                            <i class="bi bi-x-lg me-1"></i>Hủy đơn
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Vận chuyển: gửi hàng GHN / đánh dấu hoàn thành -->
-        <div th:if="${order.status.name() == 'CONFIRMED' or order.status.name() == 'SHIPPING'}"
-             class="card border-0 shadow-sm mb-3">
-            <div class="card-body">
-                <h6 class="fw-bold mb-3">
-                    <i class="bi bi-truck me-1"></i>Vận chuyển
-                </h6>
+            <!-- Vận chuyển: gửi hàng GHN / đánh dấu hoàn thành -->
+            <div th:if="${order.status.name() == 'CONFIRMED' or order.status.name() == 'SHIPPING'}"
+                 class="card border-0 shadow-sm mb-3">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">
+                        <i class="bi bi-truck me-1"></i>Vận chuyển
+                    </h6>
 
-                <!-- CONFIRMED: nhập mã vận đơn GHN để chuyển sang SHIPPING -->
-                <div th:if="${order.status.name() == 'CONFIRMED'}">
-                    <p class="small text-muted mb-2">
-                        Tạo đơn trên app/web GHN trước, sau đó nhập mã vận đơn vào đây.
-                    </p>
-                    <form th:action="@{'/admin/orders/' + ${order.id} + '/ship'}" method="post">
-                        <div class="input-group input-group-sm">
-                            <input type="text" name="trackingCode" class="form-control"
-                                   placeholder="Nhập mã vận đơn GHN" required/>
-                            <button type="submit" class="btn btn-primary btn-sm">
-                                <i class="bi bi-send me-1"></i>Gửi hàng
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    <!-- CONFIRMED: nhập mã vận đơn GHN để chuyển sang SHIPPING -->
+                    <div th:if="${order.status.name() == 'CONFIRMED'}">
+                        <p class="small text-muted mb-2">
+                            Tạo đơn trên app/web GHN trước, sau đó nhập mã vận đơn vào đây.
+                        </p>
+                        <form th:action="@{'/admin/orders/' + ${order.id} + '/ship'}" method="post">
+                            <div class="input-group input-group-sm">
+                                <input type="text" name="trackingCode" class="form-control"
+                                       placeholder="Nhập mã vận đơn GHN" required/>
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-send me-1"></i>Gửi hàng
+                                </button>
+                            </div>
+                        </form>
+                    </div>
 
-                <!-- SHIPPING: admin tự kiểm tra GHN rồi đánh dấu hoàn thành trực tiếp -->
-                <div th:if="${order.status.name() == 'SHIPPING'}">
-                    <p class="small text-muted mb-2">
-                        Mã vận đơn:
-                        <strong th:text="${order.trackingCode}"></strong>
-                        — kiểm tra trạng thái trên GHN, nếu khách đã thực sự nhận hàng
-                        thì đánh dấu hoàn thành để tính vào doanh thu.
-                    </p>
-                    <a th:href="@{'https://tracking.ghn.dev/?order_code=' + ${order.trackingCode}}"
-                       target="_blank" rel="noopener"
-                       class="btn btn-outline-primary btn-sm w-100 mb-2">
-                        <i class="bi bi-geo-alt me-1"></i>Kiểm tra trên GHN
-                    </a>
-                    <form th:action="@{'/admin/orders/' + ${order.id} + '/complete'}" method="post">
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-success btn-sm"
-                                    onclick="return confirm('Xác nhận đơn hàng đã hoàn thành? Đơn sẽ được tính vào doanh thu.')">
-                                <i class="bi bi-check2-all me-1"></i>Đánh dấu hoàn thành
-                            </button>
-                        </div>
-                    </form>
+                    <!-- SHIPPING: admin tự kiểm tra GHN rồi đánh dấu hoàn thành trực tiếp -->
+                    <div th:if="${order.status.name() == 'SHIPPING'}">
+                        <p class="small text-muted mb-2">
+                            Mã vận đơn:
+                            <strong th:text="${order.trackingCode}"></strong>
+                            — kiểm tra trạng thái trên GHN, nếu khách đã thực sự nhận hàng
+                            thì đánh dấu hoàn thành để tính vào doanh thu.
+                        </p>
+                        <a th:href="@{'https://tracking.ghn.dev/?order_code=' + ${order.trackingCode}}"
+                           target="_blank" rel="noopener"
+                           class="btn btn-outline-primary btn-sm w-100 mb-2">
+                            <i class="bi bi-geo-alt me-1"></i>Kiểm tra trên GHN
+                        </a>
+                        <form th:action="@{'/admin/orders/' + ${order.id} + '/complete'}" method="post">
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-success btn-sm"
+                                        onclick="return confirm('Xác nhận đơn hàng đã hoàn thành? Đơn sẽ được tính vào doanh thu.')">
+                                    <i class="bi bi-check2-all me-1"></i>Đánh dấu hoàn thành
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Nut hoan hang: COMPLETED trong 15 ngay -->
-        <div th:if="${(order.status.name() == 'COMPLETED')
+            <!-- Nut hoan hang: COMPLETED trong 15 ngay -->
+            <div th:if="${(order.status.name() == 'COMPLETED')
                       and order.deliveredAt != null
                       and #temporals.createNow().isBefore(order.deliveredAt.plusDays(15))}"
-             class="card border-0 shadow-sm mt-3">
-            <div class="card-body">
-                <h6 class="fw-bold mb-1 text-warning">
-                    <i class="bi bi-arrow-return-left me-1"></i>Hoàn hàng
-                </h6>
-                <small class="text-muted d-block mb-3">
-                    Hạn hoàn hàng:
-                    <strong th:text="${#temporals.format(order.deliveredAt.plusDays(15), 'HH:mm dd/MM/yyyy')}"></strong>
-                </small>
-                <div class="d-grid">
-                    <button type="button" class="btn btn-warning btn-sm"
-                            data-bs-toggle="modal" data-bs-target="#returnModal">
-                        <i class="bi bi-arrow-return-left me-1"></i>Xử lý hoàn hàng
-                    </button>
+                 class="card border-0 shadow-sm mt-3">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-1 text-warning">
+                        <i class="bi bi-arrow-return-left me-1"></i>Hoàn hàng
+                    </h6>
+                    <small class="text-muted d-block mb-3">
+                        Hạn hoàn hàng:
+                        <strong th:text="${#temporals.format(order.deliveredAt.plusDays(15), 'HH:mm dd/MM/yyyy')}"></strong>
+                    </small>
+                    <div class="d-grid">
+                        <button type="button" class="btn btn-warning btn-sm"
+                                data-bs-toggle="modal" data-bs-target="#returnModal">
+                            <i class="bi bi-arrow-return-left me-1"></i>Xử lý hoàn hàng
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Modal hoan hang -->
-        <div class="modal fade" id="returnModal" tabindex="-1">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header border-0 pb-0">
-                        <h6 class="modal-title fw-bold text-warning">
-                            <i class="bi bi-arrow-return-left me-2"></i>Xử lý hoàn hàng
-                        </h6>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <form th:action="@{'/admin/orders/' + ${order.id} + '/return'}" method="post">
-                        <div class="modal-body">
-                            <div class="alert alert-warning py-2 mb-3">
-                                <i class="bi bi-exclamation-triangle me-1"></i>
-                                Đơn hàng sẽ được chuyển sang trạng thái
-                                <strong>Đã hoàn hàng</strong>, bạn có chắc chắn?
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold">Lý do hoàn hàng</label>
-                                <select name="reason" class="form-select form-select-sm" required
-                                        onchange="document.getElementById('returnNoteWrap').style.display = (this.value === 'OTHER') ? 'block' : 'none';">
-                                    <option value="">-- Chọn lý do --</option>
-                                    <option th:each="r : ${cancelReasons}" th:value="${r}"
-                                            th:text="${r.name() == 'CUSTOMER_REQUEST'} ? 'Khách yêu cầu / đổi ý' :
+            <!-- Modal hoan hang -->
+            <div class="modal fade" id="returnModal" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header border-0 pb-0">
+                            <h6 class="modal-title fw-bold text-warning">
+                                <i class="bi bi-arrow-return-left me-2"></i>Xử lý hoàn hàng
+                            </h6>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form th:action="@{'/admin/orders/' + ${order.id} + '/return'}" method="post">
+                            <div class="modal-body">
+                                <div class="alert alert-warning py-2 mb-3">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    Đơn hàng sẽ được chuyển sang trạng thái
+                                    <strong>Đã hoàn hàng</strong>, bạn có chắc chắn?
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">Lý do hoàn hàng</label>
+                                    <select name="reason" class="form-select form-select-sm" required
+                                            onchange="document.getElementById('returnNoteWrap').style.display = (this.value === 'OTHER') ? 'block' : 'none';">
+                                        <option value="">-- Chọn lý do --</option>
+                                        <option th:each="r : ${cancelReasons}" th:value="${r}"
+                                                th:text="${r.name() == 'CUSTOMER_REQUEST'} ? 'Khách yêu cầu / đổi ý' :
                                                       (${r.name() == 'OUT_OF_STOCK'} ? 'Hết hàng' :
                                                       (${r.name() == 'PAYMENT_ISSUE'} ? 'Vấn đề thanh toán' :
                                                       (${r.name() == 'DELIVERY_FAILED'} ? 'Giao hàng thất bại' :
                                                       (${r.name() == 'DEFECTIVE_PRODUCT'} ? 'Sản phẩm lỗi/hỏng' :
                                                       (${r.name() == 'WRONG_ITEM'} ? 'Giao sai sản phẩm' :
                                                       (${r.name() == 'DUPLICATE_ORDER'} ? 'Đơn trùng/tạo nhầm' : 'Khác'))))))"></option>
-                                </select>
+                                    </select>
+                                </div>
+                                <div class="mb-3" id="returnNoteWrap" style="display:none">
+                                    <label class="form-label small fw-bold">Ghi chú (bắt buộc nếu chọn "Khác")</label>
+                                    <textarea name="note" class="form-control form-control-sm" rows="2"
+                                              placeholder="Nhập chi tiết lý do..."></textarea>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox"
+                                           name="restock" id="restockCheck" value="true"/>
+                                    <label class="form-check-label" for="restockCheck">
+                                        <strong>Restock sản phẩm</strong>
+                                        <small class="text-muted d-block">
+                                            Chỉ tích nếu hàng hoàn về còn dùng được —
+                                            không tích nếu hàng lỗi nặng
+                                        </small>
+                                    </label>
+                                </div>
                             </div>
-                            <div class="mb-3" id="returnNoteWrap" style="display:none">
-                                <label class="form-label small fw-bold">Ghi chú (bắt buộc nếu chọn "Khác")</label>
-                                <textarea name="note" class="form-control form-control-sm" rows="2"
-                                          placeholder="Nhập chi tiết lý do..."></textarea>
+                            <div class="modal-footer border-0 pt-0">
+                                <button type="button" class="btn btn-secondary btn-sm"
+                                        data-bs-dismiss="modal">Hủy bỏ</button>
+                                <button type="submit" class="btn btn-warning btn-sm">
+                                    <i class="bi bi-arrow-return-left me-1"></i>Xác nhận hoàn hàng
+                                </button>
                             </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox"
-                                       name="restock" id="restockCheck" value="true"/>
-                                <label class="form-check-label" for="restockCheck">
-                                    <strong>Restock sản phẩm</strong>
-                                    <small class="text-muted d-block">
-                                        Chỉ tích nếu hàng hoàn về còn dùng được —
-                                        không tích nếu hàng lỗi nặng
-                                    </small>
-                                </label>
-                            </div>
-                        </div>
-                        <div class="modal-footer border-0 pt-0">
-                            <button type="button" class="btn btn-secondary btn-sm"
-                                    data-bs-dismiss="modal">Hủy bỏ</button>
-                            <button type="submit" class="btn btn-warning btn-sm">
-                                <i class="bi bi-arrow-return-left me-1"></i>Xác nhận hoàn hàng
-                            </button>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Modal xác nhận hủy đơn (2 bước) -->
-        <div class="modal fade" id="cancelModal" tabindex="-1">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header border-0 pb-0">
-                        <h6 class="modal-title fw-bold text-danger">
-                            <i class="bi bi-x-octagon me-2"></i>Hủy đơn hàng
-                        </h6>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <form th:action="@{'/admin/orders/' + ${order.id} + '/cancel'}" method="post"
-                          id="cancelOrderForm">
-                        <div class="modal-body">
-                            <div class="alert alert-danger py-2 mb-3">
-                                <i class="bi bi-exclamation-triangle me-1"></i>
-                                Bạn sắp hủy đơn hàng
-                                <strong>#<span th:text="${order.id}"></span></strong>.
-                                Hành động này không thể hoàn tác.
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold">Lý do hủy</label>
-                                <select name="reason" class="form-select form-select-sm" required
-                                        onchange="document.getElementById('cancelNoteWrap').style.display = (this.value === 'OTHER') ? 'block' : 'none';">
-                                    <option value="">-- Chọn lý do --</option>
-                                    <option th:each="r : ${cancelReasons}" th:value="${r}"
-                                            th:text="${r.name() == 'CUSTOMER_REQUEST'} ? 'Khách yêu cầu / đổi ý' :
+            <!-- Modal xác nhận hủy đơn (2 bước) -->
+            <div class="modal fade" id="cancelModal" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header border-0 pb-0">
+                            <h6 class="modal-title fw-bold text-danger">
+                                <i class="bi bi-x-octagon me-2"></i>Hủy đơn hàng
+                            </h6>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form th:action="@{'/admin/orders/' + ${order.id} + '/cancel'}" method="post"
+                              id="cancelOrderForm">
+                            <div class="modal-body">
+                                <div class="alert alert-danger py-2 mb-3">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    Bạn sắp hủy đơn hàng
+                                    <strong>#<span th:text="${order.id}"></span></strong>.
+                                    Hành động này không thể hoàn tác.
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">Lý do hủy</label>
+                                    <select name="reason" class="form-select form-select-sm" required
+                                            onchange="document.getElementById('cancelNoteWrap').style.display = (this.value === 'OTHER') ? 'block' : 'none';">
+                                        <option value="">-- Chọn lý do --</option>
+                                        <option th:each="r : ${cancelReasons}" th:value="${r}"
+                                                th:text="${r.name() == 'CUSTOMER_REQUEST'} ? 'Khách yêu cầu / đổi ý' :
                                                       (${r.name() == 'OUT_OF_STOCK'} ? 'Hết hàng' :
                                                       (${r.name() == 'PAYMENT_ISSUE'} ? 'Vấn đề thanh toán' :
                                                       (${r.name() == 'DELIVERY_FAILED'} ? 'Giao hàng thất bại' :
                                                       (${r.name() == 'DEFECTIVE_PRODUCT'} ? 'Sản phẩm lỗi/hỏng' :
                                                       (${r.name() == 'WRONG_ITEM'} ? 'Giao sai sản phẩm' :
                                                       (${r.name() == 'DUPLICATE_ORDER'} ? 'Đơn trùng/tạo nhầm' : 'Khác'))))))"></option>
-                                </select>
+                                    </select>
+                                </div>
+                                <div class="mb-3" id="cancelNoteWrap" style="display:none">
+                                    <label class="form-label small fw-bold">Ghi chú (bắt buộc nếu chọn "Khác")</label>
+                                    <textarea name="note" class="form-control form-control-sm" rows="2"
+                                              placeholder="Nhập chi tiết lý do..."></textarea>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox"
+                                           id="confirmCancelCheck" onchange="document.getElementById('confirmCancelBtn').disabled = !this.checked;"/>
+                                    <label class="form-check-label" for="confirmCancelCheck">
+                                        Tôi xác nhận muốn hủy đơn hàng này
+                                    </label>
+                                </div>
                             </div>
-                            <div class="mb-3" id="cancelNoteWrap" style="display:none">
-                                <label class="form-label small fw-bold">Ghi chú (bắt buộc nếu chọn "Khác")</label>
-                                <textarea name="note" class="form-control form-control-sm" rows="2"
-                                          placeholder="Nhập chi tiết lý do..."></textarea>
+                            <div class="modal-footer border-0 pt-0">
+                                <button type="button" class="btn btn-secondary btn-sm"
+                                        data-bs-dismiss="modal">Đóng</button>
+                                <button type="submit" id="confirmCancelBtn" class="btn btn-danger btn-sm" disabled>
+                                    <i class="bi bi-x-lg me-1"></i>Xác nhận hủy
+                                </button>
                             </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox"
-                                       id="confirmCancelCheck" onchange="document.getElementById('confirmCancelBtn').disabled = !this.checked;"/>
-                                <label class="form-check-label" for="confirmCancelCheck">
-                                    Tôi xác nhận muốn hủy đơn hàng này
-                                </label>
-                            </div>
-                        </div>
-                        <div class="modal-footer border-0 pt-0">
-                            <button type="button" class="btn btn-secondary btn-sm"
-                                    data-bs-dismiss="modal">Đóng</button>
-                            <button type="submit" id="confirmCancelBtn" class="btn btn-danger btn-sm" disabled
-                                    onclick="return confirm('Xác nhận lần cuối: hủy đơn hàng này?')">
-                                <i class="bi bi-x-lg me-1"></i>Xác nhận hủy
-                            </button>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <script>
-            // Reset trạng thái tick khi đóng modal, tránh giữ trạng thái đã tick cho lần mở sau
-            document.getElementById('cancelModal').addEventListener('hidden.bs.modal', function () {
-                document.getElementById('confirmCancelCheck').checked = false;
-                document.getElementById('confirmCancelBtn').disabled = true;
-            });
-        </script>
+            <script>
+                // Reset trạng thái tick khi đóng modal, tránh giữ trạng thái đã tick cho lần mở sau
+                document.getElementById('cancelModal').addEventListener('hidden.bs.modal', function () {
+                    document.getElementById('confirmCancelCheck').checked = false;
+                    document.getElementById('confirmCancelBtn').disabled = true;
+                });
+            </script>
+        </div><!-- /col-md-4 -->
+    </div><!-- /row -->
+</div><!-- /ac-scope -->
 </body>
 </html>

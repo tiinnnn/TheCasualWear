@@ -2,8 +2,153 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head><title>Sale sản phẩm</title></head>
 <body>
-<div th:fragment="content">
+<div th:fragment="content" class="ac-scope">
+    <style>
+        .ac-scope { color: var(--adm-text); }
+        .ac-scope h4, .ac-scope h5, .ac-scope h6 { color: var(--adm-text); }
+        .ac-scope small, .ac-scope .text-muted { color: var(--adm-text-dim) !important; }
 
+        .ac-scope .card {
+            background: var(--adm-surface);
+            border: 1px solid var(--adm-border) !important;
+            color: var(--adm-text);
+        }
+        .ac-scope .card-header.bg-dark {
+            background: var(--adm-surface-2) !important;
+            border-bottom: 1px solid var(--adm-border);
+        }
+
+        .ac-scope .table {
+            --bs-table-bg: transparent;
+            --bs-table-color: var(--adm-text);
+            --bs-table-border-color: var(--adm-border);
+            --bs-table-hover-bg: var(--adm-surface-2);
+            --bs-table-hover-color: var(--adm-text);
+            --bs-table-active-bg: var(--adm-surface-2);
+            --bs-table-active-color: var(--adm-text);
+            color: var(--adm-text);
+        }
+        .ac-scope .table > :not(caption) > * > * {
+            background-color: var(--bs-table-bg) !important;
+            color: var(--bs-table-color) !important;
+            border-bottom-color: var(--bs-table-border-color) !important;
+            box-shadow: none !important;
+        }
+        .ac-scope .table > thead {
+            --bs-table-bg: var(--adm-surface-2);
+            --bs-table-color: var(--adm-text-dim);
+        }
+        .ac-scope .table-hover > tbody > tr:hover > * {
+            background-color: var(--adm-surface-2) !important;
+            color: var(--adm-text) !important;
+        }
+
+        .ac-scope .btn { font-weight: 600; }
+        .ac-scope .btn-dark { background: var(--adm-accent); border-color: var(--adm-accent); }
+        .ac-scope .btn-dark:hover { background: #7a6af0; border-color: #7a6af0; }
+        .ac-scope .btn-success { background: var(--adm-good); border-color: var(--adm-good); }
+        .ac-scope .btn-danger { background: var(--adm-bad); border-color: var(--adm-bad); }
+        .ac-scope .btn-outline-secondary,
+        .ac-scope .btn-outline-dark {
+            border-color: rgba(255,255,255,.22); color: var(--adm-text); background: transparent;
+        }
+        .ac-scope .btn-outline-secondary:hover,
+        .ac-scope .btn-outline-dark:hover {
+            border-color: var(--adm-accent); color: var(--adm-accent); background: var(--adm-accent-soft);
+        }
+        .ac-scope .btn-outline-primary {
+            border-color: rgba(139,124,246,.5); color: var(--adm-accent); background: transparent;
+        }
+        .ac-scope .btn-outline-primary:hover { background: var(--adm-accent-soft); border-color: var(--adm-accent); }
+        .ac-scope .btn-outline-success {
+            border-color: rgba(52,211,153,.5); color: var(--adm-good); background: transparent;
+        }
+        .ac-scope .btn-outline-success:hover { background: var(--adm-good-soft); border-color: var(--adm-good); }
+        .ac-scope .btn-outline-danger {
+            border-color: rgba(242,99,122,.5); color: var(--adm-bad); background: transparent;
+        }
+        .ac-scope .btn-outline-danger:hover { background: var(--adm-bad-soft); border-color: var(--adm-bad); }
+        .ac-scope .btn-outline-warning {
+            border-color: rgba(245,185,92,.5); color: var(--adm-warn); background: transparent;
+        }
+        .ac-scope .btn-outline-warning:hover { background: var(--adm-warn-soft); border-color: var(--adm-warn); }
+
+        .ac-scope .form-control, .ac-scope .form-select {
+            background: var(--adm-surface-2); border-color: var(--adm-border); color: var(--adm-text);
+        }
+        .ac-scope .form-control::placeholder { color: var(--adm-text-faint); }
+        .ac-scope .form-control:focus, .ac-scope .form-select:focus {
+            background: var(--adm-surface-2); border-color: var(--adm-accent); color: var(--adm-text);
+            box-shadow: 0 0 0 .2rem var(--adm-accent-soft);
+        }
+        .ac-scope .form-control:disabled { background: var(--adm-surface); color: var(--adm-text-faint); }
+        .ac-scope .input-group-text { background: var(--adm-surface-2); border-color: var(--adm-border); color: var(--adm-text-dim); }
+        .ac-scope .form-label { color: var(--adm-text); }
+        .ac-scope code { color: var(--adm-accent); background: var(--adm-accent-soft); padding: 1px 5px; border-radius: 4px; }
+
+        .ac-scope .badge.bg-danger { background: var(--adm-bad) !important; }
+        .ac-scope .badge.bg-success { background: var(--adm-good) !important; }
+        .ac-scope .badge.bg-secondary { background: var(--adm-surface-2) !important; color: var(--adm-text-dim) !important; border: 1px solid var(--adm-border); }
+        .ac-scope .badge.bg-dark { background: var(--adm-surface-2) !important; color: var(--adm-text) !important; border: 1px solid var(--adm-border); }
+        .ac-scope .badge.bg-light { background: var(--adm-surface-2) !important; color: var(--adm-text-faint) !important; border: 1px solid var(--adm-border); }
+
+        .ac-scope .alert-info {
+            background: var(--adm-accent-soft); border-color: rgba(139,124,246,.3); color: var(--adm-text);
+        }
+
+        .ac-scope .breadcrumb-item a { color: var(--adm-text-dim); text-decoration: none; }
+        .ac-scope .breadcrumb-item a:hover { color: var(--adm-accent); }
+        .ac-scope .breadcrumb-item.active { color: var(--adm-text-faint); }
+        .ac-scope .breadcrumb-item + .breadcrumb-item::before { color: var(--adm-text-faint); }
+
+        .ac-scope .pagination .page-link { background: var(--adm-surface); border-color: var(--adm-border); color: var(--adm-text-dim); }
+        .ac-scope .pagination .page-link:hover { background: var(--adm-surface-2); color: var(--adm-accent); }
+        .ac-scope .pagination .page-item.active .page-link { background: var(--adm-accent); border-color: var(--adm-accent); color: #fff; }
+        .ac-scope .pagination .page-item.disabled .page-link { background: var(--adm-surface); color: var(--adm-text-faint); opacity: .5; }
+
+        .ac-scope .border { border-color: var(--adm-border) !important; }
+        .ac-scope .bg-light { background: var(--adm-surface-2) !important; color: var(--adm-text); }
+
+        .ac-scope .accordion-item { background: var(--adm-surface); border-color: var(--adm-border) !important; }
+        .ac-scope .accordion-button {
+            background: var(--adm-surface); color: var(--adm-text);
+        }
+        .ac-scope .accordion-button:not(.collapsed) {
+            background: var(--adm-surface-2); color: var(--adm-text); box-shadow: none;
+        }
+        .ac-scope .accordion-button::after { filter: invert(1) grayscale(1) brightness(1.6); }
+        .ac-scope .accordion-body { background: var(--adm-surface); }
+
+        .ac-scope .modal-content { background: var(--adm-surface); color: var(--adm-text); border: 1px solid var(--adm-border); }
+        .ac-scope .modal-header, .ac-scope .modal-footer { border-color: var(--adm-border); }
+        .ac-scope .btn-close { filter: invert(1) grayscale(1) brightness(1.8); }
+
+        .ac-scope .opacity-50 { opacity: .45 !important; }
+        .ac-scope .text-dark { color: var(--adm-text) !important; }
+
+        .ac-scope .form-check-input {
+            background-color: var(--adm-surface-2); border-color: var(--adm-border);
+        }
+        .ac-scope .form-check-input:checked {
+            background-color: var(--adm-accent); border-color: var(--adm-accent);
+        }
+        .ac-scope .form-check-label { color: var(--adm-text); }
+
+        .ac-scope .alert-warning {
+            background: var(--adm-warn-soft); border-color: rgba(245,185,92,.3); color: var(--adm-text);
+        }
+        .ac-scope .alert-danger {
+            background: var(--adm-bad-soft); border-color: rgba(242,99,122,.3); color: var(--adm-text);
+        }
+
+        .ac-scope .list-group-item {
+            background: transparent; border-color: var(--adm-border); color: var(--adm-text);
+        }
+        .ac-scope .btn-secondary {
+            background: var(--adm-surface-2); border-color: rgba(255,255,255,.22); color: var(--adm-text);
+        }
+        .ac-scope .btn-secondary:hover { background: var(--adm-surface); border-color: rgba(255,255,255,.32); color: var(--adm-text); }
+    </style>
     <!-- ── HEADER ── -->
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
         <div>

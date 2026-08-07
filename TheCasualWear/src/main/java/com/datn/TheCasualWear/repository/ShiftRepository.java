@@ -4,6 +4,7 @@ import com.datn.TheCasualWear.entity.Shift;
 import com.datn.TheCasualWear.enums.ShiftStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,4 +27,13 @@ public interface ShiftRepository extends JpaRepository<Shift, Integer> {
     // quầy khác bị bắt xác nhận số liệu không liên quan tới mình.
     Optional<Shift> findFirstByCounterIdAndStatusAndHandoverConfirmedByIsNullOrderByClosedAtDesc(
             Integer counterId, ShiftStatus status);
+
+    // Ca CLOSED trong khoảng thời gian (dùng cho báo cáo tổng kết cuối ngày,
+    // lọc theo closedAt).
+    List<Shift> findByStatusAndClosedAtBetweenOrderByClosedAtDesc(
+            ShiftStatus status, LocalDateTime from, LocalDateTime to);
+
+    // Mọi ca đang OPEN toàn hệ thống — phần "đang diễn ra, tạm tính" trong
+    // báo cáo cuối ngày.
+    List<Shift> findByStatus(ShiftStatus status);
 }
