@@ -1,437 +1,547 @@
 <div xmlns:th="http://www.thymeleaf.org">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0"><i class="bi bi-truck me-2"></i>Tạo phiếu nhập kho</h4>
-        <a class="btn btn-outline-secondary btn-sm" th:href="@{/admin/warehouse/receipts}">
-            <i class="bi bi-arrow-left me-1"></i>Quay lại
-        </a>
+    <div class="dm-dash">
+        <div class="dm-glow dm-glow--a"></div>
+        <div class="dm-glow dm-glow--b"></div>
+
+        <div class="dm-content">
+
+            <!-- ==================== HEADER ==================== -->
+            <div class="dm-header">
+                <div>
+                    <p class="dm-eyebrow">Quản lý kho</p>
+                    <h1 class="dm-title"><i class="bi bi-truck"></i>Tạo phiếu nhập kho</h1>
+                </div>
+                <a class="dm-btn" th:href="@{/admin/warehouse/receipts}">
+                    <i class="bi bi-arrow-left"></i>Quay lại
+                </a>
+            </div>
+
+            <form th:action="@{/admin/warehouse/receipts/save}" th:object="${form}" method="post" id="receiptForm">
+
+                <div class="card shadow-sm mb-3">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Nhà cung cấp <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" th:field="*{supplierName}" required
+                                       placeholder="Tên nhà cung cấp"/>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Ghi chú</label>
+                                <input type="text" class="form-control" th:field="*{note}"
+                                       placeholder="Ghi chú (không bắt buộc)"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mb-3">
+                    <div class="card-body">
+                        <div class="row g-2 align-items-end mb-3">
+                            <div class="col-md-5 position-relative" id="productSearchWrap">
+                                <label class="form-label">Sản phẩm</label>
+                                <input type="text" class="form-control" id="productSearchInput"
+                                       autocomplete="off" placeholder="Gõ tên để tìm sản phẩm..."/>
+                                <div id="productSuggestions" class="list-group shadow-sm"
+                                     style="display:none; position:absolute; z-index:1050;
+                                        top:100%; left:0; right:0; max-height:240px;
+                                        overflow-y:auto;"></div>
+                                <!-- Data nodes ẩn cho JS đọc danh sách sản phẩm -->
+                                <div id="productDataList" style="display:none">
+                                <span th:each="p : ${products}" class="product-data"
+                                      th:attr="data-id=${p.id}, data-name=${p.name}"></span>
+                                </div>
+                                <input type="hidden" id="preselectedProductIdField"
+                                       th:value="${preselectedProductId}"/>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Biến thể (size/màu)</label>
+                                <select class="form-select" id="variantSelect" disabled>
+                                    <option value="">-- Chọn sản phẩm trước --</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="button" class="dm-btn dm-btn--solid dm-btn--block" id="btnAddItem">
+                                    <i class="bi bi-plus-lg"></i>Thêm dòng
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table align-middle" id="itemsTable">
+                                <thead class="table-light">
+                                <tr>
+                                    <th>SKU</th>
+                                    <th>Sản phẩm</th>
+                                    <th>Size</th>
+                                    <th>Màu</th>
+                                    <th>Tồn hiện tại</th>
+                                    <th style="width:120px">Số lượng nhập</th>
+                                    <th style="width:160px">Đơn giá nhập</th>
+                                    <th class="text-end">Thành tiền</th>
+                                    <th></th>
+                                </tr>
+                                </thead>
+                                <tbody id="itemsBody">
+                                <!-- các dòng item sẽ được JS chèn vào đây -->
+                                </tbody>
+                                <tfoot>
+                                <tr>
+                                    <td colspan="7" class="text-end fw-semibold">Tổng cộng</td>
+                                    <td class="text-end fw-semibold" id="grandTotal">0 đ</td>
+                                    <td></td>
+                                </tr>
+                                </tfoot>
+                            </table>
+                            <p class="text-muted small" id="emptyHint">Chưa có sản phẩm nào trong phiếu nhập.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-end">
+                    <button type="submit" class="dm-btn dm-btn--solid dm-btn--lg" id="btnSubmit" disabled>
+                        <i class="bi bi-check-lg"></i>Lưu phiếu nhập
+                    </button>
+                </div>
+            </form>
+
+        </div>
     </div>
 
-    <form th:action="@{/admin/warehouse/receipts/save}" th:object="${form}" method="post" id="receiptForm">
+    <div id="preselectedVariantIds" style="display:none" th:if="${preselectedVariantIds != null}">
+        <span th:each="vid : ${preselectedVariantIds}" th:text="${vid}" class="pv-id"></span>
+    </div>
 
-        <div class="card shadow-sm mb-3">
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Nhà cung cấp <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" th:field="*{supplierName}" required
-                               placeholder="Tên nhà cung cấp"/>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Ghi chú</label>
-                        <input type="text" class="form-control" th:field="*{note}"
-                               placeholder="Ghi chú (không bắt buộc)"/>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
 
-        <div class="card shadow-sm mb-3">
-            <div class="card-body">
-                <div class="row g-2 align-items-end mb-3">
-                    <div class="col-md-5 position-relative" id="productSearchWrap">
-                        <label class="form-label">Sản phẩm</label>
-                        <input type="text" class="form-control" id="productSearchInput"
-                               autocomplete="off" placeholder="Gõ tên để tìm sản phẩm..."/>
-                        <div id="productSuggestions" class="list-group shadow-sm"
-                             style="display:none; position:absolute; z-index:1050;
-                                    top:100%; left:0; right:0; max-height:240px;
-                                    overflow-y:auto;"></div>
-                        <!-- Data nodes ẩn cho JS đọc danh sách sản phẩm -->
-                        <div id="productDataList" style="display:none">
-                            <span th:each="p : ${products}" class="product-data"
-                                  th:attr="data-id=${p.id}, data-name=${p.name}"></span>
-                        </div>
-                        <input type="hidden" id="preselectedProductIdField"
-                               th:value="${preselectedProductId}"/>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Biến thể (size/màu)</label>
-                        <select class="form-select" id="variantSelect" disabled>
-                            <option value="">-- Chọn sản phẩm trước --</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <button type="button" class="btn btn-dark w-100" id="btnAddItem">
-                            <i class="bi bi-plus-lg me-1"></i>Thêm dòng
-                        </button>
-                    </div>
-                </div>
+        .dm-dash {
+            --bg: #0b0d12; --surface: #12151d; --surface-2: #1a1e29;
+            --border: rgba(255,255,255,.07); --border-strong: rgba(255,255,255,.14);
+            --text: #f5f6f9; --text-dim: #d3d6e0; --text-faint: #a6abbd;
+            --accent: #8b7cf6; --accent-soft: rgba(139,124,246,.14);
+            --good: #34d399; --good-soft: rgba(52,211,153,.13);
+            --bad: #f2637a; --bad-soft: rgba(242,99,122,.13);
+            --warn: #f5b95c; --warn-soft: rgba(245,185,92,.13);
+            --radius: 18px;
+            position: relative; overflow: hidden; background: var(--bg); color: var(--text);
+            font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 32px; margin: -24px -24px 0;
+        }
+        @media (max-width: 767px) { .dm-dash { padding: 18px; margin: -24px -24px 0; } }
 
-                <div class="table-responsive">
-                    <table class="table align-middle" id="itemsTable">
-                        <thead class="table-light">
-                        <tr>
-                            <th>SKU</th>
-                            <th>Sản phẩm</th>
-                            <th>Size</th>
-                            <th>Màu</th>
-                            <th>Tồn hiện tại</th>
-                            <th style="width:120px">Số lượng nhập</th>
-                            <th style="width:160px">Đơn giá nhập</th>
-                            <th class="text-end">Thành tiền</th>
-                            <th></th>
-                        </tr>
-                        </thead>
-                        <tbody id="itemsBody">
-                        <!-- các dòng item sẽ được JS chèn vào đây -->
-                        </tbody>
-                        <tfoot>
-                        <tr>
-                            <td colspan="7" class="text-end fw-semibold">Tổng cộng</td>
-                            <td class="text-end fw-semibold" id="grandTotal">0 đ</td>
-                            <td></td>
-                        </tr>
-                        </tfoot>
-                    </table>
-                    <p class="text-muted small" id="emptyHint">Chưa có sản phẩm nào trong phiếu nhập.</p>
-                </div>
-            </div>
-        </div>
+        .dm-glow { position: absolute; width: 480px; height: 480px; border-radius: 50%; filter: blur(110px); opacity: .16; pointer-events: none; animation: dmDrift 14s ease-in-out infinite alternate; }
+        .dm-glow--a { background: var(--accent); top: -180px; right: -140px; }
+        .dm-glow--b { background: var(--good); bottom: -200px; left: -160px; animation-delay: -6s; }
+        @keyframes dmDrift { from { transform: translate(0,0) scale(1); } to { transform: translate(-30px, 25px) scale(1.12); } }
+        @media (prefers-reduced-motion: reduce) { .dm-glow { animation: none !important; opacity: 1 !important; } }
 
-        <div class="text-end">
-            <button type="submit" class="btn btn-dark px-4" id="btnSubmit" disabled>
-                <i class="bi bi-check-lg me-1"></i>Lưu phiếu nhập
-            </button>
-        </div>
-    </form>
-</div>
+        .dm-content { position: relative; z-index: 1; }
 
-<div id="preselectedVariantIds" style="display:none" th:if="${preselectedVariantIds != null}">
-    <span th:each="vid : ${preselectedVariantIds}" th:text="${vid}" class="pv-id"></span>
-</div>
+        .dm-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 24px; gap: 12px; flex-wrap: wrap; }
+        .dm-eyebrow { text-transform: uppercase; letter-spacing: .12em; font-size: .7rem; font-weight: 700; color: var(--accent); margin: 0 0 4px; }
+        .dm-title { font-size: 1.6rem; font-weight: 800; margin: 0; letter-spacing: -.02em; display: flex; align-items: center; gap: 10px; }
+        .dm-title i { color: var(--accent); }
 
-<script th:inline="none">
-    (function () {
-        const productSearchInput = document.getElementById('productSearchInput');
-        const suggestionBox = document.getElementById('productSuggestions');
-        const variantSelect = document.getElementById('variantSelect');
-        const btnAddItem    = document.getElementById('btnAddItem');
-        const itemsBody     = document.getElementById('itemsBody');
-        const emptyHint     = document.getElementById('emptyHint');
-        const grandTotalEl  = document.getElementById('grandTotal');
-        const btnSubmit     = document.getElementById('btnSubmit');
-        const form          = document.getElementById('receiptForm');
+        .dm-btn {
+            display: inline-flex; align-items: center; gap: 6px; justify-content: center;
+            border: 1px solid var(--border); color: var(--text-dim);
+            background: transparent; border-radius: 999px;
+            font-size: .82rem; font-weight: 600; padding: 8px 16px;
+            text-decoration: none; transition: all .2s ease; cursor: pointer;
+        }
+        .dm-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+        .dm-btn--solid { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .dm-btn--solid:hover { background: #7a6af0; border-color: #7a6af0; color: #fff; }
+        .dm-btn--solid:disabled { background: var(--surface-2); border-color: var(--border); color: var(--text-faint); cursor: not-allowed; opacity: .7; }
+        .dm-btn--block { width: 100%; height: 100%; }
+        .dm-btn--lg { padding: 10px 28px; font-size: .9rem; border-radius: 12px; }
 
-        // Danh sách {id, name} đọc từ các span ẩn (#productDataList) — không
-        // dùng JS-inline vì script này có th:inline="none".
-        const productOptions = Array.from(
-            document.querySelectorAll('#productDataList .product-data')
-        ).map(el => ({ id: el.dataset.id, name: el.dataset.name }));
+        /* ===== Reskin Bootstrap form/table/list dùng chung cho phần HTML tĩnh
+           và các dòng bảng do JS chèn vào (itemsBody) — không đổi tên class để
+           không đụng tới logic JS (qty-input, price-display, subtotal-cell...) ===== */
+        .dm-dash .form-label { font-size: .8rem; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
+        .dm-dash .text-danger { color: var(--bad) !important; }
+        .dm-dash .text-muted { color: var(--text-faint) !important; }
 
-        let currentProductId   = null;
-        let currentProductName = '';
-        let variantOptionsCache = [];
-        let rowIndex = 0; // index dùng cho name="items[i].xxx" khi submit
-        let activeSuggestionIndex = -1;
+        .dm-dash .form-control,
+        .dm-dash .form-select {
+            background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+            border-radius: 10px; font-family: inherit; box-shadow: none;
+        }
+        .dm-dash .form-control:focus,
+        .dm-dash .form-select:focus {
+            background: var(--surface-2); color: var(--text);
+            border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+        .dm-dash .form-control::placeholder { color: var(--text-faint); }
+        .dm-dash .form-control:disabled,
+        .dm-dash .form-select:disabled { background: var(--surface); color: var(--text-faint); opacity: 1; }
+        .dm-dash .form-control.is-invalid { border-color: var(--bad); background: var(--bad-soft); }
+        .dm-dash .form-control-sm { padding: 6px 10px; font-size: .84rem; }
 
-        // Danh sách variantId truyền từ trang tạo biến thể (nếu có) — đọc từ
-        // các span ẩn bên dưới thay vì JS-inline (script này có th:inline="none").
-        const preselectedVariantIds = Array.from(
-            document.querySelectorAll('#preselectedVariantIds .pv-id')
-        ).map(el => el.textContent.trim());
+        .dm-dash .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+        .dm-dash .card-body { padding: 22px; }
 
-        function escapeHtml(s) {
-            const div = document.createElement('div');
-            div.textContent = s;
-            return div.innerHTML;
+        .dm-dash .table { color: var(--text); margin-bottom: 0; }
+        .dm-dash .table > :not(caption) > * > * { background: transparent; border-bottom-color: var(--border); box-shadow: none; }
+        .dm-dash .table thead.table-light th {
+            background: transparent; color: var(--text-faint); border-bottom: 1px solid var(--border);
+            text-transform: uppercase; letter-spacing: .03em; font-size: .68rem; font-weight: 700;
+        }
+        .dm-dash .table tbody tr:hover { background: var(--surface-2); }
+        .dm-dash .table tfoot td { border-top: 1px solid var(--border-strong); border-bottom: none; color: var(--text); }
+        .dm-dash .table tfoot #grandTotal { color: var(--accent); font-size: 1rem; }
+
+        .dm-dash .list-group-item {
+            background: var(--surface-2); border-color: var(--border); color: var(--text-dim);
+            font-size: .87rem;
+        }
+        .dm-dash .list-group-item-action:hover,
+        .dm-dash .list-group-item-action.active,
+        .dm-dash .suggestion-item.active {
+            background: var(--accent-soft); color: var(--text); cursor: pointer;
         }
 
-        function renderSuggestions(matches) {
-            activeSuggestionIndex = -1;
-            if (!matches.length) {
-                suggestionBox.innerHTML =
-                    '<div class="list-group-item text-muted small">Không tìm thấy sản phẩm phù hợp</div>';
-                suggestionBox.style.display = 'block';
-                return;
+        .dm-dash .btn-outline-danger {
+            color: var(--bad); border-color: var(--bad); background: transparent; border-radius: 8px;
+        }
+        .dm-dash .btn-outline-danger:hover { background: var(--bad-soft); color: var(--bad); border-color: var(--bad); }
+    </style>
+
+    <script th:inline="none">
+        (function () {
+            const productSearchInput = document.getElementById('productSearchInput');
+            const suggestionBox = document.getElementById('productSuggestions');
+            const variantSelect = document.getElementById('variantSelect');
+            const btnAddItem    = document.getElementById('btnAddItem');
+            const itemsBody     = document.getElementById('itemsBody');
+            const emptyHint     = document.getElementById('emptyHint');
+            const grandTotalEl  = document.getElementById('grandTotal');
+            const btnSubmit     = document.getElementById('btnSubmit');
+            const form          = document.getElementById('receiptForm');
+
+            // Danh sách {id, name} đọc từ các span ẩn (#productDataList) — không
+            // dùng JS-inline vì script này có th:inline="none".
+            const productOptions = Array.from(
+                document.querySelectorAll('#productDataList .product-data')
+            ).map(el => ({ id: el.dataset.id, name: el.dataset.name }));
+
+            let currentProductId   = null;
+            let currentProductName = '';
+            let variantOptionsCache = [];
+            let rowIndex = 0; // index dùng cho name="items[i].xxx" khi submit
+            let activeSuggestionIndex = -1;
+
+            // Danh sách variantId truyền từ trang tạo biến thể (nếu có) — đọc từ
+            // các span ẩn bên dưới thay vì JS-inline (script này có th:inline="none").
+            const preselectedVariantIds = Array.from(
+                document.querySelectorAll('#preselectedVariantIds .pv-id')
+            ).map(el => el.textContent.trim());
+
+            function escapeHtml(s) {
+                const div = document.createElement('div');
+                div.textContent = s;
+                return div.innerHTML;
             }
-            suggestionBox.innerHTML = matches.map((p, idx) =>
-                `<button type="button" class="list-group-item list-group-item-action py-2 suggestion-item"
-                         data-index="${idx}" data-id="${p.id}" data-name="${escapeHtml(p.name)}">
-                    ${escapeHtml(p.name)}
-                 </button>`
-            ).join('');
-            suggestionBox.style.display = 'block';
-        }
 
-        function selectProduct(id, name) {
-            currentProductId   = id;
-            currentProductName = name;
-            productSearchInput.value = name;
-            suggestionBox.style.display = 'none';
-            suggestionBox.innerHTML = '';
-            loadVariantsForProduct(id);
-        }
+            function renderSuggestions(matches) {
+                activeSuggestionIndex = -1;
+                if (!matches.length) {
+                    suggestionBox.innerHTML =
+                        '<div class="list-group-item text-muted small">Không tìm thấy sản phẩm phù hợp</div>';
+                    suggestionBox.style.display = 'block';
+                    return;
+                }
+                suggestionBox.innerHTML = matches.map((p, idx) =>
+                    `<button type="button" class="list-group-item list-group-item-action py-2 suggestion-item"
+                             data-index="${idx}" data-id="${p.id}" data-name="${escapeHtml(p.name)}">
+                        ${escapeHtml(p.name)}
+                     </button>`
+                ).join('');
+                suggestionBox.style.display = 'block';
+            }
 
-        function resetVariantDropdown() {
-            variantSelect.innerHTML = '<option value="">-- Chọn sản phẩm trước --</option>';
-            variantSelect.disabled = true;
-        }
-
-        // Gõ vào ô tìm kiếm -> lọc theo tên (không phân biệt hoa/thường,
-        // khớp theo chuỗi con chứ không cần khớp ngay từ đầu)
-        productSearchInput.addEventListener('input', function () {
-            const q = this.value.trim().toLowerCase();
-            currentProductId   = null;
-            currentProductName = '';
-            resetVariantDropdown();
-
-            if (!q) {
+            function selectProduct(id, name) {
+                currentProductId   = id;
+                currentProductName = name;
+                productSearchInput.value = name;
                 suggestionBox.style.display = 'none';
                 suggestionBox.innerHTML = '';
-                return;
+                loadVariantsForProduct(id);
             }
 
-            const matches = productOptions
-                .filter(p => p.name.toLowerCase().includes(q))
-                .slice(0, 8);
-            renderSuggestions(matches);
-        });
+            function resetVariantDropdown() {
+                variantSelect.innerHTML = '<option value="">-- Chọn sản phẩm trước --</option>';
+                variantSelect.disabled = true;
+            }
 
-        productSearchInput.addEventListener('focus', function () {
-            if (this.value.trim()) this.dispatchEvent(new Event('input'));
-        });
+            // Gõ vào ô tìm kiếm -> lọc theo tên (không phân biệt hoa/thường,
+            // khớp theo chuỗi con chứ không cần khớp ngay từ đầu)
+            productSearchInput.addEventListener('input', function () {
+                const q = this.value.trim().toLowerCase();
+                currentProductId   = null;
+                currentProductName = '';
+                resetVariantDropdown();
 
-        // Điều hướng gợi ý bằng bàn phím: ↑ ↓ để chọn, Enter để xác nhận, Esc để đóng
-        productSearchInput.addEventListener('keydown', function (e) {
-            const items = suggestionBox.querySelectorAll('.suggestion-item');
-            if (!items.length || suggestionBox.style.display === 'none') return;
-
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                activeSuggestionIndex = Math.min(activeSuggestionIndex + 1, items.length - 1);
-                items.forEach((el, i) => el.classList.toggle('active', i === activeSuggestionIndex));
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                activeSuggestionIndex = Math.max(activeSuggestionIndex - 1, 0);
-                items.forEach((el, i) => el.classList.toggle('active', i === activeSuggestionIndex));
-            } else if (e.key === 'Enter') {
-                if (activeSuggestionIndex >= 0) {
-                    e.preventDefault();
-                    const el = items[activeSuggestionIndex];
-                    selectProduct(el.dataset.id, el.dataset.name);
+                if (!q) {
+                    suggestionBox.style.display = 'none';
+                    suggestionBox.innerHTML = '';
+                    return;
                 }
-            } else if (e.key === 'Escape') {
-                suggestionBox.style.display = 'none';
-            }
-        });
 
-        suggestionBox.addEventListener('click', function (e) {
-            const btn = e.target.closest('.suggestion-item');
-            if (!btn) return;
-            selectProduct(btn.dataset.id, btn.dataset.name);
-        });
-
-        // Click ra ngoài ô tìm kiếm/gợi ý -> đóng dropdown
-        document.addEventListener('click', function (e) {
-            if (!e.target.closest('#productSearchWrap')) {
-                suggestionBox.style.display = 'none';
-            }
-        });
-
-        // Gọi AJAX lấy danh sách variant (size/màu/tồn) của 1 sản phẩm
-        function loadVariantsForProduct(productId) {
-            variantSelect.innerHTML = '<option value="">Đang tải...</option>';
-            variantSelect.disabled = true;
-
-            fetch(`/admin/warehouse/receipts/variant-options?productId=${productId}`)
-                .then(res => {
-                    if (!res.ok) throw new Error('Không tải được danh sách biến thể');
-                    return res.json();
-                })
-                .then(data => {
-                    variantOptionsCache = data;
-                    if (!data.length) {
-                        variantSelect.innerHTML = '<option value="">Sản phẩm chưa có biến thể</option>';
-                        variantSelect.disabled = true;
-                        return;
-                    }
-                    variantSelect.innerHTML = data.map(v =>
-                        `<option value="${v.id}">${v.sku} - ${v.sizeName ?? ''} / ${v.colorName ?? ''} (tồn: ${v.stock})</option>`
-                    ).join('');
-                    variantSelect.disabled = false;
-
-                    // Nếu được điều hướng từ trang tạo biến thể kèm sẵn danh sách
-                    // variantId, tự động thêm mỗi variant đó thành 1 dòng trong
-                    // bảng nhập kho — khỏi bắt admin chọn lại thủ công từng cái.
-                    if (preselectedVariantIds.length) {
-                        preselectedVariantIds.forEach(vid => {
-                            const variant = variantOptionsCache.find(v => String(v.id) === String(vid));
-                            if (variant) addItemRow(variant);
-                        });
-                    }
-                })
-                .catch(err => {
-                    console.error(err);
-                    variantSelect.innerHTML = '<option value="">Lỗi tải dữ liệu</option>';
-                });
-        }
-
-        // Thêm 1 dòng vào bảng item
-        btnAddItem.addEventListener('click', function () {
-            const variantId = variantSelect.value;
-            if (!variantId) {
-                alert('Vui lòng chọn biến thể sản phẩm trước khi thêm.');
-                return;
-            }
-            const variant = variantOptionsCache.find(v => String(v.id) === String(variantId));
-            if (!variant) return;
-            addItemRow(variant);
-        });
-
-        // Dùng chung cho cả nút "Thêm dòng" và cơ chế tự-thêm-dòng khi được
-        // điều hướng từ trang tạo biến thể (kèm ?variantId=...&variantId=...)
-        function addItemRow(variant) {
-            // Không cho thêm trùng 1 biến thể 2 lần
-            if (itemsBody.querySelector(`tr[data-variant-id="${variant.id}"]`)) {
-                return;
-            }
-
-            const i = rowIndex++;
-
-            const tr = document.createElement('tr');
-            tr.setAttribute('data-variant-id', variant.id);
-            tr.innerHTML = `
-                <td>${variant.sku}</td>
-                <td>${currentProductName}</td>
-                <td>${variant.sizeName ?? '—'}</td>
-                <td>${variant.colorName ?? '—'}</td>
-                <td>${variant.stock}</td>
-                <td>
-                    <input type="hidden" name="items[${i}].variantId" value="${variant.id}"/>
-                    <input type="number" name="items[${i}].quantity" class="form-control form-control-sm qty-input"
-                           min="1" value="1" required/>
-                </td>
-                <td>
-                    <input type="text" class="form-control form-control-sm price-display"
-                           inputmode="numeric" autocomplete="off" placeholder="Bắt buộc nhập" required/>
-                    <input type="hidden" name="items[${i}].unitCostPrice" class="price-input" value=""/>
-                </td>
-                <td class="text-end subtotal-cell">0 đ</td>
-                <td class="text-center">
-                    <button type="button" class="btn btn-sm btn-outline-danger btn-remove-row">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>`;
-            itemsBody.appendChild(tr);
-
-            attachRowListeners(tr);
-            updateVisibility();
-            recalcRow(tr);
-        }
-
-        function attachRowListeners(tr) {
-            const qtyInput     = tr.querySelector('.qty-input');
-            const priceDisplay = tr.querySelector('.price-display');
-            const priceHidden  = tr.querySelector('.price-input');
-
-            qtyInput.addEventListener('input', () => recalcRow(tr));
-
-            // Gõ vào ô hiển thị -> format có dấu phẩy (1,000,000), giá trị số
-            // thật (không dấu phẩy) được lưu vào input hidden để submit lên server.
-            //
-            // QUAN TRỌNG: tách làm 2 giai đoạn để không phá bộ gõ Unikey.
-            // Unikey theo dõi nội dung ô input bằng một bộ đệm nội bộ riêng
-            // (không đọc DOM) để ghép dấu tiếng Việt. Nếu ghi đè lại value
-            // của ô hiển thị NGAY TRONG LÚC đang gõ — dù có delay bằng
-            // setTimeout(0) — nội dung thật trên DOM và bộ đệm của Unikey
-            // sẽ bị lệch nhau, khiến phím gõ sau bị chèn/nhân đôi sai vị
-            // trí (gõ "67" ra "6067"...).
-            // -> Lúc đang gõ (input): chỉ đồng bộ số vào ô hidden để tính
-            //    lại thành tiền dòng, KHÔNG đụng value ô hiển thị.
-            // -> Lúc rời khỏi ô (blur): chắc chắn không còn ai gõ nữa,
-            //    lúc này mới format đẹp lại (thêm dấu phẩy, bỏ số 0 thừa).
-            priceDisplay.addEventListener('input', () => {
-                priceDisplay.classList.remove('is-invalid');
-                const raw = priceDisplay.value.replace(/[^\d]/g, '');
-                priceHidden.value = raw;
-                recalcRow(tr);
+                const matches = productOptions
+                    .filter(p => p.name.toLowerCase().includes(q))
+                    .slice(0, 8);
+                renderSuggestions(matches);
             });
 
-            priceDisplay.addEventListener('blur', () => {
-                let raw = priceDisplay.value.replace(/[^\d]/g, '');
-                raw = raw.replace(/^0+(?=\d)/, ''); // bỏ số 0 thừa ở đầu
-                priceHidden.value = raw;
-                priceDisplay.value = raw ? Number(raw).toLocaleString('en-US') : '';
-                recalcRow(tr);
+            productSearchInput.addEventListener('focus', function () {
+                if (this.value.trim()) this.dispatchEvent(new Event('input'));
             });
 
-            tr.querySelector('.btn-remove-row').addEventListener('click', () => {
-                tr.remove();
+            // Điều hướng gợi ý bằng bàn phím: ↑ ↓ để chọn, Enter để xác nhận, Esc để đóng
+            productSearchInput.addEventListener('keydown', function (e) {
+                const items = suggestionBox.querySelectorAll('.suggestion-item');
+                if (!items.length || suggestionBox.style.display === 'none') return;
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    activeSuggestionIndex = Math.min(activeSuggestionIndex + 1, items.length - 1);
+                    items.forEach((el, i) => el.classList.toggle('active', i === activeSuggestionIndex));
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    activeSuggestionIndex = Math.max(activeSuggestionIndex - 1, 0);
+                    items.forEach((el, i) => el.classList.toggle('active', i === activeSuggestionIndex));
+                } else if (e.key === 'Enter') {
+                    if (activeSuggestionIndex >= 0) {
+                        e.preventDefault();
+                        const el = items[activeSuggestionIndex];
+                        selectProduct(el.dataset.id, el.dataset.name);
+                    }
+                } else if (e.key === 'Escape') {
+                    suggestionBox.style.display = 'none';
+                }
+            });
+
+            suggestionBox.addEventListener('click', function (e) {
+                const btn = e.target.closest('.suggestion-item');
+                if (!btn) return;
+                selectProduct(btn.dataset.id, btn.dataset.name);
+            });
+
+            // Click ra ngoài ô tìm kiếm/gợi ý -> đóng dropdown
+            document.addEventListener('click', function (e) {
+                if (!e.target.closest('#productSearchWrap')) {
+                    suggestionBox.style.display = 'none';
+                }
+            });
+
+            // Gọi AJAX lấy danh sách variant (size/màu/tồn) của 1 sản phẩm
+            function loadVariantsForProduct(productId) {
+                variantSelect.innerHTML = '<option value="">Đang tải...</option>';
+                variantSelect.disabled = true;
+
+                fetch(`/admin/warehouse/receipts/variant-options?productId=${productId}`)
+                    .then(res => {
+                        if (!res.ok) throw new Error('Không tải được danh sách biến thể');
+                        return res.json();
+                    })
+                    .then(data => {
+                        variantOptionsCache = data;
+                        if (!data.length) {
+                            variantSelect.innerHTML = '<option value="">Sản phẩm chưa có biến thể</option>';
+                            variantSelect.disabled = true;
+                            return;
+                        }
+                        variantSelect.innerHTML = data.map(v =>
+                            `<option value="${v.id}">${v.sku} - ${v.sizeName ?? ''} / ${v.colorName ?? ''} (tồn: ${v.stock})</option>`
+                        ).join('');
+                        variantSelect.disabled = false;
+
+                        // Nếu được điều hướng từ trang tạo biến thể kèm sẵn danh sách
+                        // variantId, tự động thêm mỗi variant đó thành 1 dòng trong
+                        // bảng nhập kho — khỏi bắt admin chọn lại thủ công từng cái.
+                        if (preselectedVariantIds.length) {
+                            preselectedVariantIds.forEach(vid => {
+                                const variant = variantOptionsCache.find(v => String(v.id) === String(vid));
+                                if (variant) addItemRow(variant);
+                            });
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        variantSelect.innerHTML = '<option value="">Lỗi tải dữ liệu</option>';
+                    });
+            }
+
+            // Thêm 1 dòng vào bảng item
+            btnAddItem.addEventListener('click', function () {
+                const variantId = variantSelect.value;
+                if (!variantId) {
+                    alert('Vui lòng chọn biến thể sản phẩm trước khi thêm.');
+                    return;
+                }
+                const variant = variantOptionsCache.find(v => String(v.id) === String(variantId));
+                if (!variant) return;
+                addItemRow(variant);
+            });
+
+            // Dùng chung cho cả nút "Thêm dòng" và cơ chế tự-thêm-dòng khi được
+            // điều hướng từ trang tạo biến thể (kèm ?variantId=...&variantId=...)
+            function addItemRow(variant) {
+                // Không cho thêm trùng 1 biến thể 2 lần
+                if (itemsBody.querySelector(`tr[data-variant-id="${variant.id}"]`)) {
+                    return;
+                }
+
+                const i = rowIndex++;
+
+                const tr = document.createElement('tr');
+                tr.setAttribute('data-variant-id', variant.id);
+                tr.innerHTML = `
+                    <td>${variant.sku}</td>
+                    <td>${currentProductName}</td>
+                    <td>${variant.sizeName ?? '—'}</td>
+                    <td>${variant.colorName ?? '—'}</td>
+                    <td>${variant.stock}</td>
+                    <td>
+                        <input type="hidden" name="items[${i}].variantId" value="${variant.id}"/>
+                        <input type="number" name="items[${i}].quantity" class="form-control form-control-sm qty-input"
+                               min="1" value="1" required/>
+                    </td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm price-display"
+                               inputmode="numeric" autocomplete="off" placeholder="Bắt buộc nhập" required/>
+                        <input type="hidden" name="items[${i}].unitCostPrice" class="price-input" value=""/>
+                    </td>
+                    <td class="text-end subtotal-cell">0 đ</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-remove-row">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>`;
+                itemsBody.appendChild(tr);
+
+                attachRowListeners(tr);
                 updateVisibility();
-                recalcGrandTotal();
-            });
-        }
+                recalcRow(tr);
+            }
 
-        function recalcRow(tr) {
-            const qty   = parseFloat(tr.querySelector('.qty-input').value) || 0;
-            const price = parseFloat(tr.querySelector('.price-input').value) || 0;
-            const subtotal = qty * price;
-            tr.querySelector('.subtotal-cell').textContent = formatVnd(subtotal);
-            recalcGrandTotal();
-        }
+            function attachRowListeners(tr) {
+                const qtyInput     = tr.querySelector('.qty-input');
+                const priceDisplay = tr.querySelector('.price-display');
+                const priceHidden  = tr.querySelector('.price-input');
 
-        function recalcGrandTotal() {
-            let total = 0;
-            itemsBody.querySelectorAll('tr').forEach(tr => {
+                qtyInput.addEventListener('input', () => recalcRow(tr));
+
+                // Gõ vào ô hiển thị -> format có dấu phẩy (1,000,000), giá trị số
+                // thật (không dấu phẩy) được lưu vào input hidden để submit lên server.
+                //
+                // QUAN TRỌNG: tách làm 2 giai đoạn để không phá bộ gõ Unikey.
+                // Unikey theo dõi nội dung ô input bằng một bộ đệm nội bộ riêng
+                // (không đọc DOM) để ghép dấu tiếng Việt. Nếu ghi đè lại value
+                // của ô hiển thị NGAY TRONG LÚC đang gõ — dù có delay bằng
+                // setTimeout(0) — nội dung thật trên DOM và bộ đệm của Unikey
+                // sẽ bị lệch nhau, khiến phím gõ sau bị chèn/nhân đôi sai vị
+                // trí (gõ "67" ra "6067"...).
+                // -> Lúc đang gõ (input): chỉ đồng bộ số vào ô hidden để tính
+                //    lại thành tiền dòng, KHÔNG đụng value ô hiển thị.
+                // -> Lúc rời khỏi ô (blur): chắc chắn không còn ai gõ nữa,
+                //    lúc này mới format đẹp lại (thêm dấu phẩy, bỏ số 0 thừa).
+                priceDisplay.addEventListener('input', () => {
+                    priceDisplay.classList.remove('is-invalid');
+                    const raw = priceDisplay.value.replace(/[^\d]/g, '');
+                    priceHidden.value = raw;
+                    recalcRow(tr);
+                });
+
+                priceDisplay.addEventListener('blur', () => {
+                    let raw = priceDisplay.value.replace(/[^\d]/g, '');
+                    raw = raw.replace(/^0+(?=\d)/, ''); // bỏ số 0 thừa ở đầu
+                    priceHidden.value = raw;
+                    priceDisplay.value = raw ? Number(raw).toLocaleString('en-US') : '';
+                    recalcRow(tr);
+                });
+
+                tr.querySelector('.btn-remove-row').addEventListener('click', () => {
+                    tr.remove();
+                    updateVisibility();
+                    recalcGrandTotal();
+                });
+            }
+
+            function recalcRow(tr) {
                 const qty   = parseFloat(tr.querySelector('.qty-input').value) || 0;
                 const price = parseFloat(tr.querySelector('.price-input').value) || 0;
-                total += qty * price;
-            });
-            grandTotalEl.textContent = formatVnd(total);
-        }
-
-        function updateVisibility() {
-            const hasRows = itemsBody.querySelectorAll('tr').length > 0;
-            emptyHint.style.display = hasRows ? 'none' : 'block';
-            btnSubmit.disabled = !hasRows;
-        }
-
-        function formatVnd(n) {
-            return new Intl.NumberFormat('vi-VN').format(n) + ' đ';
-        }
-
-        form.addEventListener('submit', function (e) {
-            const rows = itemsBody.querySelectorAll('tr');
-            if (rows.length === 0) {
-                e.preventDefault();
-                alert('Vui lòng thêm ít nhất 1 sản phẩm vào phiếu nhập.');
-                return;
+                const subtotal = qty * price;
+                tr.querySelector('.subtotal-cell').textContent = formatVnd(subtotal);
+                recalcGrandTotal();
             }
 
-            // Đơn giá nhập bắt buộc phải > 0 cho từng dòng — không cho để 0/trống.
-            let invalidRow = null;
-            rows.forEach(tr => {
-                const priceHidden  = tr.querySelector('.price-input');
-                const priceDisplay = tr.querySelector('.price-display');
-                const price = parseFloat(priceHidden.value);
-                if (!invalidRow && (isNaN(price) || price <= 0)) {
-                    invalidRow = { tr, priceDisplay };
+            function recalcGrandTotal() {
+                let total = 0;
+                itemsBody.querySelectorAll('tr').forEach(tr => {
+                    const qty   = parseFloat(tr.querySelector('.qty-input').value) || 0;
+                    const price = parseFloat(tr.querySelector('.price-input').value) || 0;
+                    total += qty * price;
+                });
+                grandTotalEl.textContent = formatVnd(total);
+            }
+
+            function updateVisibility() {
+                const hasRows = itemsBody.querySelectorAll('tr').length > 0;
+                emptyHint.style.display = hasRows ? 'none' : 'block';
+                btnSubmit.disabled = !hasRows;
+            }
+
+            function formatVnd(n) {
+                return new Intl.NumberFormat('vi-VN').format(n) + ' đ';
+            }
+
+            form.addEventListener('submit', function (e) {
+                const rows = itemsBody.querySelectorAll('tr');
+                if (rows.length === 0) {
+                    e.preventDefault();
+                    alert('Vui lòng thêm ít nhất 1 sản phẩm vào phiếu nhập.');
+                    return;
+                }
+
+                // Đơn giá nhập bắt buộc phải > 0 cho từng dòng — không cho để 0/trống.
+                let invalidRow = null;
+                rows.forEach(tr => {
+                    const priceHidden  = tr.querySelector('.price-input');
+                    const priceDisplay = tr.querySelector('.price-display');
+                    const price = parseFloat(priceHidden.value);
+                    if (!invalidRow && (isNaN(price) || price <= 0)) {
+                        invalidRow = { tr, priceDisplay };
+                    }
+                });
+
+                if (invalidRow) {
+                    e.preventDefault();
+                    const sku = invalidRow.tr.querySelector('td').textContent;
+                    alert(`Vui lòng nhập đơn giá nhập lớn hơn 0 cho dòng SKU "${sku}".`);
+                    invalidRow.priceDisplay.classList.add('is-invalid');
+                    invalidRow.priceDisplay.focus();
                 }
             });
 
-            if (invalidRow) {
-                e.preventDefault();
-                const sku = invalidRow.tr.querySelector('td').textContent;
-                alert(`Vui lòng nhập đơn giá nhập lớn hơn 0 cho dòng SKU "${sku}".`);
-                invalidRow.priceDisplay.classList.add('is-invalid');
-                invalidRow.priceDisplay.focus();
-            }
-        });
+            updateVisibility();
 
-        updateVisibility();
-
-        // Nếu được điều hướng từ trang tạo biến thể (kèm ?productId=), tự điền
-        // sẵn tên sản phẩm vào ô tìm kiếm và load luôn danh sách biến thể,
-        // khỏi bắt admin gõ/chọn lại thủ công.
-        const preselectedProductIdRaw = document.getElementById('preselectedProductIdField').value;
-        if (preselectedProductIdRaw) {
-            const match = productOptions.find(p => String(p.id) === preselectedProductIdRaw);
-            if (match) {
-                productSearchInput.value = match.name;
-                currentProductId   = match.id;
-                currentProductName = match.name;
-                loadVariantsForProduct(currentProductId);
+            // Nếu được điều hướng từ trang tạo biến thể (kèm ?productId=), tự điền
+            // sẵn tên sản phẩm vào ô tìm kiếm và load luôn danh sách biến thể,
+            // khỏi bắt admin gõ/chọn lại thủ công.
+            const preselectedProductIdRaw = document.getElementById('preselectedProductIdField').value;
+            if (preselectedProductIdRaw) {
+                const match = productOptions.find(p => String(p.id) === preselectedProductIdRaw);
+                if (match) {
+                    productSearchInput.value = match.name;
+                    currentProductId   = match.id;
+                    currentProductName = match.name;
+                    loadVariantsForProduct(currentProductId);
+                }
             }
-        }
-    })();
-</script>
+        })();
+    </script>
+</div>

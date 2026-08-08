@@ -1,102 +1,226 @@
 <div xmlns:th="http://www.thymeleaf.org">
-    <h4 class="mb-3"><i class="bi bi-clock-history me-2"></i>Lịch sử biến động tồn kho</h4>
+    <div class="dm-dash">
+        <div class="dm-glow dm-glow--a"></div>
+        <div class="dm-glow dm-glow--b"></div>
 
-    <div class="card shadow-sm mb-3">
-        <div class="card-body">
-            <form th:action="@{/admin/warehouse/stock-log}" method="get" class="row g-2 align-items-end">
-                <div class="col-md-2">
-                    <label class="form-label">Sản phẩm</label>
-                    <input type="text" class="form-control" name="productName" th:value="${productName}"
-                           placeholder="Tên sản phẩm"/>
+        <div class="dm-content">
+
+            <!-- ==================== HEADER ==================== -->
+            <div class="dm-header">
+                <div>
+                    <p class="dm-eyebrow">Quản lý kho</p>
+                    <h1 class="dm-title"><i class="bi bi-clock-history"></i>Lịch sử biến động tồn kho</h1>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">SKU</label>
-                    <input type="text" class="form-control" name="sku" th:value="${sku}"
-                           placeholder="Mã SKU"/>
+            </div>
+
+            <!-- ==================== FILTER ==================== -->
+            <div class="dm-card mb-4">
+                <form th:action="@{/admin/warehouse/stock-log}" method="get" class="dm-filter-row">
+                    <div class="dm-form-group">
+                        <label class="dm-label">Sản phẩm</label>
+                        <input type="text" class="dm-input" name="productName" th:value="${productName}" placeholder="Tên sản phẩm"/>
+                    </div>
+                    <div class="dm-form-group">
+                        <label class="dm-label">SKU</label>
+                        <input type="text" class="dm-input" name="sku" th:value="${sku}" placeholder="Mã SKU"/>
+                    </div>
+                    <div class="dm-form-group">
+                        <label class="dm-label">Loại biến động</label>
+                        <select class="dm-select" name="changeType">
+                            <option value="">Tất cả</option>
+                            <option th:each="type : ${changeTypes}"
+                                    th:value="${type}" th:text="${type}"
+                                    th:selected="${changeType != null and changeType == type}"></option>
+                        </select>
+                    </div>
+                    <div class="dm-form-group">
+                        <label class="dm-label">Từ ngày</label>
+                        <input type="date" class="dm-input" name="fromDate" th:value="${fromDate}"/>
+                    </div>
+                    <div class="dm-form-group">
+                        <label class="dm-label">Đến ngày</label>
+                        <input type="date" class="dm-input" name="toDate" th:value="${toDate}"/>
+                    </div>
+                    <div class="dm-filter-actions">
+                        <button type="submit" class="dm-btn dm-btn--solid">
+                            <i class="bi bi-search"></i>Lọc
+                        </button>
+                        <a class="dm-btn" th:href="@{/admin/warehouse/stock-log}" title="Xóa lọc">
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                    </div>
+                </form>
+                <p class="dm-hint">
+                    Lưu ý: có thể kết hợp lọc theo sản phẩm / SKU / loại biến động trong khoảng ngày.
+                    Mặc định không lọc gì sẽ hiển thị 30 ngày gần nhất.
+                </p>
+            </div>
+
+            <!-- ==================== TABLE ==================== -->
+            <div class="dm-card">
+                <div class="dm-table-wrap">
+                    <table class="dm-table">
+                        <colgroup>
+                            <col style="width:12%">
+                            <col style="width:10%">
+                            <col style="width:17%">
+                            <col style="width:12%">
+                            <col style="width:9%">
+                            <col style="width:8%">
+                            <col style="width:8%">
+                            <col style="width:10%">
+                            <col style="width:14%">
+                        </colgroup>
+                        <thead>
+                        <tr>
+                            <th>Thời gian</th>
+                            <th>SKU</th>
+                            <th>Sản phẩm</th>
+                            <th>Size / Màu</th>
+                            <th>Loại</th>
+                            <th class="dm-text-end">Thay đổi</th>
+                            <th class="dm-text-end">Tồn sau</th>
+                            <th>Nguồn</th>
+                            <th>Ghi chú</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="log : ${logs}">
+                            <td class="dm-text-dim" th:text="${#temporals.format(log.createdAt, 'HH:mm dd/MM/yyyy')}"></td>
+                            <td class="dm-cell-strong" th:text="${log.variant != null ? log.variant.sku : '—'}"></td>
+                            <td class="dm-text-dim dm-truncate" th:text="${log.variant != null and log.variant.product != null ? log.variant.product.name : '—'}"></td>
+                            <td class="dm-text-dim">
+                            <span th:if="${log.variant != null}"
+                                  th:text="${(log.variant.size != null ? log.variant.size.name : '—') + ' / ' + (log.variant.color != null ? log.variant.color.name : '—')}"></span>
+                            </td>
+                            <td>
+                            <span class="dm-pill"
+                                  th:classappend="${log.changeType != null and log.changeType.name() == 'IMPORT'} ? 'dm-pill--good'
+                                                  : (${log.changeType != null and log.changeType.name() == 'SALE'} ? 'dm-pill--accent'
+                                                  : (${log.changeType != null and log.changeType.name() == 'CANCEL'} ? 'dm-pill--muted'
+                                                  : (${log.changeType != null and log.changeType.name() == 'RETURN'} ? 'dm-pill--warn'
+                                                  : 'dm-pill--bad')))"
+                                  th:text="${log.changeType}"></span>
+                            </td>
+                            <td class="dm-text-end"
+                                th:classappend="${log.changeQty > 0} ? 'dm-cell-good' : 'dm-cell-bad'"
+                                th:text="${(log.changeQty > 0 ? '+' : '') + log.changeQty}"></td>
+                            <td class="dm-text-end dm-text-dim" th:text="${log.balanceAfter}"></td>
+                            <td class="dm-text-dim dm-truncate">
+                                <span th:text="${log.refType}"></span>
+                                <span th:if="${log.refId != null}" th:text="' #' + ${log.refId}"></span>
+                            </td>
+                            <td class="dm-text-dim dm-truncate" th:title="${log.note}" th:text="${log.note}"></td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(logs)}">
+                            <td colspan="9" class="dm-empty">Không có dữ liệu biến động phù hợp</td>
+                        </tr>
+                        </tbody>
+                    </table>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">Loại biến động</label>
-                    <select class="form-select" name="changeType">
-                        <option value="">Tất cả</option>
-                        <option th:each="type : ${changeTypes}"
-                                th:value="${type}"
-                                th:text="${type}"
-                                th:selected="${changeType != null and changeType == type}"></option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Từ ngày</label>
-                    <input type="date" class="form-control" name="fromDate" th:value="${fromDate}"/>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Đến ngày</label>
-                    <input type="date" class="form-control" name="toDate" th:value="${toDate}"/>
-                </div>
-                <div class="col-md-2 d-flex gap-2">
-                    <button type="submit" class="btn btn-dark flex-fill">
-                        <i class="bi bi-search me-1"></i>Lọc
-                    </button>
-                    <a class="btn btn-outline-secondary" th:href="@{/admin/warehouse/stock-log}">
-                        <i class="bi bi-x-lg"></i>
-                    </a>
-                </div>
-            </form>
-            <p class="text-muted small mt-2 mb-0">
-                Lưu ý: có thể kết hợp lọc theo sản phẩm / SKU / loại biến động trong khoảng ngày.
-                Mặc định không lọc gì sẽ hiển thị 30 ngày gần nhất.
-            </p>
+            </div>
+
         </div>
     </div>
 
-    <div class="card shadow-sm">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                <tr>
-                    <th>Thời gian</th>
-                    <th>SKU</th>
-                    <th>Sản phẩm</th>
-                    <th>Size / Màu</th>
-                    <th>Loại</th>
-                    <th class="text-end">Thay đổi</th>
-                    <th class="text-end">Tồn sau</th>
-                    <th>Nguồn</th>
-                    <th>Ghi chú</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="log : ${logs}">
-                    <td th:text="${#temporals.format(log.createdAt, 'HH:mm dd/MM/yyyy')}"></td>
-                    <td th:text="${log.variant != null ? log.variant.sku : '—'}"></td>
-                    <td th:text="${log.variant != null and log.variant.product != null ? log.variant.product.name : '—'}"></td>
-                    <td>
-                        <span th:if="${log.variant != null}"
-                              th:text="${(log.variant.size != null ? log.variant.size.name : '—') + ' / ' + (log.variant.color != null ? log.variant.color.name : '—')}"></span>
-                    </td>
-                    <td>
-                        <span class="badge"
-                              th:classappend="${log.changeType != null and log.changeType.name() == 'IMPORT'} ? 'bg-success'
-                                              : (${log.changeType != null and log.changeType.name() == 'SALE'} ? 'bg-primary'
-                                              : (${log.changeType != null and log.changeType.name() == 'CANCEL'} ? 'bg-secondary'
-                                              : (${log.changeType != null and log.changeType.name() == 'RETURN'} ? 'bg-warning text-dark'
-                                              : 'bg-dark')))"
-                              th:text="${log.changeType}"></span>
-                    </td>
-                    <td class="text-end fw-semibold"
-                        th:classappend="${log.changeQty > 0} ? 'text-success' : 'text-danger'"
-                        th:text="${(log.changeQty > 0 ? '+' : '') + log.changeQty}"></td>
-                    <td class="text-end" th:text="${log.balanceAfter}"></td>
-                    <td>
-                        <span th:text="${log.refType}"></span>
-                        <span th:if="${log.refId != null}" th:text="' #' + ${log.refId}"></span>
-                    </td>
-                    <td th:text="${log.note}"></td>
-                </tr>
-                <tr th:if="${#lists.isEmpty(logs)}">
-                    <td colspan="9" class="text-center text-muted py-4">Không có dữ liệu biến động phù hợp</td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
+        .dm-dash {
+            --bg: #0b0d12; --surface: #12151d; --surface-2: #1a1e29;
+            --border: rgba(255,255,255,.07); --border-strong: rgba(255,255,255,.14);
+            --text: #f5f6f9; --text-dim: #d3d6e0; --text-faint: #a6abbd;
+            --accent: #8b7cf6; --accent-soft: rgba(139,124,246,.14);
+            --good: #34d399; --good-soft: rgba(52,211,153,.13);
+            --bad: #f2637a; --bad-soft: rgba(242,99,122,.13);
+            --warn: #f5b95c; --warn-soft: rgba(245,185,92,.13);
+            --radius: 18px;
+            position: relative; overflow: hidden; background: var(--bg); color: var(--text);
+            font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 32px; margin: -24px -24px 0;
+        }
+        @media (max-width: 767px) { .dm-dash { padding: 18px; margin: -24px -24px 0; } }
+
+        .dm-glow { position: absolute; width: 480px; height: 480px; border-radius: 50%; filter: blur(110px); opacity: .16; pointer-events: none; animation: dmDrift 14s ease-in-out infinite alternate; }
+        .dm-glow--a { background: var(--accent); top: -180px; right: -140px; }
+        .dm-glow--b { background: var(--good); bottom: -200px; left: -160px; animation-delay: -6s; }
+        @keyframes dmDrift { from { transform: translate(0,0) scale(1); } to { transform: translate(-30px, 25px) scale(1.12); } }
+        @media (prefers-reduced-motion: reduce) { .dm-glow { animation: none !important; opacity: 1 !important; } }
+
+        .dm-content { position: relative; z-index: 1; }
+
+        .dm-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 28px; gap: 12px; flex-wrap: wrap; }
+        .dm-eyebrow { text-transform: uppercase; letter-spacing: .12em; font-size: .7rem; font-weight: 700; color: var(--accent); margin: 0 0 4px; }
+        .dm-title { font-size: 1.6rem; font-weight: 800; margin: 0; letter-spacing: -.02em; display: flex; align-items: center; gap: 10px; }
+        .dm-title i { color: var(--accent); }
+
+        .dm-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
+        .mb-4 { margin-bottom: 24px; }
+
+        .dm-filter-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+        .dm-filter-actions { display: flex; gap: 8px; }
+        .dm-form-group { display: flex; flex-direction: column; gap: 6px; min-width: 150px; }
+        .dm-label { font-size: .78rem; font-weight: 600; color: var(--text-dim); }
+        .dm-hint { font-size: .78rem; color: var(--text-faint); margin: 12px 0 0; }
+
+        .dm-input, .dm-select {
+            background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+            border-radius: 10px; padding: 9px 12px; font-size: .87rem; font-family: inherit;
+            outline: none; transition: border-color .2s ease; width: 100%; box-sizing: border-box;
+        }
+        .dm-input:focus, .dm-select:focus { border-color: var(--accent); }
+        .dm-input::placeholder { color: var(--text-faint); }
+
+        .dm-text-dim { color: var(--text-dim); }
+        .dm-text-end { text-align: right; }
+        .dm-cell-strong { font-weight: 700; }
+        .dm-cell-good { color: var(--good); font-weight: 700; }
+        .dm-cell-bad { color: var(--bad); font-weight: 700; }
+        .dm-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .dm-table-wrap { overflow-x: hidden; }
+        .dm-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: .82rem; }
+        .dm-table thead th {
+            text-align: left; text-transform: uppercase; letter-spacing: .03em;
+            font-size: .62rem; font-weight: 700; color: var(--text-faint);
+            padding: 0 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap;
+        }
+        .dm-table tbody td {
+            padding: 12px 8px; border-bottom: 1px solid var(--border);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .dm-table tbody tr:last-child td { border-bottom: none; }
+        .dm-table tbody tr { transition: background .2s ease; }
+        .dm-table tbody tr:hover { background: var(--surface-2); }
+
+        .dm-pill {
+            display: inline-flex; align-items: center; padding: 3px 10px;
+            border-radius: 999px; font-size: .64rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .03em; white-space: nowrap;
+        }
+        .dm-pill--muted  { background: var(--surface-2); color: var(--text-dim); }
+        .dm-pill--accent { background: var(--accent-soft); color: var(--accent); }
+        .dm-pill--good   { background: var(--good-soft); color: var(--good); }
+        .dm-pill--bad    { background: var(--bad-soft); color: var(--bad); }
+        .dm-pill--warn   { background: var(--warn-soft); color: var(--warn); }
+
+        .dm-empty { text-align: center; padding: 28px 0; color: var(--text-faint); font-size: .85rem; white-space: normal; }
+
+        .dm-btn {
+            display: inline-flex; align-items: center; gap: 6px; justify-content: center;
+            border: 1px solid var(--border); color: var(--text-dim);
+            background: transparent; border-radius: 999px;
+            font-size: .82rem; font-weight: 600; padding: 8px 16px;
+            text-decoration: none; transition: all .2s ease; cursor: pointer;
+        }
+        .dm-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+        .dm-btn--solid { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .dm-btn--solid:hover { background: #7a6af0; border-color: #7a6af0; color: #fff; }
+
+        @media (max-width: 680px) {
+            .dm-table-wrap { overflow-x: auto; }
+            .dm-table { table-layout: auto; min-width: 900px; }
+            .dm-table td, .dm-table th { white-space: nowrap; overflow: visible; text-overflow: clip; }
+        }
+    </style>
 </div>

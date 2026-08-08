@@ -45,16 +45,11 @@
         }
 
         /* Khoảng trống chuyên dùng để hiện thông báo (alerts), nằm ngay dưới
-           thanh ticker, tách khỏi phần nội dung chính. Rỗng thì không chiếm chỗ. */
+           thanh ticker. position:relative để .app-alert-slot (position:absolute
+           bên trong fragment) đè đúng lên khu vực này mà không đẩy nội dung
+           phía dưới xuống. */
         #notificationArea {
-            padding: 0 1rem;
-        }
-        #notificationArea:has(.app-alert-slot:not(:empty)) {
-            padding: 1rem 1rem 0;
-        }
-        #notificationArea .app-alert-slot {
-            max-width: 1320px;
-            margin: 0 auto;
+            position: relative;
         }
     </style>
 </head>

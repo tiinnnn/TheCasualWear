@@ -11,12 +11,11 @@
     <link rel="icon" type="image/png" href="/images/footer.png"/>
     <style>
         /* Khoảng trống chuyên dùng để hiện thông báo (alerts), nằm ngay dưới
-           navbar, tách khỏi phần nội dung chính. Rỗng thì không chiếm chỗ. */
+           navbar. position:relative để .app-alert-slot (position:absolute
+           bên trong fragment) đè đúng lên khu vực này mà không đẩy nội dung
+           phía dưới xuống. */
         #notificationArea {
-            padding: 0 1.5rem;
-        }
-        #notificationArea:has(.app-alert-slot:not(:empty)) {
-            padding-top: 1rem;
+            position: relative;
         }
     </style>
 </head>

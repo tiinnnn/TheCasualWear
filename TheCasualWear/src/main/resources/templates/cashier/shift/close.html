@@ -57,7 +57,8 @@
                             <div class="input-group">
                                 <input type="text" id="actualCashDisplay" class="form-control text-end"
                                        inputmode="numeric" autocomplete="off" required autofocus
-                                       oninput="formatMoneyInput(this, 'actualCash')"/>
+                                       oninput="formatMoneyInputLive(this, 'actualCash')"
+                                       onblur="formatMoneyInputFinal(this, 'actualCash')"/>
                                 <span class="input-group-text">đ</span>
                             </div>
                             <input type="hidden" name="actualCash" id="actualCash"/>

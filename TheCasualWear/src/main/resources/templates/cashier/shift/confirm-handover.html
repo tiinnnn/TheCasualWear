@@ -65,6 +65,13 @@
                         <div class="col-6 text-end fw-bold"
                              th:text="${shift.itemsSoldCount != null ? shift.itemsSoldCount : 0}"></div>
 
+                        <div class="col-12 text-end">
+                            <a th:href="@{'/cashier/shift/' + ${shift.id} + '/items'}"
+                               target="_blank" class="small">
+                                <i class="bi bi-list-ul me-1"></i>Xem chi tiết từng sản phẩm đã bán
+                            </a>
+                        </div>
+
                         <div class="col-12" th:if="${shift.note != null and !shift.note.isBlank()}">
                             <hr class="my-1"/>
                             <span class="text-muted">Ghi chú ca trước:</span>

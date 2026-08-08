@@ -96,13 +96,10 @@
 
         /* Khoảng trống chuyên dùng để hiện thông báo (alerts), tách khỏi phần
            nội dung chính (col-md-10) để không phụ thuộc padding của view.
-           Rỗng thì không chiếm chỗ; có alert thì đẩy nội dung xuống. */
+           position:relative để .app-alert-slot (position:absolute bên trong
+           fragment) đè đúng lên khu vực này mà không đẩy nội dung phía dưới. */
         #notificationArea {
-            padding: 0 1.5rem;
-            background: var(--adm-bg);
-        }
-        #notificationArea:has(.app-alert-slot:not(:empty)) {
-            padding-top: 1rem;
+            position: relative;
         }
     </style>
 </head>
@@ -233,7 +230,11 @@
                             <i class="bi bi-collection me-2"></i>Collections
                         </a>
                     </li>
-
+                    <li class="nav-item">
+                        <a class="nav-link text-white py-3 px-4" th:href="@{/admin/shifts}">
+                            <i class="bi bi-clock-history me-2"></i>Ca làm việc
+                        </a>
+                    </li>
                     <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','OWNER')">
                         <a class="nav-link text-white py-3 px-4 d-flex justify-content-between align-items-center"
                            data-bs-toggle="collapse" href="#warehouseMenu" role="button"
@@ -255,16 +256,6 @@
                                 </li>
                             </ul>
                         </div>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-white py-3 px-4" th:href="@{/admin/shifts}">
-                            <i class="bi bi-clock-history me-2"></i>Ca làm việc
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-white py-3 px-4" th:href="@{/admin/shifts/daily-summary}">
-                            <i class="bi bi-graph-up me-2"></i>Tổng kết ngày
-                        </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link text-white py-3 px-4" th:href="@{/admin/pos-counters}">

@@ -9,14 +9,18 @@
 
       #notificationArea là khoảng trống CHUYÊN DÙNG cho thông báo, được khai báo
       sẵn trong từng layout (ngay dưới navbar, tách khỏi phần nội dung chính).
-      Fragment này chỉ render NẰM TRONG khoảng trống đó theo flow bình thường
-      (không còn position:fixed đè lên nội dung nữa) -> alert xuất hiện đúng chỗ
-      dành riêng cho nó, không che nội dung trang, và tự thu gọn lại khi JS xóa
-      alert đi sau vài giây vì nó không còn chiếm không gian cố định.
+      .app-alert-slot dùng position:absolute NẰM ĐÈ lên đúng vùng đó (không còn
+      chiếm chỗ trong flow) -> khi alert xuất hiện/biến mất, nội dung bên dưới
+      KHÔNG bị đẩy xuống/lên nữa, dù có 1 hay nhiều alert cùng lúc.
     -->
     <style>
         .app-alert-slot {
-            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1030;
+            padding: 14px clamp(1rem, 4vw, 1.5rem) 0;
         }
         .app-alert-slot .app-alert {
             margin-bottom: 10px;
@@ -36,7 +40,7 @@
             padding: 12px 16px;
             font-weight: 600;
             font-size: 0.9rem;
-            box-shadow: 0 4px 14px rgba(0,0,0,.12);
+            box-shadow: 0 8px 22px rgba(0,0,0,.2);
         }
         .app-alert.alert-success {
             background: var(--alert-success-bg, #146c43);

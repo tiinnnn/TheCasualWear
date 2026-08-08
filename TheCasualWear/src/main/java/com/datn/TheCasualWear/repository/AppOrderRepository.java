@@ -124,4 +124,5 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
             "AND o.status = com.datn.TheCasualWear.enums.OrderStatus.COMPLETED")
     BigDecimal sumTotalPriceByShiftIds(@Param("shiftIds") List<Integer> shiftIds);
 
+    boolean existsByShift_Counter_Id(Integer counterId);
 }

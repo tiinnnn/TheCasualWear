@@ -2,6 +2,8 @@ package com.datn.TheCasualWear.service;
 
 import com.datn.TheCasualWear.config.ResourceNotFoundException;
 import com.datn.TheCasualWear.entity.PosCounter;
+
+import com.datn.TheCasualWear.repository.AppOrderRepository;
 import com.datn.TheCasualWear.repository.PosCounterRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -13,6 +15,7 @@ import java.util.List;
 public class PosCounterService {
 
     private final PosCounterRepository counterRepository;
+    private final AppOrderRepository orderRepository;
 
     public List<PosCounter> getAllCounters() {
         return counterRepository.findAll();
@@ -64,10 +67,14 @@ public class PosCounterService {
         counterRepository.save(counter);
     }
 
-    // LƯU Ý: chưa check "quầy đang có ca OPEN" ở đây vì Shift chưa gắn
-    // counter (sẽ làm ở Việc 2) — lúc đó cần bổ sung throw
-    // IllegalStateException nếu còn ca OPEN tại quầy này trước khi cho xóa.
+    // Chặn xóa nếu quầy đã từng có đơn hàng (qua Shift đã tạo ra đơn tại quầy này),
+    // vì AppOrder không gắn trực tiếp PosCounter mà thông qua Shift.counter.
     public void deleteCounter(Integer id) {
-        counterRepository.delete(getCounterById(id));
+        PosCounter counter = getCounterById(id);
+        if (orderRepository.existsByShift_Counter_Id(id)) {
+            throw new IllegalStateException(
+                    "Không thể xóa quầy \"" + counter.getCode() + "\" vì đã có đơn hàng phát sinh tại quầy này!");
+        }
+        counterRepository.delete(counter);
     }
 }

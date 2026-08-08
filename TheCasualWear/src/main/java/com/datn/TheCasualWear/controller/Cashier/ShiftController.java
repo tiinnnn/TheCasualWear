@@ -172,17 +172,20 @@ public class ShiftController {
 
     @GetMapping("/history")
     public String history(Model model) {
-        model.addAttribute("shifts", shiftService.getHistory(getCurrentUser()));
+        model.addAttribute("shifts", shiftService.getHistoryThisWeek(getCurrentUser()));
         model.addAttribute("view", "cashier/shift/history");
         return "layouts/cashier-layout";
     }
 
-    // Xem danh sách sản phẩm đã bán/hủy trong 1 ca — chỉ được xem ca của
-    // chính mình (ẩn = ResourceNotFoundException thay vì lộ thông tin 403).
+    // Xem danh sách sản phẩm đã bán/hủy trong 1 ca — được xem nếu là ca của
+    // chính mình, HOẶC ca đó đang chờ xác nhận bàn giao (cần xem để đối
+    // chiếu trước khi xác nhận/báo sai lệch). Ca của người khác nhưng đã
+    // được xác nhận bàn giao xong thì không cho xem nữa.
     @GetMapping("/{id}/items")
     public String items(@PathVariable Integer id, Model model) {
         Shift shift = shiftService.getShiftById(id);
-        if (!shift.getCashier().getId().equals(getCurrentUser().getId())) {
+        boolean isOwnShift = shift.getCashier().getId().equals(getCurrentUser().getId());
+        if (!isOwnShift && shift.isHandoverConfirmed()) {
             throw new ResourceNotFoundException("Không tìm thấy ca làm việc");
         }
         model.addAttribute("shift", shift);

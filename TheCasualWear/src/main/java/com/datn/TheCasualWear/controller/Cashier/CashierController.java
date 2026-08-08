@@ -8,6 +8,7 @@ import com.datn.TheCasualWear.repository.AppUserRepository;
 import com.datn.TheCasualWear.repository.ProductVariantRepository;
 import com.datn.TheCasualWear.service.CashierService;
 import com.datn.TheCasualWear.service.VNPayService;
+import com.datn.TheCasualWear.service.VoucherService; // MỚI
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ResponseEntity;
@@ -35,15 +36,18 @@ public class CashierController {
     private final ProductVariantRepository productVariantRepository;
     private final AppUserRepository        appUserRepository;
     private final VNPayService             vnPayService;
+    private final VoucherService           voucherService; // MỚI
 
     public CashierController(CashierService cashierService,
                              ProductVariantRepository productVariantRepository,
                              AppUserRepository appUserRepository,
-                             VNPayService vnPayService) {
+                             VNPayService vnPayService,
+                             VoucherService voucherService) { // MỚI
         this.cashierService = cashierService;
         this.productVariantRepository = productVariantRepository;
         this.appUserRepository = appUserRepository;
         this.vnPayService = vnPayService;
+        this.voucherService = voucherService; // MỚI
     }
 
     /**
@@ -82,6 +86,7 @@ public class CashierController {
 
         model.addAttribute("cartItems", cart);
         model.addAttribute("grandTotal", grandTotal);
+        model.addAttribute("activeVouchers", voucherService.getActiveVouchers()); // MỚI
         model.addAttribute("view", "cashier/pos");
         return "layouts/cashier-layout";
     }

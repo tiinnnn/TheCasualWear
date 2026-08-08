@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,10 +28,6 @@ public class ShiftService {
     private final AppOrderRepository  orderRepository;
     private final PosCounterRepository counterRepository;
 
-    // Giá trị paymentMethod dùng để tính "tiền mặt thu trong ca" khi đóng ca.
-    // ⚠️ CHỈNH LẠI chuỗi này cho khớp với giá trị thực tế mà form POS gửi lên
-    // (xem tham số paymentMethod trong CashierService.checkout / trang POS —
-    // ví dụ có thể là "CASH" hoặc "TIEN_MAT" tùy nhóm đặt tên).
     private static final String CASH_PAYMENT_METHOD = "CASH";
 
     public Optional<Shift> getOpenShift(AppUser cashier) {
@@ -52,7 +49,6 @@ public class ShiftService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ca làm việc"));
     }
 
-    // Quầy này có đang bị cashier khác chiếm (ca OPEN) không.
     public boolean isCounterOccupied(Integer counterId) {
         return shiftRepository.findByCounterIdAndStatus(counterId, ShiftStatus.OPEN).isPresent();
     }
@@ -70,9 +66,6 @@ public class ShiftService {
         PosCounter counter = counterRepository.findById(counterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy quầy!"));
 
-        // Check lại lần cuối ngay trước khi lưu (phòng race condition — 2
-        // cashier cùng bấm "Vào quầy" gần như đồng thời). Unique filtered
-        // index UX_shift_counter_open ở DB là lớp chặn cuối cùng, chắc chắn.
         if (isCounterOccupied(counterId)) {
             throw new IllegalStateException(
                     "Quầy " + counter.getCode() + " đang có người sử dụng, vui lòng chọn quầy khác!");
@@ -87,10 +80,6 @@ public class ShiftService {
         return shiftRepository.save(shift);
     }
 
-    // Tính "tiền mặt lẽ ra phải có" tại thời điểm gọi = openingCash + tổng
-    // tiền mặt (CASH) đã thu trong ca tính đến hiện tại. Dùng chung cho:
-    //  - Preview hiển thị gợi ý trên form đóng ca (chưa lưu gì)
-    //  - Tính chính thức lúc closeShift() thực sự đóng ca
     public BigDecimal previewExpectedCash(Shift shift) {
         BigDecimal cashRevenue = orderRepository
                 .sumTotalPriceByShiftIdAndPaymentMethod(shift.getId(), CASH_PAYMENT_METHOD);
@@ -98,17 +87,11 @@ public class ShiftService {
         return shift.getOpeningCash().add(cashRevenue);
     }
 
-    // Tổng số lượng sản phẩm đã bán trong ca tính đến hiện tại (đơn COMPLETED).
-    // Dùng chung cho preview lúc mở form đóng ca và chốt chính thức lúc closeShift().
     public int previewItemsSold(Shift shift) {
         Integer count = orderRepository.sumItemQuantityByShiftId(shift.getId());
         return count != null ? count : 0;
     }
 
-    /**
-     * Đóng ca: tự tính expectedCash + itemsSoldCount, "chốt cứng" cả 2 số
-     * này vào ca (dùng để cashier ca sau đối chiếu khi xác nhận bàn giao).
-     */
     @Transactional
     public Shift closeShift(Integer shiftId, AppUser actor, BigDecimal actualCash, String note) {
         Shift shift = getShiftById(shiftId);
@@ -136,22 +119,11 @@ public class ShiftService {
         return shiftRepository.save(shift);
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // XÁC NHẬN BÀN GIAO CA (handover confirmation)
-    // ─────────────────────────────────────────────────────────────
-
-    // Ca CLOSED gần nhất TẠI ĐÚNG QUẦY NÀY mà chưa ai xác nhận bàn giao —
-    // scope theo quầy (không còn toàn hệ thống) để cashier ở quầy khác
-    // không bị bắt xác nhận số liệu không liên quan.
     public Optional<Shift> getLatestUnconfirmedClosedShiftForCounter(Integer counterId) {
         return shiftRepository.findFirstByCounterIdAndStatusAndHandoverConfirmedByIsNullOrderByClosedAtDesc(
                 counterId, ShiftStatus.CLOSED);
     }
 
-    /**
-     * @param isMatch true = cashier ca sau xác nhận số liệu ca trước đúng;
-     *                false = báo có sai lệch (bắt buộc kèm note giải thích).
-     */
     @Transactional
     public Shift confirmHandover(Integer shiftId, AppUser confirmingUser,
                                  boolean isMatch, String note) {
@@ -175,8 +147,6 @@ public class ShiftService {
         return shiftRepository.save(shift);
     }
 
-    // Toàn bộ đơn (COMPLETED + CANCELLED) thuộc 1 ca — dùng cho trang xem
-    // log sản phẩm đã bán/hủy theo ca.
     public List<com.datn.TheCasualWear.entity.AppOrder> getOrdersForShift(Integer shiftId) {
         return orderRepository.findByShiftIdOrderByOrderDateDesc(shiftId);
     }
@@ -185,17 +155,32 @@ public class ShiftService {
         return shiftRepository.findByCashierIdOrderByOpenedAtDesc(cashier.getId());
     }
 
+    // Lịch sử ca của cashier CHỈ trong tuần hiện tại (thứ 2 → hôm nay).
+    public List<Shift> getHistoryThisWeek(AppUser cashier) {
+        LocalDate today = LocalDate.now();
+        LocalDate startOfWeek = today.with(DayOfWeek.MONDAY);
+        LocalDateTime from = startOfWeek.atStartOfDay();
+        LocalDateTime to = today.atTime(23, 59, 59);
+        return shiftRepository.findByCashierIdAndOpenedAtBetweenOrderByOpenedAtDesc(
+                cashier.getId(), from, to);
+    }
+
     public List<Shift> getAllHistory() {
         return shiftRepository.findAllByOrderByOpenedAtDesc();
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // TỔNG KẾT CUỐI NGÀY (daily summary)
-    // ─────────────────────────────────────────────────────────────
+    // Danh sách ca (Admin) có lọc theo quầy / nhân viên / khoảng thời gian —
+    // mọi tham số đều optional, truyền null để bỏ qua điều kiện đó.
+    public List<Shift> getFilteredHistory(Integer counterId, Integer cashierId,
+                                          LocalDateTime from, LocalDateTime to) {
+        return shiftRepository.findFiltered(counterId, cashierId, from, to);
+    }
 
-    // Ca CLOSED trong ngày `date` — nhóm theo closedAt (thời điểm chốt sổ),
-    // KHÔNG phải openedAt, để nhất quán với cách các máy POS thực tế xuất
-    // báo cáo cuối ca (Z-report).
+    // Danh sách cashier từng mở ca — đổ vào dropdown "Nhân viên" của bộ lọc.
+    public List<AppUser> getAllCashiers() {
+        return shiftRepository.findDistinctCashiers();
+    }
+
     public List<Shift> getShiftsClosedOnDate(LocalDate date) {
         LocalDateTime from = date.atStartOfDay();
         LocalDateTime to = date.atTime(23, 59, 59);
@@ -203,12 +188,10 @@ public class ShiftService {
                 ShiftStatus.CLOSED, from, to);
     }
 
-    // Mọi ca đang OPEN toàn hệ thống — phần "đang diễn ra, tạm tính".
     public List<Shift> getAllOpenShifts() {
         return shiftRepository.findByStatus(ShiftStatus.OPEN);
     }
 
-    // Tổng hợp số liệu các ca ĐÃ CHỐT trong ngày — không bao gồm ca OPEN.
     public DailySummaryDTO getDailySummary(LocalDate date) {
         List<Shift> closedShifts = getShiftsClosedOnDate(date);
 
