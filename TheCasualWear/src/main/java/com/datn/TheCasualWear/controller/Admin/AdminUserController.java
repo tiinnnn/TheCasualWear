@@ -54,40 +54,4 @@ public class AdminUserController {
         ra.addFlashAttribute("successMessage", "Đã mở khóa tài khoản!");
         return "redirect:/admin/users";
     }
-
-    @PostMapping("/{id}/role/add")
-    public String addRole(@PathVariable Integer id,
-                          @RequestParam String roleName,
-                          Authentication auth,
-                          RedirectAttributes ra) {
-        boolean isOwner = auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_OWNER"));
-
-        if (!isOwner && (roleName.equals("ROLE_ADMIN") || roleName.equals("ROLE_OWNER"))) {
-            ra.addFlashAttribute("errorMessage", "Bạn không có quyền cấp role này!");
-            return "redirect:/admin/users";
-        }
-
-        appUserService.addRole(id, roleName);
-        ra.addFlashAttribute("successMessage", "Đã thêm role!");
-        return "redirect:/admin/users";
-    }
-
-    @PostMapping("/{id}/role/remove")
-    public String removeRole(@PathVariable Integer id,
-                             @RequestParam String roleName,
-                             Authentication auth,
-                             RedirectAttributes ra) {
-        boolean isOwner = auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_OWNER"));
-
-        if (!isOwner && (roleName.equals("ROLE_ADMIN") || roleName.equals("ROLE_OWNER"))) {
-            ra.addFlashAttribute("errorMessage", "Bạn không có quyền xóa role này!");
-            return "redirect:/admin/users";
-        }
-
-        appUserService.removeRole(id, roleName);
-        ra.addFlashAttribute("successMessage", "Đã xóa role!");
-        return "redirect:/admin/users";
-    }
 }

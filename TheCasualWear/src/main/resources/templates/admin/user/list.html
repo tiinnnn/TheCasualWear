@@ -107,31 +107,6 @@
                                    onclick="return confirm('Mở khóa tài khoản này?')">
                                     <i class="bi bi-unlock"></i>Mở khóa
                                 </a>
-
-                                <form th:action="@{'/admin/users/' + ${u.id} + '/role/add'}" method="post" class="dm-inline-form">
-                                    <select name="roleName" class="dm-select dm-select--sm">
-                                        <option value="ROLE_CUSTOMER">CUSTOMER</option>
-                                        <option value="ROLE_CASHIER">CASHIER</option>
-                                        <option th:if="${isOwner}" value="ROLE_ADMIN">ADMIN</option>
-                                        <option th:if="${isOwner}" value="ROLE_OWNER">OWNER</option>
-                                    </select>
-                                    <button type="submit" class="dm-icon-btn dm-icon-btn--good" title="Thêm role">
-                                        <i class="bi bi-plus-lg"></i>
-                                    </button>
-                                </form>
-
-                                <form th:action="@{'/admin/users/' + ${u.id} + '/role/remove'}" method="post" class="dm-inline-form">
-                                    <select name="roleName" class="dm-select dm-select--sm">
-                                        <option value="ROLE_CUSTOMER">CUSTOMER</option>
-                                        <option value="ROLE_CASHIER">CASHIER</option>
-                                        <option th:if="${isOwner}" value="ROLE_ADMIN">ADMIN</option>
-                                        <option th:if="${isOwner}" value="ROLE_OWNER">OWNER</option>
-                                    </select>
-                                    <button type="submit" class="dm-icon-btn dm-icon-btn--bad" title="Xóa role"
-                                            onclick="return confirm('Xóa role này khỏi user?')">
-                                        <i class="bi bi-dash-lg"></i>
-                                    </button>
-                                </form>
                             </div>
                         </td>
                     </tr>

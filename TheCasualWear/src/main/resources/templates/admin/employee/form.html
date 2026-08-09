@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Thêm nhân viên</title></head>
+<body>
+<div th:fragment="content">
+
+    <div class="dm-dash">
+        <div class="dm-glow dm-glow--a"></div>
+        <div class="dm-glow dm-glow--b"></div>
+
+        <div class="dm-content">
+
+            <!-- ==================== HEADER ==================== -->
+            <div class="dm-header">
+                <div>
+                    <p class="dm-eyebrow">Nhân sự</p>
+                    <h1 class="dm-title">Thêm nhân viên mới</h1>
+                </div>
+                <a th:href="@{/admin/employees}" class="dm-btn">
+                    <i class="bi bi-arrow-left"></i>Quay lại
+                </a>
+            </div>
+
+            <form th:action="@{/admin/employees/save}" th:object="${newUser}" method="post">
+                <div class="dm-form-row dm-form-row--2">
+
+                    <!-- ==================== TÀI KHOẢN ĐĂNG NHẬP ==================== -->
+                    <div class="dm-card">
+                        <div class="dm-section-title">
+                            <span><i class="bi bi-person-badge"></i>Tài khoản đăng nhập</span>
+                        </div>
+
+                        <div class="dm-form-group">
+                            <label class="dm-label">Tên đăng nhập <span class="dm-required">*</span></label>
+                            <input type="text" th:field="*{username}" class="dm-input" required/>
+                        </div>
+                        <div class="dm-form-group">
+                            <label class="dm-label">Mật khẩu <span class="dm-required">*</span></label>
+                            <input type="password" th:field="*{password}" class="dm-input" required minlength="6"/>
+                            <small class="dm-text-faint">Tối thiểu 6 ký tự, có ít nhất 1 chữ số</small>
+                        </div>
+                        <div class="dm-form-group">
+                            <label class="dm-label">Nhập lại mật khẩu <span class="dm-required">*</span></label>
+                            <input type="password" name="confirmPassword" class="dm-input" required/>
+                        </div>
+                        <div class="dm-form-group">
+                            <label class="dm-label">Email</label>
+                            <input type="email" th:field="*{email}" class="dm-input" placeholder="ten@gmail.com"/>
+                        </div>
+                        <div class="dm-form-group dm-form-group--last">
+                            <label class="dm-label">Số điện thoại</label>
+                            <input type="text" th:field="*{phone}" class="dm-input" placeholder="10 chữ số"/>
+                        </div>
+                        <small class="dm-text-faint dm-block-hint">Cần nhập ít nhất 1 trong 2: Email hoặc SĐT</small>
+                    </div>
+
+                    <!-- ==================== THÔNG TIN NHÂN VIÊN ==================== -->
+                    <div>
+                        <div class="dm-card mb-3">
+                            <div class="dm-section-title">
+                                <span><i class="bi bi-clipboard-data"></i>Thông tin nhân viên</span>
+                            </div>
+
+                            <div class="dm-note-box">
+                                <i class="bi bi-info-circle-fill"></i>
+                                <span>Mã nhân viên sẽ được hệ thống tự sinh (dạng NV0001, NV0002...) sau khi lưu.</span>
+                            </div>
+
+                            <div class="dm-form-group">
+                                <label class="dm-label">Vai trò (role) <span class="dm-required">*</span></label>
+                                <select name="roleName" class="dm-select" required>
+                                    <option value="ROLE_CASHIER">Thu ngân (CASHIER)</option>
+                                    <option value="ROLE_ADMIN" th:if="${isOwner}">Quản trị (ADMIN)</option>
+                                    <option value="ROLE_OWNER" th:if="${isOwner}">Chủ cửa hàng (OWNER)</option>
+                                </select>
+                                <small th:unless="${isOwner}" class="dm-text-faint">
+                                    Chỉ tài khoản OWNER mới cấp được role ADMIN/OWNER.
+                                </small>
+                            </div>
+                            <div class="dm-form-group">
+                                <label class="dm-label">Ngày vào làm</label>
+                                <input type="date" name="hireDate" class="dm-input"/>
+                            </div>
+                            <div class="dm-form-group dm-form-group--last">
+                                <label class="dm-label">Ghi chú</label>
+                                <textarea name="note" class="dm-input dm-textarea" rows="2"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="dm-form-actions">
+                            <button type="submit" class="dm-btn dm-btn--solid">
+                                <i class="bi bi-save"></i>Tạo nhân viên
+                            </button>
+                            <a th:href="@{/admin/employees}" class="dm-btn">Hủy</a>
+                        </div>
+                    </div>
+
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
+        .dm-dash {
+            --bg: #0b0d12; --surface: #12151d; --surface-2: #1a1e29;
+            --border: rgba(255,255,255,.07); --border-strong: rgba(255,255,255,.14);
+            --text: #f5f6f9; --text-dim: #d3d6e0; --text-faint: #a6abbd;
+            --accent: #8b7cf6; --accent-soft: rgba(139,124,246,.14);
+            --good: #34d399; --good-soft: rgba(52,211,153,.13);
+            --bad: #f2637a; --bad-soft: rgba(242,99,122,.13);
+            --warn: #f5b95c; --warn-soft: rgba(245,185,92,.13);
+            --radius: 18px;
+            position: relative; overflow: hidden; background: var(--bg); color: var(--text);
+            font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 32px; margin: -24px -24px 0;
+        }
+        @media (max-width: 767px) { .dm-dash { padding: 18px; margin: -24px -24px 0; } }
+
+        .dm-glow { position: absolute; width: 480px; height: 480px; border-radius: 50%; filter: blur(110px); opacity: .16; pointer-events: none; animation: dmDrift 14s ease-in-out infinite alternate; }
+        .dm-glow--a { background: var(--accent); top: -180px; right: -140px; }
+        .dm-glow--b { background: var(--good); bottom: -200px; left: -160px; animation-delay: -6s; }
+        @keyframes dmDrift { from { transform: translate(0,0) scale(1); } to { transform: translate(-30px, 25px) scale(1.12); } }
+        @media (prefers-reduced-motion: reduce) { .dm-glow { animation: none !important; opacity: 1 !important; } }
+
+        .dm-content { position: relative; z-index: 1; }
+
+        .dm-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 26px; gap: 12px; flex-wrap: wrap; }
+        .dm-eyebrow { text-transform: uppercase; letter-spacing: .12em; font-size: .7rem; font-weight: 700; color: var(--accent); margin: 0 0 4px; }
+        .dm-title { font-size: 1.6rem; font-weight: 800; margin: 0; letter-spacing: -.02em; }
+
+        .dm-form-row { display: grid; gap: 20px; }
+        .dm-form-row--2 { grid-template-columns: 1fr 1fr; }
+        @media (max-width: 860px) { .dm-form-row--2 { grid-template-columns: 1fr; } }
+
+        .dm-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
+        .mb-3 { margin-bottom: 16px; }
+
+        .dm-section-title {
+            display: flex; align-items: center; font-weight: 700; font-size: .92rem;
+            margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border);
+        }
+        .dm-section-title i { margin-right: 8px; color: var(--accent); }
+
+        .dm-note-box {
+            display: flex; align-items: flex-start; gap: 8px; background: var(--accent-soft);
+            border-radius: 10px; padding: 10px 12px; font-size: .8rem; color: var(--text-dim);
+            margin-bottom: 16px; line-height: 1.4;
+        }
+        .dm-note-box i { color: var(--accent); margin-top: 1px; flex-shrink: 0; }
+
+        .dm-form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+        .dm-form-group--last { margin-bottom: 6px; }
+        .dm-label { font-size: .8rem; font-weight: 600; color: var(--text-dim); }
+        .dm-required { color: var(--bad); }
+        .dm-text-faint { color: var(--text-faint); font-size: .76rem; }
+        .dm-block-hint { display: block; margin-top: 4px; }
+
+        .dm-input, .dm-select {
+            background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+            border-radius: 10px; padding: 10px 13px; font-size: .88rem; font-family: inherit;
+            outline: none; transition: border-color .2s ease, box-shadow .2s ease; width: 100%; box-sizing: border-box;
+        }
+        .dm-input:focus, .dm-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        .dm-input::placeholder { color: var(--text-faint); }
+        .dm-textarea { resize: vertical; min-height: 64px; font-family: inherit; }
+
+        .dm-form-actions { display: flex; gap: 10px; }
+
+        .dm-btn {
+            display: inline-flex; align-items: center; gap: 6px; justify-content: center;
+            border: 1px solid var(--border); color: var(--text-dim);
+            background: transparent; border-radius: 999px;
+            font-size: .82rem; font-weight: 600; padding: 8px 16px;
+            text-decoration: none; transition: all .2s ease; cursor: pointer;
+        }
+        .dm-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+        .dm-btn--solid { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .dm-btn--solid:hover { background: #7a6af0; border-color: #7a6af0; color: #fff; }
+    </style>
+
+</div>
+</body>
+</html>

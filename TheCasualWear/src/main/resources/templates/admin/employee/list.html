@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Quản lý nhân viên</title></head>
+<body>
+
+<div class="dm-dash">
+    <div class="dm-glow dm-glow--a"></div>
+    <div class="dm-glow dm-glow--b"></div>
+
+    <div class="dm-content">
+
+        <!-- ==================== HEADER ==================== -->
+        <div class="dm-header">
+            <div>
+                <p class="dm-eyebrow">Nhân sự</p>
+                <h1 class="dm-title">
+                    Nhân viên
+                    <span class="dm-title-count" th:text="'(' + ${#lists.size(employees)} + ' người)'"></span>
+                </h1>
+            </div>
+            <a th:href="@{/admin/employees/add}" class="dm-btn dm-btn--solid">
+                <i class="bi bi-person-plus"></i>Thêm nhân viên
+            </a>
+        </div>
+
+        <!-- ==================== TABLE ==================== -->
+        <div class="dm-card">
+            <div class="dm-table-wrap">
+                <table class="dm-table">
+                    <colgroup>
+                        <col style="width:12%">
+                        <col style="width:16%">
+                        <col style="width:22%">
+                        <col style="width:14%">
+                        <col style="width:14%">
+                        <col style="width:22%">
+                    </colgroup>
+                    <thead>
+                    <tr>
+                        <th>Mã NV</th>
+                        <th>Tên đăng nhập</th>
+                        <th>Email / SĐT</th>
+                        <th>Ngày vào làm</th>
+                        <th class="dm-text-center">Trạng thái</th>
+                        <th class="dm-text-end">Hành động</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(employees)}">
+                        <td colspan="6" class="dm-empty">Chưa có nhân viên nào</td>
+                    </tr>
+                    <tr th:each="e : ${employees}">
+                        <td class="dm-cell-strong" th:text="${e.employeeCode}"></td>
+                        <td class="dm-truncate" th:text="${e.user.username}"></td>
+                        <td class="dm-text-dim dm-truncate" th:text="${e.user.email != null ? e.user.email : e.user.phone}"></td>
+                        <td class="dm-text-dim" th:text="${e.hireDate != null ? #temporals.format(e.hireDate, 'dd/MM/yyyy') : '-'}"></td>
+                        <td class="dm-text-center">
+                            <span th:if="${e.isActive}" class="dm-pill dm-pill--good">Đang làm việc</span>
+                            <span th:unless="${e.isActive}" class="dm-pill dm-pill--muted">Đã nghỉ</span>
+                        </td>
+                        <td class="dm-text-end">
+                            <div class="dm-action-group">
+                                <a th:href="@{'/admin/employees/edit/' + ${e.id}}"
+                                   class="dm-icon-btn dm-icon-btn--accent" title="Sửa">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a th:href="@{'/admin/employees/' + ${e.id} + '/toggle'}"
+                                   class="dm-icon-btn dm-icon-btn--warn dm-confirm-trigger"
+                                   th:title="${e.isActive ? 'Đánh dấu nghỉ việc' : 'Đánh dấu đi làm lại'}"
+                                   th:data-confirm-msg="${e.isActive
+                                        ? 'Đánh dấu nhân viên ' + e.user.username + ' nghỉ việc?'
+                                        : 'Đánh dấu nhân viên ' + e.user.username + ' đi làm lại?'}">
+                                    <i th:class="${e.isActive ? 'bi bi-person-dash' : 'bi bi-person-check'}"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ==================== MODAL XÁC NHẬN (thay cho confirm() của trình duyệt) ==================== -->
+<div class="dm-confirm-overlay" id="dmConfirmOverlay">
+    <div class="dm-confirm-box">
+        <div class="dm-confirm-icon"><i class="bi bi-question-circle-fill"></i></div>
+        <p class="dm-confirm-msg" id="dmConfirmMsg">Bạn có chắc chắn?</p>
+        <div class="dm-confirm-actions">
+            <button type="button" class="dm-btn" id="dmConfirmCancel">Hủy</button>
+            <button type="button" class="dm-btn dm-btn--solid" id="dmConfirmOk">Xác nhận</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
+    .dm-dash {
+        --bg: #0b0d12; --surface: #12151d; --surface-2: #1a1e29;
+        --border: rgba(255,255,255,.07); --border-strong: rgba(255,255,255,.14);
+        --text: #f5f6f9; --text-dim: #d3d6e0; --text-faint: #a6abbd;
+        --accent: #8b7cf6; --accent-soft: rgba(139,124,246,.14);
+        --good: #34d399; --good-soft: rgba(52,211,153,.13);
+        --bad: #f2637a; --bad-soft: rgba(242,99,122,.13);
+        --warn: #f5b95c; --warn-soft: rgba(245,185,92,.13);
+        --radius: 18px;
+        position: relative; overflow: hidden; background: var(--bg); color: var(--text);
+        font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+        padding: 32px; margin: -24px -24px 0;
+        /* Phủ hết chiều cao còn lại của khung nhìn, không chỉ ôm theo nội dung,
+           để không lộ nền đen trơn phía dưới khi trang ngắn hơn màn hình. */
+        min-height: calc(100vh - 64px);
+    }
+    @media (max-width: 767px) { .dm-dash { padding: 18px; margin: -24px -24px 0; min-height: calc(100vh - 56px); } }
+
+    .dm-glow { position: absolute; width: 480px; height: 480px; border-radius: 50%; filter: blur(110px); opacity: .16; pointer-events: none; animation: dmDrift 14s ease-in-out infinite alternate; }
+    .dm-glow--a { background: var(--accent); top: -180px; right: -140px; }
+    .dm-glow--b { background: var(--good); bottom: -200px; left: -160px; animation-delay: -6s; }
+    @keyframes dmDrift { from { transform: translate(0,0) scale(1); } to { transform: translate(-30px, 25px) scale(1.12); } }
+    @media (prefers-reduced-motion: reduce) { .dm-glow { animation: none !important; opacity: 1 !important; } }
+
+    .dm-content { position: relative; z-index: 1; }
+
+    .dm-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 28px; gap: 12px; flex-wrap: wrap; }
+    .dm-eyebrow { text-transform: uppercase; letter-spacing: .12em; font-size: .7rem; font-weight: 700; color: var(--accent); margin: 0 0 4px; }
+    .dm-title { font-size: 1.7rem; font-weight: 800; margin: 0; letter-spacing: -.02em; }
+    .dm-title-count { font-size: 1rem; font-weight: 600; color: var(--text-faint); margin-left: 6px; }
+
+    .dm-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
+
+    .dm-text-dim { color: var(--text-dim); }
+    .dm-text-center { text-align: center; }
+    .dm-text-end { text-align: right; }
+    .dm-cell-strong { font-weight: 700; }
+    .dm-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .dm-table-wrap { overflow-x: hidden; }
+    .dm-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: .87rem; }
+    .dm-table thead th {
+        text-align: left; text-transform: uppercase; letter-spacing: .03em;
+        font-size: .68rem; font-weight: 700; color: var(--text-faint);
+        padding: 0 10px 10px; border-bottom: 1px solid var(--border); white-space: nowrap;
+    }
+    /* Độ ưu tiên CSS của ".dm-table thead th" (1 class + 2 thẻ) cao hơn class tiện ích
+       ".dm-text-end"/".dm-text-center" (chỉ 1 class) nên phải viết lại rõ ràng ở đây,
+       nếu không header sẽ luôn bị ép căn trái dù đã gắn class căn phải/giữa. */
+    .dm-table th.dm-text-end   { text-align: right; }
+    .dm-table th.dm-text-center { text-align: center; }
+    .dm-table tbody td {
+        padding: 13px 10px; border-bottom: 1px solid var(--border);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .dm-table tbody tr:last-child td { border-bottom: none; }
+    .dm-table tbody tr { transition: background .2s ease; }
+    .dm-table tbody tr:hover { background: var(--surface-2); }
+
+    .dm-pill {
+        display: inline-flex; align-items: center; padding: 3px 11px;
+        border-radius: 999px; font-size: .68rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: .03em; white-space: nowrap;
+    }
+    .dm-pill--muted { background: var(--surface-2); color: var(--text-dim); }
+    .dm-pill--good  { background: var(--good-soft); color: var(--good); }
+
+    .dm-empty { text-align: center; padding: 28px 0; color: var(--text-faint); font-size: .85rem; white-space: normal; }
+
+    .dm-action-group { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: nowrap; }
+    .dm-icon-btn {
+        display: inline-flex; align-items: center; justify-content: center;
+        flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px;
+        border: 1px solid var(--border); color: var(--text-dim); background: transparent;
+        text-decoration: none; transition: all .2s ease;
+    }
+    .dm-icon-btn--accent:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+    .dm-icon-btn--warn:hover { border-color: var(--warn); color: var(--warn); background: var(--warn-soft); }
+
+    .dm-btn {
+        display: inline-flex; align-items: center; gap: 6px; justify-content: center;
+        border: 1px solid var(--border); color: var(--text-dim);
+        background: transparent; border-radius: 999px;
+        font-size: .82rem; font-weight: 600; padding: 8px 16px;
+        text-decoration: none; transition: all .2s ease; cursor: pointer;
+    }
+    .dm-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+    .dm-btn--solid { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .dm-btn--solid:hover { background: #7a6af0; border-color: #7a6af0; color: #fff; }
+
+    @media (max-width: 680px) {
+        .dm-table-wrap { overflow-x: auto; }
+        .dm-table { table-layout: auto; min-width: 700px; }
+        .dm-table td, .dm-table th { white-space: nowrap; overflow: visible; text-overflow: clip; }
+    }
+
+    /* ===== Modal xác nhận ===== */
+    .dm-confirm-overlay {
+        display: none; position: fixed; inset: 0; z-index: 1090;
+        background: rgba(5,6,10,.62); backdrop-filter: blur(2px);
+        align-items: center; justify-content: center; padding: 20px;
+        /* Khai báo lại biến màu ở đây vì modal nằm NGOÀI .dm-dash (anh em, không
+           phải con) nên không kế thừa được --surface/--text/--warn... khai báo
+           trong .dm-dash — nếu không nền card sẽ trong suốt, chỉ còn chữ nổi. */
+        --surface: #12151d; --border-strong: rgba(255,255,255,.14);
+        --text: #f5f6f9; --text-dim: #d3d6e0; --warn: #f5b95c;
+        --accent: #8b7cf6; --accent-soft: rgba(139,124,246,.14); --border: rgba(255,255,255,.07);
+        font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .dm-confirm-overlay.dm-show { display: flex; }
+    .dm-confirm-box {
+        background: var(--surface); border: 1px solid var(--border-strong); border-radius: 16px;
+        padding: 26px 24px; max-width: 360px; width: 100%; text-align: center;
+        box-shadow: 0 20px 60px rgba(0,0,0,.5);
+        animation: dmConfirmPop .18s ease-out;
+    }
+    @keyframes dmConfirmPop { from { transform: scale(.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .dm-confirm-icon { font-size: 1.8rem; color: var(--warn); margin-bottom: 10px; }
+    .dm-confirm-msg { font-size: .92rem; font-weight: 600; color: var(--text); margin: 0 0 20px; line-height: 1.5; }
+    .dm-confirm-actions { display: flex; gap: 10px; justify-content: center; }
+    .dm-confirm-actions .dm-btn { flex: 1; }
+</style>
+
+<script>
+    (function () {
+        const overlay  = document.getElementById('dmConfirmOverlay');
+        const msgEl    = document.getElementById('dmConfirmMsg');
+        const btnOk    = document.getElementById('dmConfirmOk');
+        const btnCancel= document.getElementById('dmConfirmCancel');
+        let pendingHref = null;
+
+        document.querySelectorAll('.dm-confirm-trigger').forEach(el => {
+            el.addEventListener('click', function (e) {
+                e.preventDefault();
+                pendingHref = this.getAttribute('href');
+                msgEl.textContent = this.dataset.confirmMsg || 'Bạn có chắc chắn?';
+                overlay.classList.add('dm-show');
+            });
+        });
+
+        function closeModal() {
+            overlay.classList.remove('dm-show');
+            pendingHref = null;
+        }
+
+        btnOk.addEventListener('click', function () {
+            if (pendingHref) window.location.href = pendingHref;
+        });
+        btnCancel.addEventListener('click', closeModal);
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) closeModal();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeModal();
+        });
+    })();
+</script>
+
+</body>
+</html>

@@ -18,12 +18,15 @@ public class AppUserService {
 
     private final AppUserRepository appUserRepository;
     private final RoleRepository    roleRepository;
+    private final ShiftService      shiftService;
     private static final int ADMIN_PAGE_SIZE = 10;
 
     public AppUserService(AppUserRepository appUserRepository,
-                          RoleRepository roleRepository) {
+                          RoleRepository roleRepository,
+                          ShiftService shiftService) {
         this.appUserRepository = appUserRepository;
         this.roleRepository    = roleRepository;
+        this.shiftService      = shiftService;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -80,6 +83,13 @@ public class AppUserService {
     // ─────────────────────────────────────────────────────────────
 
     public void register(AppUser user) {
+        createUserWithRole(user, "ROLE_CUSTOMER");
+    }
+
+    // Dùng chung cho cả đăng ký khách hàng (role CUSTOMER) lẫn tạo nhân viên
+    // (role CASHIER/ADMIN/OWNER) từ trang Admin — cùng 1 bộ validate, tránh
+    // trùng lặp logic email/phone/password ở 2 nơi.
+    public AppUser createUserWithRole(AppUser user, String roleName) {
         if (appUserRepository.existsByUsername(user.getUsername())) {
             throw new IllegalArgumentException("Tên đăng nhập đã tồn tại!");
         }
@@ -107,11 +117,11 @@ public class AppUserService {
 
         user.setPassword("{noop}" + user.getPassword());
 
-        Role customerRole = roleRepository.findByName("ROLE_CUSTOMER")
+        Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Không tìm thấy role CUSTOMER"));
-        user.getRoles().add(customerRole);
-        appUserRepository.save(user);
+                        "Không tìm thấy role: " + roleName));
+        user.getRoles().add(role);
+        return appUserRepository.save(user);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -155,6 +165,12 @@ public class AppUserService {
         }
         if (user.getRoles().size() == 1) {
             throw new IllegalStateException("User phải có ít nhất 1 role!");
+        }
+        // Chặn sửa quyền giữa lúc đang có ca mở — tránh kẹt ca vĩnh viễn
+        // (không ai đóng được nữa) nếu role cashier bị thu hồi đột ngột.
+        if (shiftService.hasOpenShift(user)) {
+            throw new IllegalStateException(
+                    "Người này đang có ca làm việc mở! Vui lòng đóng ca trước khi chỉnh sửa quyền.");
         }
 
         user.getRoles().remove(role);
