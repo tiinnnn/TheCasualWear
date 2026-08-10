@@ -2,54 +2,90 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head><title>Đơn hàng</title></head>
 <body>
-<div class="container">
-    <div class="row">
+<div class="container py-4">
+    <div class="row g-4">
         <div class="col-md-3">
             <div th:replace="~{fragments/account-menu :: account-menu}"></div>
         </div>
-        <div class="col-md-9 mt-3">
-            <h5 class="mb-4">Đơn hàng của tôi</h5>
-            <div th:if="${#lists.isEmpty(orders)}" class="text-center py-4">
-                <p class="text-muted">Bạn chưa có đơn hàng nào!</p>
-                <a th:href="@{/shop}" class="btn btn-dark">Mua sắm ngay</a>
-            </div>
-            <div th:each="order : ${orders}" class="card mb-3">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="mb-1">Đơn hàng <strong th:text="'#' + ${order.id}"></strong></h6>
-                            <small class="text-muted"
-                                   th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy HH:mm')}"></small>
+        <div class="col-md-9">
+            <div class="card border-0 shadow-sm overflow-hidden">
+
+                <!-- Header đen giống các trang khác -->
+                <div class="d-flex align-items-center gap-3 px-4 py-3" style="background:#000;color:#fff;">
+                    <i class="bi bi-bag-fill fs-4"></i>
+                    <div>
+                        <h5 class="mb-0 fw-bold">Lịch sử mua hàng</h5>
+                        <small class="text-white-50">Theo dõi trạng thái, xem lại sản phẩm và tổng thanh toán từng đơn.</small>
+                    </div>
+                </div>
+
+                <div class="card-body p-4">
+
+                    <!-- Trạng thái rỗng -->
+                    <div th:if="${#lists.isEmpty(orders)}" class="text-center py-5">
+                        <div class="mx-auto mb-3 d-flex align-items-center justify-content-center rounded-circle"
+                             style="width:96px;height:96px;background:#f5f5f5;">
+                            <i class="bi bi-bag fs-1 text-muted"></i>
                         </div>
-                        <div class="text-end">
-                        <span th:switch="${order.status.name()}">
-                            <span th:case="'PENDING'"   class="badge bg-warning text-dark">Chờ xác nhận</span>
-                            <span th:case="'CONFIRMED'" class="badge bg-info">Đã xác nhận</span>
-                            <span th:case="'SHIPPING'"  class="badge bg-primary">Đang giao</span>
-                            <span th:case="'COMPLETED'" class="badge bg-success">Hoàn thành</span>
-                            <span th:case="'CANCELLED'" class="badge bg-danger">Đã hủy</span>
-                            <span th:case="'RETURNED'"  class="badge bg-secondary">Đã hoàn hàng</span>
-                        </span>
-                            <p class="text-danger fw-bold mt-1 mb-0"
-                               th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></p>
+                        <h6 class="fw-bold mb-2">Chưa có đơn hàng nào</h6>
+                        <p class="text-muted mb-4">
+                            Bắt đầu mua sắm — đơn của bạn sẽ hiện ở đây<br/>
+                            cùng trạng thái và từng sản phẩm.
+                        </p>
+                        <a th:href="@{/shop}" class="btn btn-dark rounded-pill px-4">Khám phá sản phẩm</a>
+                    </div>
+
+                    <!-- Danh sách đơn hàng -->
+                    <div th:each="order : ${orders}" class="border rounded-3 p-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                            <div class="d-flex gap-3">
+                                <i class="bi bi-receipt fs-3 text-muted"></i>
+                                <div>
+                                    <h6 class="mb-1">Đơn hàng <strong th:text="'#' + ${order.id}"></strong></h6>
+                                    <small class="text-muted">
+                                        <i class="bi bi-clock me-1"></i>
+                                        <span th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy HH:mm')}"></span>
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <span th:switch="${order.status.name()}">
+                                    <span th:case="'PENDING'"   class="badge rounded-pill bg-warning text-dark">Chờ xác nhận</span>
+                                    <span th:case="'CONFIRMED'" class="badge rounded-pill bg-info">Đã xác nhận</span>
+                                    <span th:case="'SHIPPING'"  class="badge rounded-pill bg-primary">Đang giao</span>
+                                    <span th:case="'COMPLETED'" class="badge rounded-pill bg-success">Hoàn thành</span>
+                                    <span th:case="'CANCELLED'" class="badge rounded-pill bg-danger">Đã hủy</span>
+                                    <span th:case="'RETURNED'"  class="badge rounded-pill bg-secondary">Đã hoàn hàng</span>
+                                </span>
+                                <p class="text-danger fw-bold mt-1 mb-0"
+                                   th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></p>
+                            </div>
+                        </div>
+
+                        <div th:if="${order.trackingCode != null}"
+                             class="mt-2 ps-1 d-flex align-items-center gap-1 small text-muted">
+                            <i class="bi bi-truck text-primary"></i>
+                            <span>Mã vận đơn: <strong th:text="${order.trackingCode}"></strong></span>
+                            <a th:href="@{'https://tracking.ghn.dev/?order_code=' + ${order.trackingCode}}"
+                               target="_blank" rel="noopener" class="ms-1">
+                                Tra cứu ↗
+                            </a>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-3">
+                            <a th:href="@{'/order/detail/' + ${order.id}}"
+                               class="btn btn-sm btn-outline-dark rounded-pill px-3">
+                                <i class="bi bi-eye me-1"></i>Xem chi tiết
+                            </a>
+                            <!-- Hủy đơn cần chọn lý do → chuyển sang trang chi tiết thay vì hủy thẳng từ list -->
+                            <a th:if="${order.status.name() == 'PENDING'}"
+                               th:href="@{'/order/detail/' + ${order.id}}"
+                               class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                                <i class="bi bi-x-circle me-1"></i>Hủy đơn
+                            </a>
                         </div>
                     </div>
-                    <div th:if="${order.trackingCode != null}" class="mt-2">
-                        <i class="bi bi-truck me-1 text-primary"></i>
-                        <small class="text-muted">Mã vận đơn: <strong th:text="${order.trackingCode}"></strong></small>
-                        <a th:href="@{'https://tracking.ghn.dev/?order_code=' + ${order.trackingCode}}"
-                           target="_blank" rel="noopener" class="ms-1 small">
-                            Tra cứu ↗
-                        </a>
-                    </div>
-                    <div class="d-flex gap-2 mt-3">
-                        <a th:href="@{'/order/detail/' + ${order.id}}"
-                           class="btn btn-sm btn-outline-dark">Xem chi tiết</a>
-                        <!-- Hủy đơn cần chọn lý do → chuyển sang trang chi tiết thay vì hủy thẳng từ list -->
-                        <a th:if="${order.status.name() == 'PENDING'}"
-                           th:href="@{'/order/detail/' + ${order.id}}"
-                           class="btn btn-sm btn-outline-danger">Hủy đơn</a>
-                    </div>
+
                 </div>
             </div>
         </div>

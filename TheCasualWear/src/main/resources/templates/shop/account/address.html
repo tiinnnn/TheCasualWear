@@ -2,49 +2,88 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head><title>Địa chỉ</title></head>
 <body>
-<div class="container">
-    <div class="row">
+<div class="container py-4">
+    <div class="row g-4">
         <div class="col-md-3">
             <div th:replace="~{fragments/account-menu :: account-menu}"></div>
         </div>
-        <div class="col-md-9 mt-3">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h5>Địa chỉ của tôi
-                    <span class="text-muted small fw-normal ms-1"
-                          th:text="'(' + ${#lists.size(addresses)} + '/3)'"></span>
-                </h5>
-                <a th:if="${#lists.size(addresses) < 3}"
-                   th:href="@{/account/address/add}" class="btn btn-dark btn-sm">
-                    + Thêm địa chỉ mới
-                </a>
-                <span th:if="${#lists.size(addresses) >= 3}"
-                      class="text-muted small">Đã đạt tối đa 3 địa chỉ</span>
-            </div>
-            <div th:if="${#lists.isEmpty(addresses)}" class="text-center py-4">
-                <p class="text-muted">Bạn chưa có địa chỉ nào!</p>
-            </div>
-            <div th:each="addr : ${addresses}" class="card mb-3">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
+        <div class="col-md-9">
+            <div class="card border-0 shadow-sm overflow-hidden">
+
+                <!-- Header đen giống các trang khác -->
+                <div class="d-flex justify-content-between align-items-center px-4 py-3" style="background:#000;color:#fff;">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="bi bi-geo-alt-fill fs-4"></i>
                         <div>
-                            <strong th:text="${addr.fullName}"></strong>
-                            <span th:if="${addr.isDefault}" class="badge bg-dark ms-2">Mặc định</span>
-                            <p class="mb-1 text-muted" th:text="${addr.phone}"></p>
-                            <p class="mb-0 small"
-                               th:text="${addr.street + ', ' + addr.district + ', ' + addr.city}"></p>
-                        </div>
-                        <div class="d-flex gap-2 align-items-start">
-                            <a th:href="@{'/account/address/edit/' + ${addr.id}}"
-                               class="btn btn-sm btn-outline-secondary">Sửa</a>
-                            <a th:unless="${addr.isDefault}"
-                               th:href="@{'/account/address/set-default/' + ${addr.id}}"
-                               class="btn btn-sm btn-outline-dark">Đặt mặc định</a>
-                            <a th:unless="${addr.isDefault}"
-                               th:href="@{'/account/address/delete/' + ${addr.id}}"
-                               class="btn btn-sm btn-outline-danger"
-                               onclick="return confirm('Xóa địa chỉ này?')">Xóa</a>
+                            <h5 class="mb-0 fw-bold">
+                                Địa chỉ của tôi
+                                <span class="text-white-50 fw-normal fs-6 ms-1"
+                                      th:text="'(' + ${#lists.size(addresses)} + '/3)'"></span>
+                            </h5>
+                            <small class="text-white-50">Quản lý địa chỉ giao hàng của bạn</small>
                         </div>
                     </div>
+                    <a th:if="${#lists.size(addresses) < 3}"
+                       th:href="@{/account/address/add}" class="btn btn-light rounded-pill btn-sm px-3">
+                        <i class="bi bi-plus-lg me-1"></i>Thêm địa chỉ
+                    </a>
+                    <span th:if="${#lists.size(addresses) >= 3}"
+                          class="text-white-50 small">Đã đạt tối đa 3 địa chỉ</span>
+                </div>
+
+                <div class="card-body p-4">
+
+                    <!-- Trạng thái rỗng -->
+                    <div th:if="${#lists.isEmpty(addresses)}" class="text-center py-5">
+                        <i class="bi bi-geo-alt fs-1 text-muted d-block mb-2"></i>
+                        <p class="text-muted mb-0">Bạn chưa có địa chỉ nào!</p>
+                    </div>
+
+                    <!-- Danh sách địa chỉ -->
+                    <div th:each="addr : ${addresses}"
+                         class="border rounded-3 p-3 mb-3"
+                         th:classappend="${addr.isDefault} ? 'border-dark' : ''">
+                        <div class="d-flex justify-content-between flex-wrap gap-3">
+                            <div class="d-flex gap-3">
+                                <i class="bi bi-person-circle fs-3 text-muted"></i>
+                                <div>
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <strong th:text="${addr.fullName}"></strong>
+                                        <span th:if="${addr.isDefault}"
+                                              class="badge bg-dark rounded-pill">
+                                            <i class="bi bi-check-circle me-1"></i>Mặc định
+                                        </span>
+                                    </div>
+                                    <p class="mb-1 text-muted small">
+                                        <i class="bi bi-telephone me-1"></i>
+                                        <span th:text="${addr.phone}"></span>
+                                    </p>
+                                    <p class="mb-0 small">
+                                        <i class="bi bi-geo-alt me-1"></i>
+                                        <span th:text="${addr.street + ', ' + addr.district + ', ' + addr.city}"></span>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2 align-items-start flex-wrap">
+                                <a th:href="@{'/account/address/edit/' + ${addr.id}}"
+                                   class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                                    <i class="bi bi-pencil me-1"></i>Sửa
+                                </a>
+                                <a th:unless="${addr.isDefault}"
+                                   th:href="@{'/account/address/set-default/' + ${addr.id}}"
+                                   class="btn btn-sm btn-outline-dark rounded-pill px-3">
+                                    <i class="bi bi-check2-circle me-1"></i>Đặt mặc định
+                                </a>
+                                <a th:unless="${addr.isDefault}"
+                                   th:href="@{'/account/address/delete/' + ${addr.id}}"
+                                   class="btn btn-sm btn-outline-danger rounded-pill px-3"
+                                   onclick="return confirm('Xóa địa chỉ này?')">
+                                    <i class="bi bi-trash me-1"></i>Xóa
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
