@@ -180,8 +180,8 @@
                                     <i class="bi bi-pencil" style="pointer-events: none;"></i>
                                 </button>
                                 <a th:href="@{'/admin/categories/delete/' + ${cat.id}}"
-                                   class="btn btn-sm btn-outline-danger"
-                                   onclick="return confirm('Xóa danh mục này?')">
+                                   class="btn btn-sm btn-outline-danger js-confirm-delete"
+                                   th:data-msg="'Xóa danh mục &quot;' + ${cat.name} + '&quot;?'">
                                     <i class="bi bi-trash"></i>
                                 </a>
                             </div>
@@ -210,8 +210,8 @@
                         <span class="text-truncate flex-grow-1 me-2" style="min-width:0;"
                               th:text="${s.name}" th:title="${s.name}"></span>
                             <a th:href="@{'/admin/categories/size/delete/' + ${s.id}}"
-                               class="btn btn-sm btn-outline-danger flex-shrink-0"
-                               onclick="return confirm('Xóa size này?')">
+                               class="btn btn-sm btn-outline-danger flex-shrink-0 js-confirm-delete"
+                               th:data-msg="'Xóa size &quot;' + ${s.name} + '&quot;?'">
                                 <i class="bi bi-trash"></i>
                             </a>
                         </li>
@@ -239,12 +239,32 @@
                         <span class="text-truncate flex-grow-1 me-2" style="min-width:0;"
                               th:text="${cl.name}" th:title="${cl.name}"></span>
                             <a th:href="@{'/admin/categories/color/delete/' + ${cl.id}}"
-                               class="btn btn-sm btn-outline-danger flex-shrink-0"
-                               onclick="return confirm('Xóa màu này?')">
+                               class="btn btn-sm btn-outline-danger flex-shrink-0 js-confirm-delete"
+                               th:data-msg="'Xóa màu &quot;' + ${cl.name} + '&quot;?'">
                                 <i class="bi bi-trash"></i>
                             </a>
                         </li>
                     </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal xác nhận xóa (dùng chung cho xóa danh mục / size / màu,
+         thay cho confirm() của trình duyệt) -->
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Xác nhận xóa</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="confirmDeleteMsg">Bạn có chắc chắn?</div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <a href="#" id="confirmDeleteBtn" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>Xóa
+                    </a>
                 </div>
             </div>
         </div>
@@ -281,6 +301,24 @@
             document.getElementById('editCategoryName').value = name;
             document.getElementById('editCategoryForm').action = '/admin/categories/edit/' + id;
         }
+
+        // Modal xác nhận xóa dùng chung — thay cho onclick="return confirm(...)"
+        (function () {
+            const modalEl = document.getElementById('confirmDeleteModal');
+            const msgEl   = document.getElementById('confirmDeleteMsg');
+            const btnOk   = document.getElementById('confirmDeleteBtn');
+
+            document.querySelectorAll('.js-confirm-delete').forEach(el => {
+                el.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    msgEl.textContent = this.dataset.msg || 'Bạn có chắc chắn?';
+                    btnOk.setAttribute('href', this.getAttribute('href'));
+                    // Khởi tạo modal lúc bấm, không khởi tạo sẵn ở đầu script — xem
+                    // giải thích chi tiết trong product-list.html.
+                    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                });
+            });
+        })();
     </script>
 </div>
 </body>

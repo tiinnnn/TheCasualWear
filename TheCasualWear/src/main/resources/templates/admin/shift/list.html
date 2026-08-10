@@ -19,8 +19,8 @@
                           th:text="'(' + ${#lists.size(shifts)} + ' ca)'"></span>
                 </h1>
             </div>
-            <a th:href="@{/admin/shifts/daily-summary}" class="dm-btn">
-                <i class="bi bi-graph-up me-1"></i>Tổng kết cuối ngày
+            <a th:href="@{/admin/shifts/daily-summary}" class="dm-btn dm-btn--accent">
+                <i class="bi bi-graph-up-arrow me-1"></i>Tổng kết cuối ngày
             </a>
         </div>
 
@@ -103,8 +103,8 @@
                             <div th:if="${s.status.name() == 'CLOSED' and s.handoverConfirmedBy == null}">
                                 <span class="dm-pill dm-pill--warn d-block mb-1" style="width:fit-content">Chờ xác nhận</span>
                                 <form th:action="@{'/admin/shifts/' + ${s.id} + '/confirm-handover'}"
-                                      method="post"
-                                      onsubmit="return confirm('Xác nhận số liệu ca này thay cho ca sau?')">
+                                      method="post" class="dm-confirm-form"
+                                      data-confirm-msg="Xác nhận số liệu ca này thay cho ca sau?">
                                     <button type="submit" class="dm-btn dm-btn--sm dm-btn--confirm">
                                         <i class="bi bi-exclamation-circle-fill me-1"></i>Xác nhận (Admin)
                                     </button>
@@ -123,6 +123,18 @@
             </div>
         </div>
 
+    </div>
+</div>
+
+<!-- ==================== MODAL XÁC NHẬN (thay cho confirm() của trình duyệt) ==================== -->
+<div class="dm-confirm-overlay" id="dmConfirmOverlay">
+    <div class="dm-confirm-box">
+        <div class="dm-confirm-icon"><i class="bi bi-question-circle-fill"></i></div>
+        <p class="dm-confirm-msg" id="dmConfirmMsg">Bạn có chắc chắn?</p>
+        <div class="dm-confirm-actions">
+            <button type="button" class="dm-btn" id="dmConfirmCancel">Hủy</button>
+            <button type="button" class="dm-btn dm-btn--accent" id="dmConfirmOk">Xác nhận</button>
+        </div>
     </div>
 </div>
 
@@ -330,7 +342,86 @@
     .dm-empty {
         text-align: center; padding: 28px 0; color: var(--text-faint); font-size: .85rem;
     }
+
+    /* ===== Modal xác nhận =====
+       Đặt biến màu ngay trên .dm-confirm-overlay vì modal nằm NGOÀI .dm-dash
+       (anh em, không phải con) nên không kế thừa được --surface/--text/--warn...
+       khai báo trong .dm-dash — nếu không nền card sẽ trong suốt. */
+    .dm-confirm-overlay {
+        display: none; position: fixed; inset: 0; z-index: 1090;
+        background: rgba(5,6,10,.62); backdrop-filter: blur(2px);
+        align-items: center; justify-content: center; padding: 20px;
+        --surface: #12151d; --border: rgba(255,255,255,.07); --border-strong: rgba(255,255,255,.14);
+        --text: #eef0f4; --text-dim: #8d93a6; --warn: #f5b95c; --warn-soft: rgba(245,185,92,.13);
+        --accent: #8b7cf6; --accent-soft: rgba(139,124,246,.14);
+        font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .dm-confirm-overlay.dm-show { display: flex; }
+    .dm-confirm-box {
+        background: var(--surface); border: 1px solid var(--border-strong); border-radius: 16px;
+        padding: 26px 24px; max-width: 360px; width: 100%; text-align: center;
+        box-shadow: 0 20px 60px rgba(0,0,0,.5);
+        animation: dmConfirmPop .18s ease-out;
+    }
+    @keyframes dmConfirmPop { from { transform: scale(.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .dm-confirm-icon { font-size: 1.8rem; color: var(--warn); margin-bottom: 10px; }
+    .dm-confirm-msg { font-size: .92rem; font-weight: 600; color: var(--text); margin: 0 0 20px; line-height: 1.5; }
+    .dm-confirm-actions { display: flex; gap: 10px; justify-content: center; }
+    .dm-confirm-actions .dm-btn { flex: 1; padding: 8px 14px; }
 </style>
+
+<script>
+    (function () {
+        const overlay   = document.getElementById('dmConfirmOverlay');
+        const msgEl     = document.getElementById('dmConfirmMsg');
+        const btnOk     = document.getElementById('dmConfirmOk');
+        const btnCancel = document.getElementById('dmConfirmCancel');
+        let pendingForm  = null;
+        let pendingHref  = null;
+
+        function openModal(msg) {
+            msgEl.textContent = msg || 'Bạn có chắc chắn?';
+            overlay.classList.add('dm-show');
+        }
+        function closeModal() {
+            overlay.classList.remove('dm-show');
+            pendingForm = null;
+            pendingHref = null;
+        }
+
+        // Form (vd: nút "Xác nhận (Admin)")
+        document.querySelectorAll('form.dm-confirm-form').forEach(form => {
+            form.addEventListener('submit', function (e) {
+                if (this.dataset.confirmed === 'true') return; // đã xác nhận, cho submit thật
+                e.preventDefault();
+                pendingForm = this;
+                openModal(this.dataset.confirmMsg);
+            });
+        });
+
+        // Link đơn (vd: nút bật/tắt, xóa...)
+        document.querySelectorAll('.dm-confirm-trigger').forEach(el => {
+            el.addEventListener('click', function (e) {
+                e.preventDefault();
+                pendingHref = this.getAttribute('href');
+                openModal(this.dataset.confirmMsg);
+            });
+        });
+
+        btnOk.addEventListener('click', function () {
+            if (pendingForm) {
+                pendingForm.dataset.confirmed = 'true';
+                pendingForm.submit();
+            } else if (pendingHref) {
+                window.location.href = pendingHref;
+            }
+            closeModal();
+        });
+        btnCancel.addEventListener('click', closeModal);
+        overlay.addEventListener('click', function (e) { if (e.target === overlay) closeModal(); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+    })();
+</script>
 
 </body>
 </html>

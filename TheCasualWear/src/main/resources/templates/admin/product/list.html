@@ -248,8 +248,9 @@
                             <i class="bi bi-copy"></i>
                         </a>
                         <a th:href="@{'/admin/products/delete/' + ${p.id}}"
-                           class="btn btn-sm btn-outline-danger"
-                           onclick="return confirm('Ẩn sản phẩm này?')" title="Ẩn">
+                           class="btn btn-sm btn-outline-danger js-confirm-delete"
+                           th:data-msg="'Ẩn sản phẩm &quot;' + ${p.name} + '&quot;? Sản phẩm sẽ chuyển vào mục Đã xóa, khách hàng sẽ không còn thấy nữa.'"
+                           title="Ẩn">
                             <i class="bi bi-trash"></i>
                         </a>
                     </td>
@@ -280,6 +281,48 @@
             </ul>
         </nav>
     </div>
+
+    <!-- Modal xác nhận ẩn sản phẩm (xóa mềm) — thay cho confirm() của trình duyệt -->
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Xác nhận ẩn sản phẩm</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="confirmDeleteMsg">Bạn có chắc chắn?</div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <a href="#" id="confirmDeleteBtn" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>Ẩn sản phẩm
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const modalEl = document.getElementById('confirmDeleteModal');
+            const msgEl   = document.getElementById('confirmDeleteMsg');
+            const btnOk   = document.getElementById('confirmDeleteBtn');
+
+            document.querySelectorAll('.js-confirm-delete').forEach(el => {
+                el.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    msgEl.textContent = this.dataset.msg || 'Bạn có chắc chắn?';
+                    btnOk.setAttribute('href', this.getAttribute('href'));
+                    // Khởi tạo modal NGAY LÚC BẤM (không khởi tạo sẵn ở đầu script) vì
+                    // bootstrap.bundle.min.js được admin-layout nạp ở CUỐI <body>, tức là
+                    // SAU nội dung view này — nếu gọi "new bootstrap.Modal(...)" ngay khi
+                    // script này chạy thì biến `bootstrap` chưa tồn tại, modal sẽ im lặng
+                    // không hoạt động. Đến lúc người dùng bấm nút thì trang đã tải xong
+                    // toàn bộ nên gọi lúc này luôn an toàn.
+                    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                });
+            });
+        })();
+    </script>
 </div>
 </body>
 </html>
