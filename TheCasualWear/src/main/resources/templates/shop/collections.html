@@ -3,51 +3,39 @@
 <head><title>Collections</title></head>
 <body>
 
-<div class="container py-4">
-    <h3 class="fw-bold mb-4">Collections</h3>
+<div class="col-page">
+    <h1 class="col-page-title">Collections</h1>
+    <div class="col-page-line"></div>
 
-    <div th:if="${#lists.isEmpty(collections)}"
-         class="text-muted text-center py-5">
+    <div th:if="${#lists.isEmpty(collections)}" class="col-empty">
         Chưa có collection nào.
     </div>
 
     <div class="row g-4">
-        <div th:each="c : ${collections}" class="col-md-4">
-            <a th:href="@{'/collections/' + ${c.id}}"
-               class="text-decoration-none text-dark">
-                <div class="card border-0 shadow-sm overflow-hidden h-100
-                            hover-shadow">
-                    <!-- Anh bia -->
-                    <div class="position-relative">
-                        <img th:if="${c.coverImage != null}"
-                             th:src="${c.coverImage}"
-                             class="card-img-top"
-                             style="height:220px;object-fit:cover"/>
-                        <div th:unless="${c.coverImage != null}"
-                             class="bg-light d-flex align-items-center
-                                    justify-content-center"
-                             style="height:220px">
-                            <i class="bi bi-image text-muted fs-1"></i>
-                        </div>
-                        <!-- Badge so luong san pham -->
-                        <span class="position-absolute bottom-0 end-0
-                                     m-2 badge bg-dark opacity-75">
-                            <span th:text="${c.products.size()}"></span> sản phẩm
-                        </span>
+        <div th:each="c, i : ${collections}" class="col-6 col-md-4"
+             th:with="activeProducts=${c.products.?[isDeleted != true]}">
+            <a th:href="@{'/collections/' + ${c.id}}" class="col-card"
+               th:style="${'animation-delay:' + (i.index * 0.06) + 's'}">
+                <div class="col-card-img-wrap">
+                    <img th:if="${c.coverImage != null}"
+                         th:src="${c.coverImage}" class="col-card-img"/>
+                    <div th:unless="${c.coverImage != null}" class="col-card-noimg">
+                        <i class="bi bi-image"></i>
                     </div>
-                    <div class="card-body">
-                        <h5 class="fw-bold mb-1" th:text="${c.name}"></h5>
-                        <p class="text-muted small mb-0"
-                           th:text="${c.description}"></p>
-                        <div th:if="${c.startDate != null or c.endDate != null}"
-                             class="small text-muted mt-2">
-                            <i class="bi bi-calendar me-1"></i>
-                            <span th:if="${c.startDate != null}"
-                                  th:text="${#temporals.format(c.startDate, 'dd/MM/yyyy')}"></span>
-                            <span th:if="${c.startDate != null and c.endDate != null}"> — </span>
-                            <span th:if="${c.endDate != null}"
-                                  th:text="${#temporals.format(c.endDate, 'dd/MM/yyyy')}"></span>
-                        </div>
+                    <span class="col-card-count"
+                          th:text="${#lists.size(activeProducts)} + ' sản phẩm'"></span>
+                </div>
+
+                <div class="col-card-body">
+                    <h2 class="col-card-name" th:text="${c.name}"></h2>
+                    <p class="col-card-desc" th:text="${c.description}"></p>
+                    <div th:if="${c.startDate != null or c.endDate != null}" class="col-card-dates">
+                        <i class="bi bi-calendar3"></i>
+                        <span th:if="${c.startDate != null}"
+                              th:text="${#temporals.format(c.startDate, 'dd/MM/yyyy')}"></span>
+                        <span th:if="${c.startDate != null and c.endDate != null}">—</span>
+                        <span th:if="${c.endDate != null}"
+                              th:text="${#temporals.format(c.endDate, 'dd/MM/yyyy')}"></span>
                     </div>
                 </div>
             </a>
@@ -55,5 +43,92 @@
     </div>
 </div>
 
+<style>
+    .col-page {
+        --ink: #111111;
+        --paper: #ffffff;
+        --line: #e5e2dc;
+        --mute: #8a8a8a;
+        max-width: 1140px;
+        margin: 0 auto;
+        padding: 2.5rem 1rem 4rem;
+    }
+    .col-page-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+        color: var(--ink);
+        margin: 0 0 1rem;
+    }
+    .col-page-line { width: 100%; height: 1px; background: var(--line); margin-bottom: 2rem; }
+    .col-empty { text-align: center; padding: 3rem 0; color: var(--mute); font-size: .85rem; }
+
+    .col-card {
+        display: block;
+        text-decoration: none;
+        color: var(--ink);
+        animation: col-fade-up .5s ease both;
+    }
+    @keyframes col-fade-up {
+        from { opacity: 0; transform: translateY(14px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .col-card-img-wrap {
+        position: relative;
+        overflow: hidden;
+        aspect-ratio: 4 / 5;
+        background: #f4f2ef;
+    }
+    .col-card-img {
+        width: 100%; height: 100%; object-fit: cover; display: block;
+        transition: transform .5s ease;
+    }
+    .col-card:hover .col-card-img { transform: scale(1.045); }
+    .col-card-noimg {
+        width: 100%; height: 100%;
+        display: flex; align-items: center; justify-content: center;
+        color: var(--mute); font-size: 2rem;
+    }
+    .col-card-count {
+        position: absolute; top: 10px; right: 10px;
+        background: var(--paper);
+        color: var(--ink);
+        font-size: .62rem;
+        font-weight: 700;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        padding: .25rem .5rem;
+        border: 1px solid var(--line);
+    }
+
+    .col-card-body { padding-top: .9rem; }
+    .col-card-name {
+        font-size: .84rem;
+        font-weight: 700;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+        margin: 0 0 .35rem;
+        transition: opacity .2s;
+    }
+    .col-card:hover .col-card-name { opacity: .6; }
+    .col-card-desc {
+        font-size: .76rem;
+        color: var(--mute);
+        margin: 0 0 .45rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .col-card-dates {
+        font-size: .68rem;
+        letter-spacing: .02em;
+        color: var(--mute);
+        text-transform: uppercase;
+    }
+    .col-card-dates i { margin-right: .3rem; }
+</style>
 </body>
 </html>

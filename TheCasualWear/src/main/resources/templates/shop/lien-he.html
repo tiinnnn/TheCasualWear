@@ -2,47 +2,134 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head><title>Liên hệ</title></head>
 <body>
-<div class="container py-5">
-  <h2 class="fw-bold text-center mb-5">Liên hệ</h2>
 
-  <div class="row g-4">
-    <div class="col-md-6">
-      <div class="card h-100 border-0 shadow-sm">
-        <img src="/images/banner.jpg" class="card-img-top"
-             style="height:250px;object-fit:cover"/>
-        <div class="card-body">
-          <h5 class="fw-bold">The Casual Wear - Chi nhánh 1</h5>
-          <p class="text-muted mb-1">
-            <i class="bi bi-telephone me-2"></i>Hotline: 0901 234 567
-          </p>
-          <p class="text-muted mb-3">
-            <i class="bi bi-geo-alt me-2"></i>
-            33 Đường ABC, Phường XYZ, Hà Nội
-          </p>
-          <a href="https://maps.google.com" target="_blank"
-             class="btn btn-dark">Bản đồ</a>
+<div class="lh-page">
+    <h1 class="lh-page-title">Liên hệ</h1>
+    <div class="lh-page-line"></div>
+    <p class="lh-page-sub">Ghé thăm cửa hàng gần bạn hoặc liên hệ trực tiếp qua hotline từng chi nhánh.</p>
+
+    <div class="row g-4">
+        <div class="col-md-6">
+            <a href="https://maps.google.com" target="_blank" class="lh-card" style="animation-delay:0s">
+                <div class="lh-card-img-wrap">
+                    <img src="/images/banner.jpg" class="lh-card-img"/>
+                </div>
+                <div class="lh-card-body">
+                    <h2 class="lh-card-name">The Casual Wear — Chi nhánh 1</h2>
+                    <p class="lh-card-line">
+                        <i class="bi bi-telephone"></i>Hotline: 0901 234 567
+                    </p>
+                    <p class="lh-card-line">
+                        <i class="bi bi-geo-alt"></i>33 Đường ABC, Phường XYZ, Hà Nội
+                    </p>
+                    <span class="lh-card-cta">Xem bản đồ <i class="bi bi-arrow-right"></i></span>
+                </div>
+            </a>
         </div>
-      </div>
-    </div>
-    <div class="col-md-6">
-      <div class="card h-100 border-0 shadow-sm">
-        <img src="/images/banner.jpg" class="card-img-top"
-             style="height:250px;object-fit:cover"/>
-        <div class="card-body">
-          <h5 class="fw-bold">The Casual Wear - Chi nhánh 2</h5>
-          <p class="text-muted mb-1">
-            <i class="bi bi-telephone me-2"></i>Hotline: 0902 345 678
-          </p>
-          <p class="text-muted mb-3">
-            <i class="bi bi-geo-alt me-2"></i>
-            157 Đường DEF, Phường GHI, Hà Nội
-          </p>
-          <a href="https://maps.google.com" target="_blank"
-             class="btn btn-dark">Bản đồ</a>
+
+        <div class="col-md-6">
+            <a href="https://maps.google.com" target="_blank" class="lh-card" style="animation-delay:.1s">
+                <div class="lh-card-img-wrap">
+                    <img src="/images/banner.jpg" class="lh-card-img"/>
+                </div>
+                <div class="lh-card-body">
+                    <h2 class="lh-card-name">The Casual Wear — Chi nhánh 2</h2>
+                    <p class="lh-card-line">
+                        <i class="bi bi-telephone"></i>Hotline: 0902 345 678
+                    </p>
+                    <p class="lh-card-line">
+                        <i class="bi bi-geo-alt"></i>157 Đường DEF, Phường GHI, Hà Nội
+                    </p>
+                    <span class="lh-card-cta">Xem bản đồ <i class="bi bi-arrow-right"></i></span>
+                </div>
+            </a>
         </div>
-      </div>
     </div>
-  </div>
 </div>
+
+<style>
+    .lh-page {
+        --ink: #111111;
+        --paper: #ffffff;
+        --line: #e5e2dc;
+        --mute: #8a8a8a;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 2.5rem 1rem 4rem;
+    }
+    .lh-page-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+        color: var(--ink);
+        margin: 0 0 1rem;
+        text-align: center;
+    }
+    .lh-page-line { width: 40px; height: 1px; background: var(--ink); margin: 0 auto 1rem; }
+    .lh-page-sub {
+        text-align: center;
+        font-size: .84rem;
+        color: var(--mute);
+        max-width: 480px;
+        margin: 0 auto 2.5rem;
+    }
+
+    .lh-card {
+        display: block;
+        text-decoration: none;
+        color: var(--ink);
+        border: 1px solid var(--line);
+        animation: lh-fade-up .5s ease both;
+        transition: border-color .2s;
+    }
+    .lh-card:hover { border-color: var(--ink); color: var(--ink); }
+    @keyframes lh-fade-up {
+        from { opacity: 0; transform: translateY(14px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .lh-card-img-wrap { overflow: hidden; height: 240px; }
+    .lh-card-img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s ease; }
+    .lh-card:hover .lh-card-img { transform: scale(1.045); }
+
+    .lh-card-body { padding: 1.4rem; border-top: 1px solid var(--line); }
+    .lh-card-name {
+        font-size: .9rem;
+        font-weight: 700;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+        margin: 0 0 .8rem;
+    }
+    .lh-card-line {
+        font-size: .8rem;
+        color: var(--mute);
+        margin: 0 0 .45rem;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+    .lh-card-line i { color: var(--ink); font-size: .85rem; }
+
+    .lh-card-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        margin-top: .8rem;
+        font-size: .68rem;
+        font-weight: 700;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+        color: var(--ink);
+        border-bottom: 1px solid var(--ink);
+        padding-bottom: 2px;
+        transition: gap .2s;
+    }
+    .lh-card:hover .lh-card-cta { gap: .65rem; }
+
+    @media (max-width: 576px) {
+        .lh-card-img-wrap { height: 200px; }
+    }
+</style>
 </body>
 </html>

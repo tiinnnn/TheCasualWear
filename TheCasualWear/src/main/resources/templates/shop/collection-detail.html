@@ -3,70 +3,142 @@
 <head><title th:text="${collection.name}"></title></head>
 <body>
 
-<!-- Anh bia + ten collection -->
-<div class="position-relative mb-5"
-     th:if="${collection.coverImage != null}">
-    <img th:src="${collection.coverImage}"
-         class="w-100"
-         style="height:320px;object-fit:cover;filter:brightness(0.7)"/>
-    <div class="position-absolute top-50 start-50 translate-middle text-center text-white">
-        <h2 class="fw-bold" th:text="${collection.name}"></h2>
-        <p th:text="${collection.description}"></p>
-        <div th:if="${collection.endDate != null}" class="small opacity-75"></div>
+<!-- Ảnh bìa + tên collection -->
+<div class="col-hero" th:if="${collection.coverImage != null}">
+    <img th:src="${collection.coverImage}" class="col-hero-img"/>
+    <div class="col-hero-overlay"></div>
+    <div class="col-hero-text">
+        <h1 class="col-hero-name" th:text="${collection.name}"></h1>
+        <p class="col-hero-desc" th:if="${collection.description != null}" th:text="${collection.description}"></p>
+        <div th:if="${collection.startDate != null or collection.endDate != null}" class="col-hero-dates">
+            <span th:if="${collection.startDate != null}"
+                  th:text="'Từ ' + ${#temporals.format(collection.startDate, 'dd/MM/yyyy')}"></span>
+            <span th:if="${collection.startDate != null and collection.endDate != null}"> — </span>
+            <span th:if="${collection.endDate != null}"
+                  th:text="'Kết thúc ' + ${#temporals.format(collection.endDate, 'dd/MM/yyyy')}"></span>
+        </div>
     </div>
 </div>
 
-<!-- Tieu de khi khong co anh -->
-<div th:unless="${collection.coverImage != null}" class="mb-4 text-center">
-    <h2 class="fw-bold" th:text="${collection.name}"></h2>
-    <p class="text-muted" th:text="${collection.description}"></p>
+<!-- Tiêu đề khi không có ảnh -->
+<div th:unless="${collection.coverImage != null}" class="col-header-plain">
+    <h1 class="col-hero-name" th:text="${collection.name}"></h1>
+    <p class="col-plain-desc" th:if="${collection.description != null}" th:text="${collection.description}"></p>
+    <div th:if="${collection.startDate != null or collection.endDate != null}" class="col-hero-dates col-hero-dates--plain">
+        <span th:if="${collection.startDate != null}"
+              th:text="'Từ ' + ${#temporals.format(collection.startDate, 'dd/MM/yyyy')}"></span>
+        <span th:if="${collection.startDate != null and collection.endDate != null}"> — </span>
+        <span th:if="${collection.endDate != null}"
+              th:text="'Kết thúc ' + ${#temporals.format(collection.endDate, 'dd/MM/yyyy')}"></span>
+    </div>
 </div>
 
-<div class="container">
+<div class="col-page">
     <!-- Breadcrumb -->
-    <nav class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a th:href="@{/}">Trang chủ</a></li>
-            <li class="breadcrumb-item"><a th:href="@{/collections}">Collections</a></li>
-            <li class="breadcrumb-item active" th:text="${collection.name}"></li>
+    <nav class="col-breadcrumb-nav">
+        <ol class="col-breadcrumb">
+            <li><a th:href="@{/}">Trang chủ</a></li>
+            <li><a th:href="@{/collections}">Collections</a></li>
+            <li class="is-active" th:text="${collection.name}"></li>
         </ol>
     </nav>
 
-    <!-- So luong san pham -->
-    <p class="text-muted mb-4">
-        <span th:text="${products.size()}"></span> sản phẩm
-    </p>
+    <p class="col-count" th:text="${#lists.size(products)} + ' sản phẩm'"></p>
 
-    <!-- Danh sach san pham -->
-    <div th:if="${#lists.isEmpty(products)}"
-         class="text-muted text-center py-5">
+    <!-- Trống -->
+    <div th:if="${#lists.isEmpty(products)}" class="col-empty">
         Collection này chưa có sản phẩm.
     </div>
 
-    <div class="row g-4">
-        <div th:each="p : ${products}" class="col-6 col-md-3">
-            <a th:href="@{'/product/' + ${p.id}}"
-               class="text-decoration-none text-dark">
-                <div class="card border-0 shadow-sm h-100">
-                    <img th:if="${p.images != null and !p.images.isEmpty()}"
-                         th:src="${p.images[0].imageUrl}"
-                         class="card-img-top"
-                         style="height:220px;object-fit:cover"/>
-                    <img th:unless="${p.images != null and !p.images.isEmpty()}"
-                         src="/images/no-image.png"
-                         class="card-img-top"
-                         style="height:220px;object-fit:cover"/>
-                    <div class="card-body p-2">
-                        <p class="mb-1 small fw-bold"
-                           th:text="${p.name}"></p>
-                        <span class="text-danger fw-bold small"
-                              th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></span>
-                    </div>
-                </div>
+    <!-- Sản phẩm -->
+    <div class="row row-cols-2 row-cols-md-4 g-4">
+        <div th:each="p, i : ${products}" class="col">
+            <a th:href="@{'/product/' + ${p.id}}" class="col-prod-card"
+               th:style="${'animation-delay:' + (i.index * 0.05) + 's'}">
+                <img th:if="${p.images != null and !p.images.isEmpty()}"
+                     th:src="${p.images[0].imageUrl}" class="col-prod-img"/>
+                <img th:unless="${p.images != null and !p.images.isEmpty()}"
+                     src="/images/no-image.png" class="col-prod-img"/>
+                <p class="col-prod-name" th:text="${p.name}"></p>
+                <p class="col-prod-price" th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></p>
             </a>
         </div>
     </div>
 </div>
 
+<style>
+    :root {
+        --ink: #111111;
+        --paper: #ffffff;
+        --line: #e5e2dc;
+        --mute: #8a8a8a;
+    }
+
+    /* ── Hero ── */
+    .col-hero { position: relative; height: 360px; overflow: hidden; margin-bottom: 3rem; }
+    .col-hero-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .col-hero-overlay {
+        position: absolute; inset: 0;
+        background: linear-gradient(to bottom, rgba(0,0,0,.15), rgba(0,0,0,.45));
+    }
+    .col-hero-text {
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        text-align: center; color: #fff; padding: 0 1rem;
+        animation: col-fade-up .6s ease both;
+    }
+    .col-hero-name {
+        font-size: 1.6rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin: 0 0 .7rem;
+    }
+    .col-hero-desc { font-size: .88rem; max-width: 480px; opacity: .9; margin: 0 0 .8rem; }
+    .col-hero-dates {
+        font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; opacity: .8;
+        border-top: 1px solid rgba(255,255,255,.4); padding-top: .6rem; display: inline-block;
+    }
+
+    .col-header-plain { text-align: center; padding: 3rem 1rem 1rem; }
+    .col-header-plain .col-hero-name { color: var(--ink); }
+    .col-plain-desc { color: var(--mute); font-size: .85rem; max-width: 480px; margin: 0 auto .8rem; }
+    .col-hero-dates--plain { color: var(--mute); border-top: 1px solid var(--line); }
+
+    @keyframes col-fade-up {
+        from { opacity: 0; transform: translateY(16px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Body ── */
+    .col-page { max-width: 1140px; margin: 0 auto; padding: 0 1rem 4rem; }
+
+    .col-breadcrumb-nav { margin-bottom: 1.2rem; }
+    .col-breadcrumb { display: flex; list-style: none; padding: 0; margin: 0; font-size: .78rem; color: var(--mute); }
+    .col-breadcrumb li + li::before { content: "›"; margin: 0 .5rem; color: #bbb; }
+    .col-breadcrumb a { color: var(--mute); text-decoration: none; transition: color .15s; }
+    .col-breadcrumb a:hover { color: var(--ink); }
+    .col-breadcrumb .is-active { color: var(--ink); font-weight: 600; }
+
+    .col-count {
+        font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--mute);
+        border-bottom: 1px solid var(--line); padding-bottom: 1.2rem; margin-bottom: 2rem;
+    }
+    .col-empty { text-align: center; padding: 3rem 0; color: var(--mute); font-size: .85rem; }
+
+    /* ── Thẻ sản phẩm — đồng bộ với product-detail.html ── */
+    .col-prod-card {
+        display: block; text-decoration: none; color: var(--ink);
+        animation: col-fade-up .45s ease both;
+    }
+    .col-prod-img { width: 100%; height: 260px; object-fit: cover; display: block; transition: opacity .2s; }
+    .col-prod-card:hover .col-prod-img { opacity: .85; }
+    .col-prod-name {
+        font-size: .68rem; letter-spacing: .04em; text-transform: uppercase; color: var(--ink);
+        margin: .7rem 0 .2rem;
+    }
+    .col-prod-price { font-size: .74rem; color: var(--mute); margin: 0; }
+
+    @media (max-width: 576px) {
+        .col-hero { height: 260px; }
+        .col-hero-name { font-size: 1.2rem; }
+    }
+</style>
 </body>
 </html>

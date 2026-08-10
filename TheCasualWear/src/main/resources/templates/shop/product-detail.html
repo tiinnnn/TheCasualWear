@@ -5,70 +5,210 @@
 <div class="container">
     <div class="row">
         <div class="col-md-6">
-            <div id="productCarousel" class="carousel slide mb-2" data-bs-ride="false">
-                <div class="carousel-inner">
-
-                    <div th:each="img, i : ${product.images}"
-                         th:classappend="${i.index == 0} ? 'active'"
-                         class="carousel-item"
-                         th:attr="data-type='product'">
-                        <img th:src="${img.imageUrl}"
-                             class="d-block w-100 rounded carousel-zoomable"
-                             style="height:450px;object-fit:cover;cursor:zoom-in"/>
-                    </div>
-
-                    <th:block th:each="v : ${variants}">
-                        <div th:each="img : ${v.images}"
-                             class="carousel-item"
-                             th:attr="data-type='variant',
-                                      data-color-id=${v.color != null ? v.color.id : 0},
-                                      data-variant-id=${v.id}">
-                            <img th:src="${img.imageUrl}"
-                                 class="d-block w-100 rounded carousel-zoomable"
-                                 style="height:450px;object-fit:cover;cursor:zoom-in"/>
-                        </div>
-                    </th:block>
-
-                    <!-- Fallback nếu không có ảnh nào -->
-                    <div th:if="${(product.images == null or product.images.isEmpty())}"
-                         class="carousel-item active"
-                         th:unless="${variants != null and !variants.isEmpty() and variants[0].images != null and !variants[0].images.isEmpty()}">
-                        <img src="/images/no-image.png"
-                             class="d-block w-100 rounded"
-                             style="height:450px;object-fit:cover"/>
-                    </div>
+            <div class="d-flex gap-2 align-items-start pdp-gallery">
+                <!-- Thumbnails — cột dọc bên trái, kiểu smaker.vn -->
+                <div style="position:relative;flex-shrink:0">
+                    <button id="thumb-prev" onclick="scrollThumbs(-1)"
+                            style="display:none;position:absolute;top:0;left:50%;transform:translateX(-50%);
+                                   z-index:2;background:var(--paper,#fff);border:1px solid var(--line,#e5e2dc);
+                                   width:70px;height:20px;cursor:pointer;font-size:.7rem;
+                                   align-items:center;justify-content:center">
+                        <i class="bi bi-chevron-up"></i>
+                    </button>
+                    <div id="thumbnailRow" class="pdp-thumb-col"></div>
+                    <button id="thumb-next" onclick="scrollThumbs(1)"
+                            style="display:none;position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+                                   z-index:2;background:var(--paper,#fff);border:1px solid var(--line,#e5e2dc);
+                                   width:70px;height:20px;cursor:pointer;font-size:.7rem;
+                                   align-items:center;justify-content:center">
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
                 </div>
-                <button class="carousel-control-prev" type="button"
-                        data-bs-target="#productCarousel" data-bs-slide="prev">
-                    <span class="carousel-control-prev-icon"></span>
-                </button>
-                <button class="carousel-control-next" type="button"
-                        data-bs-target="#productCarousel" data-bs-slide="next">
-                    <span class="carousel-control-next-icon"></span>
-                </button>
+
+                <!-- Ảnh chính -->
+                <div id="productCarousel" class="carousel slide flex-grow-1" data-bs-ride="false">
+                    <div class="carousel-inner">
+
+                        <div th:each="img, i : ${product.images}"
+                             th:classappend="${i.index == 0} ? 'active'"
+                             class="carousel-item"
+                             th:attr="data-type='product'">
+                            <img th:src="${img.imageUrl}"
+                                 class="d-block w-100 pdp-main-img carousel-zoomable"
+                                 style="cursor:zoom-in"/>
+                        </div>
+
+                        <th:block th:each="v : ${variants}">
+                            <div th:each="img : ${v.images}"
+                                 class="carousel-item"
+                                 th:attr="data-type='variant',
+                                          data-color-id=${v.color != null ? v.color.id : 0},
+                                          data-variant-id=${v.id}">
+                                <img th:src="${img.imageUrl}"
+                                     class="d-block w-100 pdp-main-img carousel-zoomable"
+                                     style="cursor:zoom-in"/>
+                            </div>
+                        </th:block>
+
+                        <!-- Fallback nếu không có ảnh nào -->
+                        <div th:if="${(product.images == null or product.images.isEmpty())}"
+                             class="carousel-item active"
+                             th:unless="${variants != null and !variants.isEmpty() and variants[0].images != null and !variants[0].images.isEmpty()}">
+                            <img src="/images/no-image.png"
+                                 class="d-block w-100 pdp-main-img"/>
+                        </div>
+                    </div>
+                    <button class="carousel-control-prev" type="button"
+                            data-bs-target="#productCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon"></span>
+                    </button>
+                    <button class="carousel-control-next" type="button"
+                            data-bs-target="#productCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon"></span>
+                    </button>
+                </div>
             </div>
 
-            <!-- Thumbnails — JS render, horizontal scroll -->
-            <div style="position:relative;padding:0 18px">
-                <button id="thumb-prev" onclick="scrollThumbs(-1)"
-                        style="display:none;position:absolute;left:0;top:50%;transform:translateY(-50%);
-                               z-index:2;background:#fff;border:1px solid #ddd;border-radius:50%;
-                               width:28px;height:28px;cursor:pointer;font-size:.8rem;
-                               align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.12)">
-                    <i class="bi bi-chevron-left"></i>
-                </button>
-                <div id="thumbnailRow"
-                     style="display:flex;gap:8px;overflow-x:auto;scroll-behavior:smooth;
-                            scrollbar-width:none;-ms-overflow-style:none;padding-bottom:2px"></div>
-                <button id="thumb-next" onclick="scrollThumbs(1)"
-                        style="display:none;position:absolute;right:0;top:50%;transform:translateY(-50%);
-                               z-index:2;background:#fff;border:1px solid #ddd;border-radius:50%;
-                               width:28px;height:28px;cursor:pointer;font-size:.8rem;
-                               align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.12)">
-                    <i class="bi bi-chevron-right"></i>
-                </button>
-            </div>
-            <style>#thumbnailRow::-webkit-scrollbar{display:none}</style>
+            <style>
+                /* ── Gallery kiểu smaker.vn: thumbnail dọc, ảnh chính vuông, không bo góc ── */
+                .pdp-main-img { height: 560px; object-fit: cover; }
+                .pdp-thumb-col {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                    width: 70px;
+                    max-height: 560px;
+                    overflow-y: auto;
+                    scrollbar-width: none;
+                    -ms-overflow-style: none;
+                }
+                .pdp-thumb-col::-webkit-scrollbar { display: none; }
+                .thumb-img { border-radius: 0 !important; }
+                @media (max-width: 767px) {
+                    .pdp-main-img { height: 380px; }
+                    .pdp-thumb-col { width: 54px; max-height: 380px; }
+                }
+
+                /* ── Cột thông tin sản phẩm — chữ hoa tracked-out, vuông vắn ── */
+                .pdp-title {
+                    font-size: 1.15rem;
+                    font-weight: 700;
+                    letter-spacing: .04em;
+                    text-transform: uppercase;
+                }
+                .pdp-icon-btn {
+                    width: 40px; height: 40px;
+                    border: 1px solid var(--line, #e5e2dc);
+                    background: var(--paper, #fff);
+                    color: var(--ink, #111);
+                    display: flex; align-items: center; justify-content: center;
+                    transition: opacity .2s;
+                }
+                .pdp-icon-btn:hover { opacity: .6; }
+                .pdp-category {
+                    font-size: .72rem;
+                    letter-spacing: .08em;
+                    text-transform: uppercase;
+                    color: var(--mute, #8a8a8a);
+                    margin: .4rem 0 0;
+                }
+                .pdp-price {
+                    font-size: .95rem;
+                    font-weight: 600;
+                    color: var(--ink, #111);
+                }
+                .pdp-price-strike {
+                    font-size: .82rem;
+                    color: var(--mute, #8a8a8a);
+                    text-decoration: line-through;
+                }
+                .pdp-sale-badge {
+                    font-size: .68rem;
+                    font-weight: 700;
+                    letter-spacing: .04em;
+                    color: #c0392b;
+                }
+                .pdp-label {
+                    font-size: .68rem;
+                    font-weight: 700;
+                    letter-spacing: .1em;
+                    text-transform: uppercase;
+                    color: var(--ink, #111);
+                }
+                .pdp-size-guide {
+                    font-size: .68rem;
+                    letter-spacing: .04em;
+                    text-decoration: underline;
+                    color: var(--mute, #8a8a8a);
+                }
+                .pdp-size-guide:hover { color: var(--ink, #111); }
+                .pdp-stock {
+                    font-size: .72rem;
+                    letter-spacing: .04em;
+                    color: var(--mute, #8a8a8a);
+                }
+
+                /* Nút màu / size do JS render — ép về style vuông, chữ hoa */
+                #colorBtns .btn, #sizeBtns .btn {
+                    border-radius: 0 !important;
+                    font-size: .74rem !important;
+                    letter-spacing: .04em;
+                    text-transform: uppercase;
+                    min-width: 44px;
+                }
+                #sizeBtns .btn {
+                    min-width: 48px;
+                    height: 40px;
+                }
+                #colorBtns .btn.btn-dark, #sizeBtns .btn.btn-dark {
+                    background: var(--ink, #111) !important;
+                    border-color: var(--ink, #111) !important;
+                }
+                #colorBtns .btn.btn-outline-dark, #sizeBtns .btn.btn-outline-dark {
+                    color: var(--ink, #111);
+                    border-color: var(--line, #e5e2dc);
+                }
+
+                .pdp-qty .btn { border-radius: 0; border-color: var(--line, #e5e2dc); color: var(--ink, #111); }
+                .pdp-qty input { border-radius: 0; border-color: var(--line, #e5e2dc); }
+
+                .pdp-add-btn {
+                    width: 100%;
+                    background: var(--ink, #111);
+                    color: #fff;
+                    border: none;
+                    padding: .85rem 1rem;
+                    font-size: .78rem;
+                    font-weight: 700;
+                    letter-spacing: .12em;
+                    text-transform: uppercase;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    transition: opacity .2s;
+                }
+                .pdp-add-btn:hover:not(:disabled) { opacity: .85; }
+                .pdp-add-btn:disabled { background: var(--mute, #8a8a8a); }
+
+                .pdp-accordion { border-top: 1px solid var(--line, #e5e2dc); }
+                .pdp-accordion-toggle {
+                    width: 100%;
+                    background: none;
+                    border: none;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: .85rem 0;
+                    font-size: .72rem;
+                    font-weight: 700;
+                    letter-spacing: .1em;
+                    text-transform: uppercase;
+                    color: var(--ink, #111);
+                    text-decoration: none;
+                }
+                .pdp-accordion-toggle .bi-chevron-down { transition: transform .2s; }
+                .pdp-accordion-toggle[aria-expanded="false"] .bi-chevron-down { transform: rotate(-90deg); }
+            </style>
         </div>
         <div class="col-md-6">
             <nav aria-label="breadcrumb" class="mb-3">
@@ -90,16 +230,15 @@
                 </ol>
             </nav>
 
-            <div class="d-flex align-items-start justify-content-between gap-2">
-                <h2 class="fw-bold mb-0" th:text="${product.name}"></h2>
+            <div class="d-flex align-items-start justify-content-between gap-3">
+                <h1 class="pdp-title mb-0" th:text="${product.name}"></h1>
 
                 <!-- Nút yêu thích — đã đăng nhập -->
                 <form sec:authorize="isAuthenticated()"
                       th:action="@{/wishlist/toggle/{id}(id=${product.id})}"
                       method="post" class="flex-shrink-0">
                     <button type="submit"
-                            class="btn btn-light border rounded-circle p-2"
-                            style="width:44px;height:44px"
+                            class="pdp-icon-btn"
                             th:title="${isWishlisted} ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'">
                         <i class="bi fs-5"
                            th:classappend="${isWishlisted} ? 'bi-heart-fill text-danger' : 'bi-heart'"></i>
@@ -108,53 +247,51 @@
 
                 <a sec:authorize="!isAuthenticated()"
                    th:href="@{/auth/login}"
-                   class="btn btn-light border rounded-circle p-2 flex-shrink-0"
-                   style="width:44px;height:44px"
+                   class="pdp-icon-btn flex-shrink-0"
                    title="Đăng nhập để yêu thích">
                     <i class="bi bi-heart fs-5"></i>
                 </a>
             </div>
 
-            <p class="text-muted mb-1 mt-1"
-               th:text="${product.category != null ? product.category.name : ''}"></p>
+            <p class="pdp-category" th:text="${product.category != null ? product.category.name : ''}"></p>
 
-            <div th:if="${activeSale != null}" class="d-flex align-items-center gap-2 mt-3">
-                <span class="badge bg-danger"
+            <div th:if="${activeSale != null}" class="d-flex align-items-center gap-2 mt-2">
+                <span class="pdp-sale-badge"
                       th:text="'-' + ${#numbers.formatDecimal(activeSale.discountPercent,1,0)} + '%'"></span>
-                <span class="text-muted text-decoration-line-through"
+                <span class="pdp-price-strike"
                       th:text="${#numbers.formatInteger(product.price, 0, 'COMMA') + ' đ'}"></span>
             </div>
-            <h3 class="text-danger fw-bold mb-3"
-                th:classappend="${activeSale != null} ? 'mt-1' : 'mt-3'"
-                id="displayPrice"
-                th:text="${#numbers.formatInteger(effectivePrice, 0, 'COMMA') + ' đ'}"></h3>
+            <p class="pdp-price mb-0"
+               th:classappend="${activeSale != null} ? 'text-danger mt-1' : 'mt-2'"
+               id="displayPrice"
+               th:text="${#numbers.formatInteger(effectivePrice, 0, 'COMMA') + ' đ'}"></p>
 
-            <hr/>
-
-            <div class="mb-3" id="colorSection">
-                <small class="text-muted d-block mb-2 fw-bold">Màu sắc:</small>
-                <div id="colorBtns" class="d-flex gap-2 flex-wrap"></div>
+            <div class="mt-4" id="colorSection">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="pdp-label">Màu sắc</span>
+                </div>
+                <div id="colorBtns" class="d-flex gap-2 flex-wrap pdp-color-row"></div>
             </div>
 
-            <div class="mb-3" id="sizeSection">
-                <small class="text-muted d-block mb-2 fw-bold">Kích thước:</small>
-                <div id="sizeBtns" class="d-flex gap-2 flex-wrap"></div>
+            <div class="mt-4" id="sizeSection">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="pdp-label">Kích thước</span>
+                    <a th:href="@{/chinh-sach-doi-tra}" class="pdp-size-guide">Bảng size &amp; độ vừa vặn</a>
+                </div>
+                <div id="sizeBtns" class="d-flex gap-2 flex-wrap pdp-size-row"></div>
             </div>
 
-            <div class="mb-3">
-                <span id="stockBadge" class="badge bg-secondary">Chọn size và màu</span>
+            <div class="mt-3">
+                <span id="stockBadge" class="pdp-stock">Chọn size và màu</span>
             </div>
-
-
-            <hr/>
 
             <!-- Form thêm vào giỏ — chỉ cần variantId -->
-            <form th:action="@{/cart/add}" method="post" id="addToCartForm">
+            <form th:action="@{/cart/add}" method="post" id="addToCartForm" class="mt-3">
                 <input type="hidden" name="variantId" id="selectedVariantId" value=""/>
 
-                <div class="d-flex gap-2 align-items-center mb-3">
-                    <label class="form-label mb-0 fw-bold">Số lượng:</label>
-                    <div class="input-group" style="width:130px">
+                <div class="d-flex gap-3 align-items-center mb-3">
+                    <span class="pdp-label mb-0">Số lượng</span>
+                    <div class="input-group pdp-qty" style="width:130px">
                         <button type="button" class="btn btn-outline-secondary"
                                 onclick="changeQty(-1)">-</button>
                         <input type="number" id="qtyInput" name="quantity"
@@ -166,61 +303,117 @@
                 </div>
 
                 <button type="submit" id="addToCartBtn"
-                        class="btn btn-dark w-100 py-2" disabled>
-                    <i class="bi bi-cart-plus me-2"></i>Chọn size và màu trước
+                        class="pdp-add-btn" disabled>
+                    <span>Chọn size và màu trước</span>
+                    <i class="bi bi-bag"></i>
                 </button>
             </form>
 
             <div id="variantError" class="text-danger small mt-2" style="display:none">
                 Vui lòng chọn size và màu sắc!
             </div>
+
+            <!-- Details — thu gọn kiểu smaker.vn -->
+            <div class="pdp-accordion mt-4">
+                <button class="pdp-accordion-toggle" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#pdpDetails">
+                    <span>Chi tiết</span>
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+                <div id="pdpDetails" class="collapse show">
+                    <div class="product-description-container pt-2 pb-2">
+                        <span id="rawDescription" th:text="${product.description}" style="display:none;"></span>
+                        <div id="formattedDescription" class="product-description-content"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pdp-accordion">
+                <a class="pdp-accordion-toggle" th:href="@{/chinh-sach-doi-tra}">
+                    <span>Chính sách đổi trả</span>
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
         </div>
     </div>
-    <div class="product-description-container mt-5 pt-4 border-top">
-        <span id="rawDescription" th:text="${product.description}" style="display:none;"></span>
-
-        <div id="formattedDescription" class="product-description-content"></div>
-    </div>
-    <!-- SẢN PHẨM LIÊN QUAN -->
-    <div th:if="${relatedProducts != null and !relatedProducts.isEmpty()}" class="mt-5">
-        <h4 class="mb-3 fw-bold">Sản phẩm liên quan</h4>
+    <!-- SẢN PHẨM LIÊN QUAN — kiểu "MORE LIKE THIS" của smaker.vn -->
+    <div th:if="${relatedProducts != null and !relatedProducts.isEmpty()}" class="pdp-related mt-5 pt-4 border-top">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="pdp-related-title">Sản phẩm tương tự</span>
+            <a th:if="${product.category != null}"
+               th:href="@{/shop(category=${product.category.id})}"
+               class="pdp-related-link">Xem tất cả <i class="bi bi-arrow-right"></i></a>
+        </div>
         <div class="row row-cols-2 row-cols-md-4 g-4">
             <div class="col" th:each="p : ${relatedProducts}"
                  th:with="relSale=${relatedActiveSales != null ? relatedActiveSales.get(p.id) : null}">
-                <a th:href="@{'/product/' + ${p.id}}" class="text-decoration-none text-dark">
-                    <div class="card h-100 border-0 shadow-sm"
-                         style="cursor:pointer;transition:transform 0.2s;position:relative"
-                         onmouseover="this.style.transform='translateY(-4px)'"
-                         onmouseout="this.style.transform='translateY(0)'">
+                <a th:href="@{'/product/' + ${p.id}}" class="text-decoration-none pdp-related-card">
+                    <div class="position-relative">
                         <span th:if="${relSale != null}"
-                              class="badge bg-danger position-absolute"
-                              style="top:8px;left:8px;z-index:2"
+                              class="pdp-sale-flag position-absolute"
                               th:text="'-' + ${#numbers.formatDecimal(relSale.discountPercent,1,0)} + '%'"></span>
                         <img th:if="${p.images != null and !p.images.isEmpty()}"
                              th:src="${p.images[0].imageUrl}"
-                             class="card-img-top" style="height:220px;object-fit:cover"/>
+                             class="pdp-related-img" />
                         <img th:unless="${p.images != null and !p.images.isEmpty()}"
                              src="/images/no-image.png"
-                             class="card-img-top" style="height:220px;object-fit:cover"/>
-                        <div class="card-body">
-                            <h6 class="card-title" th:text="${p.name}"></h6>
-                            <p th:if="${relSale != null}" class="mb-0">
-                                <span class="text-muted text-decoration-line-through small me-1"
-                                      th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></span>
-                                <span class="text-danger fw-bold"
-                                      th:text="${#numbers.formatInteger(
-                                            p.price - (p.price * relSale.discountPercent / 100),
-                                            0, 'COMMA') + ' đ'}"></span>
-                            </p>
-                            <p th:unless="${relSale != null}" class="text-danger fw-bold mb-0"
-                               th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></p>
-                        </div>
+                             class="pdp-related-img" />
                     </div>
+                    <p class="pdp-related-name" th:text="${p.name}"></p>
+                    <p th:if="${relSale != null}" class="pdp-related-price mb-0">
+                        <span class="pdp-price-strike me-1"
+                              th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></span>
+                        <span class="text-danger"
+                              th:text="${#numbers.formatInteger(
+                                    p.price - (p.price * relSale.discountPercent / 100),
+                                    0, 'COMMA') + ' đ'}"></span>
+                    </p>
+                    <p th:unless="${relSale != null}" class="pdp-related-price mb-0"
+                       th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></p>
                 </a>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    .pdp-related-title {
+        font-size: .78rem;
+        font-weight: 700;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+    }
+    .pdp-related-link {
+        font-size: .7rem;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+        color: var(--ink, #111);
+        text-decoration: none;
+    }
+    .pdp-related-link:hover { opacity: .6; }
+    .pdp-related-card { display: block; color: var(--ink, #111); transition: opacity .2s; }
+    .pdp-related-card:hover { opacity: .8; }
+    .pdp-related-img { width: 100%; height: 260px; object-fit: cover; display: block; }
+    .pdp-sale-flag {
+        top: 8px; left: 8px; z-index: 2;
+        background: #fff;
+        color: #c0392b;
+        font-size: .66rem;
+        font-weight: 700;
+        padding: .15rem .4rem;
+    }
+    .pdp-related-name {
+        font-size: .68rem;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        color: var(--ink, #111);
+        margin: .6rem 0 .2rem;
+    }
+    .pdp-related-price {
+        font-size: .74rem;
+        color: var(--mute, #8a8a8a);
+    }
+</style>
 
 <script th:inline="javascript">
     const variants  = /*[[${variantData}]]*/ [];
@@ -248,7 +441,7 @@
 
     function scrollThumbs(dir) {
         const row = document.getElementById('thumbnailRow');
-        row.scrollBy({ left: dir * 220, behavior: 'smooth' });
+        row.scrollBy({ top: dir * 160, behavior: 'smooth' });
     }
     window.scrollThumbs = scrollThumbs;
 
@@ -257,7 +450,7 @@
         const prev = document.getElementById('thumb-prev');
         const next = document.getElementById('thumb-next');
         if (!prev || !next) return;
-        const scrollable = row.scrollWidth > row.clientWidth + 4;
+        const scrollable = row.scrollHeight > row.clientHeight + 4;
         prev.style.display = scrollable ? 'flex' : 'none';
         next.style.display = scrollable ? 'flex' : 'none';
     }
@@ -276,8 +469,8 @@
             const thumb = document.createElement('img');
             thumb.src               = img.src;
             thumb.dataset.index     = idx;
-            thumb.className         = 'rounded border border-2 thumb-img';
-            thumb.style.cssText     = 'width:70px;height:70px;object-fit:cover;cursor:pointer;opacity:0.6;flex-shrink:0';
+            thumb.className         = 'border thumb-img';
+            thumb.style.cssText     = 'width:100%;aspect-ratio:1/1;object-fit:cover;cursor:pointer;opacity:0.6;flex-shrink:0';
             thumb.addEventListener('click', function () {
                 carousel.to(idx);
                 highlightThumb(idx);

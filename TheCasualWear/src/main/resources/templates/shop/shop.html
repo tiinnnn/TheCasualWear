@@ -3,139 +3,163 @@
 <head>
     <title>Shop</title>
     <style>
+        /* ── TOKENS (đồng bộ với home.html) ── */
+        :root {
+            --ink: #111111;
+            --paper: #ffffff;
+            --line: #eceae5;
+            --mute: #8a8a8a;
+        }
+        * { box-sizing: border-box; }
+        body { color: var(--ink); -webkit-font-smoothing: antialiased; }
+        a { color: inherit; }
+
         @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(18px); }
+            from { opacity: 0; transform: translateY(14px); }
             to   { opacity: 1; transform: translateY(0); }
         }
 
-        .shop-title small { transition: color .2s ease; }
+        .shop-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            padding-bottom: 1.1rem;
+            margin-bottom: 1.6rem;
+            border-bottom: 1px solid var(--line);
+        }
+        .sec-title {
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            margin: 0;
+        }
+        .sec-title small {
+            font-size: .68rem;
+            font-weight: 500;
+            letter-spacing: .02em;
+            text-transform: none;
+            color: var(--mute);
+        }
 
-        /* ===== Thanh tìm kiếm + sắp xếp ===== */
+        /* ===== Toolbar: tìm kiếm + sắp xếp — phẳng, đơn sắc ===== */
+        .shop-toolbar { margin-bottom: 2.4rem; }
+        .shop-toolbar .form-control,
+        .shop-toolbar .form-select {
+            border: 1px solid var(--line);
+            border-radius: 0;
+            font-size: .85rem;
+            padding: .6rem .9rem;
+        }
         .shop-toolbar .form-control:focus,
         .shop-toolbar .form-select:focus {
-            border-color: #ff5a36;
-            box-shadow: 0 0 0 .18rem rgba(255,90,54,.16);
+            border-color: var(--ink);
+            box-shadow: none;
         }
         .shop-toolbar .btn-dark {
-            background: #000;
-            border-color: #000;
-            transition: background-color .22s ease, transform .15s ease, box-shadow .22s ease;
+            background: var(--ink);
+            border: 1px solid var(--ink);
+            border-radius: 0;
+            font-size: .72rem;
+            font-weight: 700;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            padding: .6rem 1.6rem;
+            transition: background-color .2s ease, color .2s ease;
         }
-        .shop-toolbar .btn-dark:hover {
-            background: #ff5a36;
-            border-color: #ff5a36;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 14px rgba(255,90,54,.35);
-        }
+        .shop-toolbar .btn-dark:hover { background: var(--paper); color: var(--ink); }
         .shop-toolbar .btn-outline-secondary {
+            border: 1px solid var(--line);
+            border-radius: 0;
+            color: var(--mute);
+            padding: .6rem .9rem;
             transition: all .2s ease;
         }
         .shop-toolbar .btn-outline-secondary:hover {
-            background: #000;
-            border-color: #000;
+            background: var(--ink);
+            border-color: var(--ink);
             color: #fff;
-            transform: rotate(90deg);
         }
 
-        /* ===== Product card ===== */
-        .product-card-link {
+        /* ===== Product card — đúng bố cục /san-pham thật:
+           tag đơn sắc góc trái ("New" hoặc "-X%"), không nhãn danh mục,
+           tên hoa, giá đơn giản, không khung/không đổ bóng ===== */
+        .p-card {
             display: block;
+            text-decoration: none;
+            color: var(--ink);
             opacity: 0;
             animation: fadeInUp .5s ease forwards;
         }
-        .product-card {
-            position: relative;
-            overflow: hidden;
-            border-radius: 14px;
-            transition: transform .3s ease, box-shadow .3s ease;
-        }
-        .product-card:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 16px 30px rgba(0,0,0,.14) !important;
-        }
-        .product-card .img-wrap {
-            overflow: hidden;
-            height: 280px;
-        }
-        .product-card .img-wrap img {
-            height: 280px;
-            width: 100%;
+        .p-card__img-wrap { position: relative; overflow: hidden; background: #f4f2ef; aspect-ratio: 3/4; }
+        .p-card__img-wrap img {
+            width: 100%; height: 100%;
             object-fit: cover;
+            display: block;
             transition: transform .5s ease;
         }
-        .product-card:hover .img-wrap img {
-            transform: scale(1.08);
-        }
-        .product-card .card-title {
-            transition: color .2s ease;
-        }
-        .product-card:hover .card-title {
-            color: #ff5a36;
-        }
-        .product-card .price-tag {
-            color: #ff5a36 !important;
-        }
-        .product-card .category-badge {
-            display: inline-block;
-            font-size: .72rem;
-            font-weight: 600;
-            letter-spacing: .02em;
-            color: #ff5a36;
-            background: #fff0eb;
-            border-radius: 999px;
-            padding: 2px 10px;
-            margin-bottom: 6px;
-        }
-        /* ===== Sale badge + giá gạch ngang ===== */
-        .product-card .sale-badge {
+        .p-card:hover .p-card__img-wrap img { transform: scale(1.04); }
+        .p-card__tag {
             position: absolute;
-            top: 10px;
-            left: 10px;
+            top: 10px; left: 10px;
             z-index: 2;
-            background: #ff5a36;
+            background: var(--ink);
             color: #fff;
-            font-size: .72rem;
+            font-size: .62rem;
             font-weight: 700;
-            border-radius: 999px;
-            padding: 3px 10px;
-            box-shadow: 0 2px 8px rgba(255,90,54,.35);
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            padding: 3px 9px;
         }
-        .product-card .price-original {
+        .p-card__body { padding: .85rem .05rem 0; }
+        .p-card__name {
             font-size: .8rem;
-            color: #999;
+            font-weight: 700;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: .3rem;
+            transition: opacity .2s;
+        }
+        .p-card:hover .p-card__name { opacity: .55; }
+        .p-card__price { font-size: .8rem; font-weight: 500; color: var(--ink); }
+        .p-card__price-original {
+            font-size: .72rem;
+            color: var(--mute);
             text-decoration: line-through;
             margin-right: 6px;
         }
 
         /* ===== Empty state ===== */
-        .empty-state i {
-            font-size: 2.6rem;
-            color: #ff5a36;
-            animation: fadeInUp .4s ease;
-        }
+        .empty-state { padding: 5rem 0; }
+        .empty-state i { font-size: 2.2rem; color: var(--mute); }
+        .empty-state p { color: var(--mute); letter-spacing: .04em; }
         .empty-state .btn-outline-dark {
+            border-radius: 0;
+            font-size: .72rem;
+            font-weight: 700;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            padding: .6rem 1.8rem;
             transition: all .2s ease;
         }
-        .empty-state .btn-outline-dark:hover {
-            background: #ff5a36;
-            border-color: #ff5a36;
-            color: #fff;
-            transform: translateY(-2px);
-        }
+        .empty-state .btn-outline-dark:hover { background: var(--ink); color: #fff; }
     </style>
 </head>
 <body>
-<div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="fw-bold shop-title">
-            Shop
-            <small class="text-muted fs-6"
-                   th:text="'(' + ${totalItems} + ' sản phẩm)'"></small>
-        </h4>
+<div class="container py-3">
+
+    <!-- ═══ TIÊU ĐỀ ═══ -->
+    <div class="shop-head">
+        <p class="sec-title">
+            Sản phẩm
+            <small th:text="'(' + ${totalItems} + ')'"></small>
+        </p>
     </div>
 
-    <!-- Search + Sort -->
-    <form th:action="@{/shop}" method="get" class="d-flex gap-2 mb-4 shop-toolbar">
+    <!-- ═══ TÌM KIẾM + SẮP XẾP ═══ -->
+    <form th:action="@{/shop}" method="get" class="d-flex gap-2 shop-toolbar">
         <input type="hidden" name="category" th:value="${selectedCategory}"
                th:if="${selectedCategory != null}"/>
         <input type="text" name="keyword" th:value="${keyword}"
@@ -154,10 +178,10 @@
            th:href="@{/shop}" class="btn btn-outline-secondary">✕</a>
     </form>
 
-    <!-- Danh sách sản phẩm -->
-    <div th:if="${#lists.isEmpty(products)}" class="text-center py-5 empty-state">
+    <!-- ═══ DANH SÁCH SẢN PHẨM ═══ -->
+    <div th:if="${#lists.isEmpty(products)}" class="text-center empty-state">
         <i class="bi bi-emoji-frown d-block mb-3"></i>
-        <p class="text-muted">Không tìm thấy sản phẩm nào!</p>
+        <p class="mb-3">Không tìm thấy sản phẩm nào</p>
         <a th:href="@{/shop}" class="btn btn-outline-dark">Xem tất cả</a>
     </div>
 
@@ -165,47 +189,40 @@
          th:unless="${#lists.isEmpty(products)}">
         <div class="col" th:each="p, iterStat : ${products}"
              th:with="sale=${activeSales.get(p.id)}">
-            <a th:href="@{'/product/' + ${p.id}}"
-               class="text-decoration-none text-dark product-card-link"
+            <a th:href="@{'/product/' + ${p.id}}" class="p-card"
                th:style="'animation-delay:' + ${iterStat.index % 8 * 0.06} + 's'">
-                <div class="card product-card h-100 border-0 shadow-sm" style="cursor:pointer">
-                    <span th:if="${sale != null}" class="sale-badge"
+                <div class="p-card__img-wrap">
+                    <span th:if="${sale == null}" class="p-card__tag">New</span>
+                    <span th:if="${sale != null}" class="p-card__tag"
                           th:text="'-' + ${#numbers.formatDecimal(sale.discountPercent,1,0)} + '%'"></span>
-                    <div class="img-wrap">
-                        <img th:if="${p.images != null and !p.images.isEmpty()}"
-                             th:src="${p.images[0].imageUrl}"
-                             class="card-img-top"/>
-                        <img th:unless="${p.images != null and !p.images.isEmpty()}"
-                             src="/images/no-image.png"
-                             class="card-img-top"/>
-                    </div>
-                    <div class="card-body">
-            <span th:if="${p.category != null}"
-                  class="category-badge"
-                  th:text="${p.category.name}"></span>
-                        <h6 class="card-title mb-1" th:text="${p.name}"></h6>
+                    <img th:if="${p.images != null and !p.images.isEmpty()}"
+                         th:src="${p.images[0].imageUrl}" th:alt="${p.name}"/>
+                    <img th:unless="${p.images != null and !p.images.isEmpty()}"
+                         src="/images/no-image.png" alt=""/>
+                </div>
+                <div class="p-card__body">
+                    <p class="p-card__name" th:text="${p.name}"></p>
 
-                        <!-- Còn sale: giá gốc gạch ngang + giá sau giảm -->
-                        <p th:if="${sale != null}" class="mb-0">
-                            <span class="price-original"
-                                  th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></span>
-                            <span class="price-tag fw-bold"
-                                  th:text="${#numbers.formatInteger(
-                                        p.price - (p.price * sale.discountPercent / 100),
-                                        0, 'COMMA') + ' đ'}"></span>
-                        </p>
-                        <!-- Không sale: giá thường -->
-                        <p th:unless="${sale != null}" class="price-tag fw-bold mb-0"
-                           th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></p>
-                    </div>
+                    <!-- Còn sale: giá gốc gạch ngang + giá sau giảm -->
+                    <p th:if="${sale != null}" class="p-card__price mb-0">
+                        <span class="p-card__price-original"
+                              th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></span>
+                        <span th:text="${#numbers.formatInteger(
+                                p.price - (p.price * sale.discountPercent / 100), 0, 'COMMA') + ' đ'}"></span>
+                    </p>
+                    <!-- Không sale: giá thường -->
+                    <p th:unless="${sale != null}" class="p-card__price mb-0"
+                       th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></p>
                 </div>
             </a>
         </div>
     </div>
 
-    <!-- Pagination -->
+    <!-- ═══ PHÂN TRANG ═══
+         Dùng nguyên class .pagination của shop-layout.html (đã theo tông
+         đen-trắng flat sẵn, giống dãy số đơn giản của /san-pham thật). -->
     <div th:if="${totalPages > 1}"
-         class="d-flex justify-content-center mt-4">
+         class="d-flex justify-content-center mt-5">
         <nav>
             <ul class="pagination">
                 <li class="page-item"
