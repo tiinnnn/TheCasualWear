@@ -185,6 +185,11 @@
             font-size: .62rem; font-weight: 700; color: var(--text-faint);
             padding: 0 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap;
         }
+        /* Độ ưu tiên của ".dm-table thead th" (1 class + 2 thẻ) cao hơn class tiện ích
+           ".dm-text-end"/".dm-text-center" (1 class) nên phải viết lại rõ ràng ở đây,
+           nếu không header sẽ luôn bị ép căn trái dù đã gắn class căn phải/giữa. */
+        .dm-table th.dm-text-end   { text-align: right; }
+        .dm-table th.dm-text-center { text-align: center; }
         .dm-table tbody td {
             padding: 12px 8px; border-bottom: 1px solid var(--border);
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;

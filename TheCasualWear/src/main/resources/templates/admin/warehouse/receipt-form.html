@@ -184,9 +184,12 @@
         .dm-dash .card-body { padding: 22px; }
 
         .dm-dash .table { color: var(--text); margin-bottom: 0; }
-        .dm-dash .table > :not(caption) > * > * { background: transparent; border-bottom-color: var(--border); box-shadow: none; }
+        .dm-dash .table > :not(caption) > * > * {
+            background: transparent; color: var(--text) !important;
+            border-bottom-color: var(--border); box-shadow: none;
+        }
         .dm-dash .table thead.table-light th {
-            background: transparent; color: var(--text-faint); border-bottom: 1px solid var(--border);
+            background: transparent; color: var(--text-faint) !important; border-bottom: 1px solid var(--border);
             text-transform: uppercase; letter-spacing: .03em; font-size: .68rem; font-weight: 700;
         }
         .dm-dash .table tbody tr:hover { background: var(--surface-2); }

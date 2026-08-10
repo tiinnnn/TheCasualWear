@@ -97,14 +97,14 @@
                             <div class="dm-action-stack">
                                 <a th:if="${u.enabled}"
                                    th:href="@{'/admin/users/' + ${u.id} + '/lock'}"
-                                   class="dm-btn dm-btn--bad-outline dm-btn--block"
-                                   onclick="return confirm('Khóa tài khoản này?')">
+                                   class="dm-btn dm-btn--bad-outline dm-btn--block dm-confirm-trigger"
+                                   th:data-confirm-msg="'Khóa tài khoản ' + ${u.username} + '?'">
                                     <i class="bi bi-lock"></i>Khóa
                                 </a>
                                 <a th:unless="${u.enabled}"
                                    th:href="@{'/admin/users/' + ${u.id} + '/unlock'}"
-                                   class="dm-btn dm-btn--good-outline dm-btn--block"
-                                   onclick="return confirm('Mở khóa tài khoản này?')">
+                                   class="dm-btn dm-btn--good-outline dm-btn--block dm-confirm-trigger"
+                                   th:data-confirm-msg="'Mở khóa tài khoản ' + ${u.username} + '?'">
                                     <i class="bi bi-unlock"></i>Mở khóa
                                 </a>
                             </div>
@@ -139,6 +139,18 @@
     </div>
 </div>
 
+<!-- ==================== MODAL XÁC NHẬN (thay cho confirm() của trình duyệt) ==================== -->
+<div class="dm-confirm-overlay" id="dmConfirmOverlay">
+    <div class="dm-confirm-box">
+        <div class="dm-confirm-icon"><i class="bi bi-question-circle-fill"></i></div>
+        <p class="dm-confirm-msg" id="dmConfirmMsg">Bạn có chắc chắn?</p>
+        <div class="dm-confirm-actions">
+            <button type="button" class="dm-btn" id="dmConfirmCancel">Hủy</button>
+            <button type="button" class="dm-btn dm-btn--solid" id="dmConfirmOk">Xác nhận</button>
+        </div>
+    </div>
+</div>
+
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
 
@@ -169,8 +181,9 @@
         border-radius: 0px;
         padding: 32px;
         margin: -24px -24px 0;
+        min-height: calc(100vh - 64px);
     }
-    @media (max-width: 767px) { .dm-dash { padding: 18px; margin: -24px -24px 0; } }
+    @media (max-width: 767px) { .dm-dash { padding: 18px; margin: -24px -24px 0; min-height: calc(100vh - 56px); } }
 
     .dm-glow {
         position: absolute; width: 480px; height: 480px; border-radius: 50%;
@@ -210,7 +223,6 @@
     .dm-input:focus, .dm-select:focus { border-color: var(--accent); }
     .dm-input::placeholder { color: var(--text-faint); }
     .dm-select { min-width: 150px; }
-    .dm-select--sm { padding: 6px 8px; font-size: .76rem; min-width: 0; }
 
     .dm-table-wrap { overflow-x: hidden; }
     .dm-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: .84rem; }
@@ -219,6 +231,8 @@
         font-size: .64rem; font-weight: 700; color: var(--text-faint);
         padding: 0 8px 10px; border-bottom: 1px solid var(--border);
     }
+    .dm-table th.dm-text-end   { text-align: right; }
+    .dm-table th.dm-text-center { text-align: center; }
     .dm-table tbody td { padding: 12px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
     .dm-table tbody tr:last-child td { border-bottom: none; }
     .dm-table tbody tr { transition: background .2s ease; }
@@ -239,8 +253,6 @@
     .dm-empty { text-align: center; padding: 24px 0; color: var(--text-faint); font-size: .85rem; }
 
     .dm-action-stack { display: flex; flex-direction: column; gap: 6px; min-width: 150px; }
-    .dm-inline-form { display: flex; gap: 6px; }
-    .dm-inline-form .dm-select { flex: 1; }
 
     .dm-btn {
         display: inline-flex; align-items: center; gap: 6px; justify-content: center;
@@ -257,15 +269,6 @@
     .dm-btn--bad-outline:hover { background: var(--bad-soft); }
     .dm-btn--good-outline { border-color: var(--good); color: var(--good); }
     .dm-btn--good-outline:hover { background: var(--good-soft); }
-
-    .dm-icon-btn {
-        display: inline-flex; align-items: center; justify-content: center;
-        flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px;
-        border: 1px solid var(--border); color: var(--text-dim); background: transparent;
-        cursor: pointer; transition: all .2s ease;
-    }
-    .dm-icon-btn--good:hover { border-color: var(--good); color: var(--good); background: var(--good-soft); }
-    .dm-icon-btn--bad:hover { border-color: var(--bad); color: var(--bad); background: var(--bad-soft); }
 
     .dm-pagination-wrap { display: flex; justify-content: center; margin-top: 20px; overflow-x: auto; }
     .dm-pagination { list-style: none; display: flex; gap: 6px; margin: 0; padding: 0; }
@@ -284,7 +287,63 @@
         .dm-table { table-layout: auto; min-width: 720px; }
         .dm-truncate { white-space: nowrap; overflow: visible; text-overflow: clip; }
     }
+
+    /* ===== Modal xác nhận =====
+       Đặt biến màu ngay trên .dm-confirm-overlay vì modal nằm NGOÀI .dm-dash
+       (anh em, không phải con) nên không kế thừa được các biến khai báo trong đó. */
+    .dm-confirm-overlay {
+        display: none; position: fixed; inset: 0; z-index: 1090;
+        background: rgba(5,6,10,.62); backdrop-filter: blur(2px);
+        align-items: center; justify-content: center; padding: 20px;
+        --surface: #12151d; --border: rgba(255,255,255,.07); --border-strong: rgba(255,255,255,.14);
+        --text: #f5f6f9; --text-dim: #d3d6e0;
+        --accent: #8b7cf6; --accent-soft: rgba(139,124,246,.14);
+        font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .dm-confirm-overlay.dm-show { display: flex; }
+    .dm-confirm-box {
+        background: var(--surface); border: 1px solid var(--border-strong); border-radius: 16px;
+        padding: 26px 24px; max-width: 360px; width: 100%; text-align: center;
+        box-shadow: 0 20px 60px rgba(0,0,0,.5);
+        animation: dmConfirmPop .18s ease-out;
+    }
+    @keyframes dmConfirmPop { from { transform: scale(.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .dm-confirm-icon { font-size: 1.8rem; color: var(--accent); margin-bottom: 10px; }
+    .dm-confirm-msg { font-size: .92rem; font-weight: 600; color: var(--text); margin: 0 0 20px; line-height: 1.5; }
+    .dm-confirm-actions { display: flex; gap: 10px; justify-content: center; }
+    .dm-confirm-actions .dm-btn { flex: 1; padding: 8px 14px; }
 </style>
+
+<script>
+    (function () {
+        const overlay   = document.getElementById('dmConfirmOverlay');
+        const msgEl     = document.getElementById('dmConfirmMsg');
+        const btnOk     = document.getElementById('dmConfirmOk');
+        const btnCancel = document.getElementById('dmConfirmCancel');
+        let pendingHref = null;
+
+        function closeModal() {
+            overlay.classList.remove('dm-show');
+            pendingHref = null;
+        }
+
+        document.querySelectorAll('.dm-confirm-trigger').forEach(el => {
+            el.addEventListener('click', function (e) {
+                e.preventDefault();
+                pendingHref = this.getAttribute('href');
+                msgEl.textContent = this.dataset.confirmMsg || 'Bạn có chắc chắn?';
+                overlay.classList.add('dm-show');
+            });
+        });
+
+        btnOk.addEventListener('click', function () {
+            if (pendingHref) window.location.href = pendingHref;
+        });
+        btnCancel.addEventListener('click', closeModal);
+        overlay.addEventListener('click', function (e) { if (e.target === overlay) closeModal(); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+    })();
+</script>
 
 </body>
 </html>
