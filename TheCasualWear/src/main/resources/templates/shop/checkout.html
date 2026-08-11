@@ -2,210 +2,198 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head><title>Thanh toán</title></head>
 <body>
-<div class="container">
-    <h3 class="mb-4">Thanh toán</h3>
+<div class="container py-4" style="max-width:900px;">
+    <h3 class="mb-4 fw-bold">Thanh toán</h3>
 
     <form th:action="@{/order/checkout}" method="post" id="checkout-form">
-        <div class="row">
-            <!-- Cột trái -->
-            <div class="col-md-7">
 
-                <!-- Chọn địa chỉ -->
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <h5>Địa chỉ giao hàng</h5>
-                        <div th:if="${#lists.isEmpty(addresses)}" class="alert alert-warning">
-                            Bạn chưa có địa chỉ!
-                            <a th:href="@{/account/address/add}">Thêm địa chỉ ngay</a>
-                        </div>
-                        <div th:each="addr : ${addresses}" class="form-check mb-2">
-                            <input class="form-check-input address-radio" type="radio"
-                                   name="shippingAddressId" th:value="${addr.id}"
-                                   th:checked="${addr.isDefault}"
-                                   th:attr="data-fullname=${addr.fullName},
-                                            data-phone=${addr.phone},
-                                            data-address=${addr.street + ', ' + addr.district + ', ' + addr.city}"/>
-                            <label class="form-check-label">
-                                <strong th:text="${addr.fullName}"></strong> —
-                                <span th:text="${addr.phone}"></span><br/>
-                                <small th:text="${addr.street + ', ' + addr.district + ', ' + addr.city}"></small>
-                            </label>
-                        </div>
-                        <a th:href="@{/account/address/add}" class="btn btn-outline-secondary btn-sm mt-2">
-                            + Thêm địa chỉ mới
-                        </a>
+        <!-- Banner mã ưu đãi -->
+        <div class="alert alert-primary bg-primary-subtle border-0 d-flex align-items-center gap-2 mb-2"
+             style="cursor:pointer" data-bs-toggle="collapse" data-bs-target="#voucherPanel" role="button">
+            <i class="bi bi-info-circle-fill"></i>
+            <span>Bạn có mã ưu đãi? Ấn vào đây để nhập mã</span>
+        </div>
+
+        <div class="collapse mb-4" id="voucherPanel">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="input-group mb-3">
+                        <span class="input-group-text bg-white"><i class="bi bi-ticket-perforated"></i></span>
+                        <input type="text" name="voucherCode" id="voucherCode"
+                               class="form-control" placeholder="Nhập mã giảm giá..."/>
+                        <button type="button" class="btn btn-dark" onclick="applyVoucher()">Áp dụng</button>
                     </div>
-                </div>
+                    <div id="voucher-result" class="mb-3"></div>
 
-                <!-- Voucher -->
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <h5>Mã giảm giá</h5>
-                        <div class="input-group">
-                            <input type="text" name="voucherCode" id="voucherCode"
-                                   class="form-control" placeholder="Nhập mã giảm giá..."/>
-                            <button type="button" class="btn btn-outline-secondary"
-                                    onclick="applyVoucher()">Áp dụng</button>
-                        </div>
-                        <div id="voucher-result" class="mt-2"></div>
-
-                        <button th:if="${!#lists.isEmpty(activeVouchers)}"
-                                type="button" class="btn btn-link btn-sm ps-0 mt-2"
-                                data-bs-toggle="modal" data-bs-target="#voucherModal">
-                            <i class="bi bi-tag-fill me-1"></i>
-                            Xem voucher khả dụng
-                            (<span th:text="${#lists.size(activeVouchers)}"></span>)
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Phương thức thanh toán -->
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <h5>Phương thức thanh toán</h5>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="radio"
-                                   name="paymentMethod" value="COD"
-                                   id="codOption" checked/>
-                            <label class="form-check-label" for="codOption">
-                                <i class="bi bi-cash-coin me-2"></i>Thanh toán khi nhận hàng (COD)
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio"
-                                   name="paymentMethod" value="VNPAY"
-                                   id="vnpayOption"/>
-                            <label class="form-check-label" for="vnpayOption">
-                                <i class="bi bi-credit-card me-2"></i>Thanh toán qua VNPay
-                            </label>
-                        </div>
-                        <div id="codWarning" class="alert alert-warning mt-2 d-none">
-                            <i class="bi bi-exclamation-triangle me-2"></i>
-                            Đơn hàng trên <strong>1.000.000 đ</strong> bắt buộc thanh toán qua ngân hàng!
+                    <div th:if="${!#lists.isEmpty(activeVouchers)}">
+                        <h6 class="fw-bold text-uppercase small mb-2">Mã giảm giá dành cho bạn</h6>
+                        <div th:each="v : ${activeVouchers}"
+                             class="d-flex align-items-center justify-content-between border rounded-3 p-3 mb-2 voucher-item"
+                             th:attr="data-code=${v.code}">
+                            <div>
+                                <div class="fw-bold" th:text="${v.code}"></div>
+                                <small class="text-muted"
+                                       th:text="'Giảm ' + ${v.discountPercent} + '%' + (${v.maxDiscount != null} ? ', tối đa ' + ${#numbers.formatInteger(v.maxDiscount, 0, 'COMMA')} + ' đ' : '')"></small>
+                            </div>
+                            <button type="button" class="btn btn-outline-dark btn-sm rounded-pill px-3"
+                                    onclick="selectVoucher(this)">Áp dụng</button>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Cột phải - Tổng đơn -->
-            <div class="col-md-5">
-                <div class="card">
-                    <div class="card-body">
-                        <h5>Đơn hàng của bạn</h5>
-                        <hr/>
+        <!-- Địa chỉ giao hàng -->
+        <div class="mb-4">
+            <h5 class="fw-bold mb-3">Địa chỉ giao hàng</h5>
 
-                        <!-- ✅ Danh sách sản phẩm — dùng variant.product -->
-                        <div th:each="item : ${cartItems}"
-                             th:with="unitPrice=${itemPrices.get(item.id)},
-                                      sale=${activeSales.get(item.variant.product.id)}"
-                             class="d-flex justify-content-between align-items-center mb-2 gap-2">
+            <div th:if="${#lists.isEmpty(addresses)}" class="alert alert-warning d-flex align-items-center gap-2">
+                <i class="bi bi-exclamation-triangle"></i>
+                <span>Bạn chưa có địa chỉ! <a th:href="@{/account/address/add}" class="fw-semibold">Thêm địa chỉ ngay</a></span>
+            </div>
+
+            <div th:each="addr : ${addresses}"
+                 class="form-check border rounded-3 p-3 mb-2">
+                <input class="form-check-input address-radio" type="radio"
+                       name="shippingAddressId" th:value="${addr.id}"
+                       th:checked="${addr.isDefault}"
+                       th:attr="data-fullname=${addr.fullName},
+                                data-phone=${addr.phone},
+                                data-address=${addr.street + ', ' + addr.district + ', ' + addr.city}"/>
+                <label class="form-check-label">
+                    <strong th:text="${addr.fullName}"></strong> —
+                    <span th:text="${addr.phone}"></span>
+                    <span th:if="${addr.isDefault}" class="badge rounded-pill bg-dark ms-1">Mặc định</span><br/>
+                    <small class="text-muted" th:text="${addr.street + ', ' + addr.district + ', ' + addr.city}"></small>
+                </label>
+            </div>
+
+            <a th:href="@{/account/address/add}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 mt-1">
+                <i class="bi bi-plus-lg me-1"></i>Thêm địa chỉ mới
+            </a>
+        </div>
+
+        <!-- Đơn hàng của bạn -->
+        <div class="mb-4">
+            <h5 class="fw-bold mb-3">Đơn hàng của bạn</h5>
+            <div class="table-responsive border rounded-3">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Sản phẩm</th>
+                        <th class="text-end">Tạm tính</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <!-- ✅ Danh sách sản phẩm — dùng variant.product -->
+                    <tr th:each="item : ${cartItems}"
+                        th:with="unitPrice=${itemPrices.get(item.id)},
+                                 sale=${activeSales.get(item.variant.product.id)}">
+                        <td>
                             <div class="d-flex align-items-center gap-2">
-                                <!-- Ảnh nhỏ -->
                                 <img th:if="${item.variant.product.images != null and !item.variant.product.images.isEmpty()}"
                                      th:src="${item.variant.product.images[0].imageUrl}"
-                                     style="width:44px;height:44px;object-fit:cover;border-radius:4px"
+                                     style="width:44px;height:44px;object-fit:cover;border-radius:8px"
                                      class="border flex-shrink-0"/>
                                 <img th:unless="${item.variant.product.images != null and !item.variant.product.images.isEmpty()}"
                                      src="/images/no-image.png"
-                                     style="width:44px;height:44px;object-fit:cover;border-radius:4px"
+                                     style="width:44px;height:44px;object-fit:cover;border-radius:8px"
                                      class="border flex-shrink-0"/>
                                 <div>
                                     <!-- ✅ Tên qua variant.product.name -->
-                                    <p class="mb-0 small fw-semibold lh-sm"
-                                       th:text="${item.variant.product.name}"></p>
-                                    <small class="text-muted">
-                                    <span th:if="${item.variant.size != null}"
-                                          th:text="${item.variant.size.name}"></span>
-                                        <span th:if="${item.variant.color != null}"
-                                              th:text="' / ' + ${item.variant.color.name}"></span>
-                                        <span th:text="' × ' + ${item.quantity}"></span>
-                                        <span th:if="${sale != null}" class="badge bg-danger ms-1"
-                                              th:text="'-' + ${#numbers.formatDecimal(sale.discountPercent,1,0)} + '%'"></span>
-                                    </small>
+                                    <span th:text="${item.variant.product.name}"></span>
+                                    <span class="text-muted"
+                                          th:text="' (' + (${item.variant.size != null} ? ${item.variant.size.name} : '') +
+                                                   (${item.variant.color != null} ? ' / ' + ${item.variant.color.name} : '') + ')'"></span>
+                                    <span class="text-muted" th:text="' × ' + ${item.quantity}"></span>
+                                    <span th:if="${sale != null}" class="badge rounded-pill bg-danger ms-1"
+                                          th:text="'-' + ${#numbers.formatDecimal(sale.discountPercent,1,0)} + '%'"></span>
                                 </div>
                             </div>
-                            <!-- ✅ Giá = unitPrice đã áp sale (nếu có), × qty -->
-                            <span class="small fw-semibold text-nowrap"
-                                  th:text="${#numbers.formatInteger(
-                                  unitPrice.doubleValue() * item.quantity, 0, 'COMMA') + ' đ'}">
-                        </span>
-                        </div>
+                        </td>
+                        <!-- ✅ Giá = unitPrice đã áp sale (nếu có), × qty -->
+                        <td class="text-end fw-semibold text-nowrap"
+                            th:text="${#numbers.formatInteger(
+                            unitPrice.doubleValue() * item.quantity, 0, 'COMMA') + ' đ'}">
+                        </td>
+                    </tr>
 
-                        <hr/>
+                    <!-- Tạm tính -->
+                    <tr class="table-light">
+                        <td class="fw-bold">Tạm tính</td>
+                        <td class="text-end fw-bold" id="original-price"
+                            th:text="${#numbers.formatInteger(totalPrice, 0, 'COMMA') + ' đ'}"></td>
+                    </tr>
 
-                        <!-- ✅ 3 dòng tổng tiền -->
-
-                        <!-- Dòng 1: Tạm tính -->
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Tạm tính:</span>
-                            <span id="original-price"
-                                  th:text="${#numbers.formatInteger(totalPrice, 0, 'COMMA') + ' đ'}"></span>
-                        </div>
-
-                        <!-- Dòng 2: Tiền giảm — ẩn cho đến khi apply voucher -->
-                        <div class="d-flex justify-content-between mb-2 text-success d-none"
-                             id="discount-row">
-                        <span>
+                    <!-- Giảm giá — ẩn cho đến khi apply voucher -->
+                    <tr id="discount-row" class="text-success d-none">
+                        <td>
                             <i class="bi bi-tag-fill me-1"></i>Giảm giá
-                            <span id="discount-label" class="small"></span>:
-                        </span>
-                            <span id="discount-amount" class="fw-semibold"></span>
-                        </div>
+                            <span id="discount-label" class="small"></span>
+                        </td>
+                        <td class="text-end fw-semibold" id="discount-amount"></td>
+                    </tr>
 
-                        <!-- Dòng 3: Tổng sau giảm -->
-                        <div class="d-flex justify-content-between fw-bold fs-5 pt-2 border-top">
-                            <span>Tổng cộng:</span>
-                            <span class="text-danger" id="final-price"
-                                  th:text="${#numbers.formatInteger(totalPrice, 0, 'COMMA') + ' đ'}"></span>
-                        </div>
-
-                        <button type="button" class="btn btn-dark w-100 mt-3" id="btn-open-confirm"
-                                th:disabled="${#lists.isEmpty(addresses)}"
-                                onclick="openConfirmModal()">
-                            <i class="bi bi-bag-check me-2"></i>Đặt hàng
-                        </button>
-                    </div>
-                </div>
+                    <!-- Tổng cộng -->
+                    <tr class="table-light">
+                        <td class="fw-bold fs-5">Tổng</td>
+                        <td class="text-end fw-bold fs-5 text-danger" id="final-price"
+                            th:text="${#numbers.formatInteger(totalPrice, 0, 'COMMA') + ' đ'}"></td>
+                    </tr>
+                    </tbody>
+                </table>
             </div>
+        </div>
+
+        <!-- Phương thức thanh toán -->
+        <div class="mb-4">
+            <h5 class="fw-bold mb-3">Phương thức thanh toán</h5>
+
+            <div class="border rounded-3 overflow-hidden">
+                <label class="d-block p-3 border-bottom" style="cursor:pointer">
+                    <input class="form-check-input me-2" type="radio"
+                           name="paymentMethod" value="COD" id="codOption" checked/>
+                    Thanh toán khi nhận hàng
+                    <div class="mt-2 ps-4 text-muted small payment-desc" data-for="codOption">
+                        Trả tiền mặt khi giao hàng.
+                    </div>
+                </label>
+                <label class="d-block p-3" style="cursor:pointer">
+                    <input class="form-check-input me-2" type="radio"
+                           name="paymentMethod" value="VNPAY" id="vnpayOption"/>
+                    Chuyển khoản ngân hàng / VNPay
+                    <div class="mt-2 ps-4 text-muted small payment-desc d-none" data-for="vnpayOption">
+                        Bạn sẽ được chuyển đến cổng thanh toán VNPay để hoàn tất đơn hàng.
+                    </div>
+                </label>
+            </div>
+
+            <div id="codWarning" class="alert alert-warning mt-2 d-none">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Đơn hàng trên <strong>1.000.000 đ</strong> bắt buộc thanh toán qua ngân hàng!
+            </div>
+        </div>
+
+        <p class="text-muted small">
+            Dữ liệu cá nhân bạn cung cấp sẽ được bảo mật tuyệt đối.
+        </p>
+
+        <div class="text-end">
+            <button type="button" class="btn btn-dark rounded-pill px-5 py-2" id="btn-open-confirm"
+                    th:disabled="${#lists.isEmpty(addresses)}"
+                    onclick="openConfirmModal()">
+                <i class="bi bi-bag-check me-2"></i>Đặt hàng
+            </button>
         </div>
     </form>
-
-    <!-- Modal chọn voucher -->
-    <div class="modal fade" id="voucherModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-tag-fill me-2"></i>Chọn voucher</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-0" style="max-height: 420px; overflow-y: auto;">
-                    <div th:each="v : ${activeVouchers}"
-                         class="d-flex align-items-center justify-content-between p-3 border-bottom voucher-item"
-                         style="cursor:pointer"
-                         th:attr="data-code=${v.code}"
-                         onclick="selectVoucherFromModal(this)">
-                        <div>
-                            <div class="fw-semibold" th:text="${v.code}"></div>
-                            <small class="text-muted"
-                                   th:text="'Giảm ' + ${v.discountPercent} + '%' + (${v.maxDiscount != null} ? ', tối đa ' + ${#numbers.formatInteger(v.maxDiscount, 0, 'COMMA')} + ' đ' : '')"></small>
-                        </div>
-                        <button type="button" class="btn btn-outline-dark btn-sm">Áp dụng</button>
-                    </div>
-                    <div th:if="${#lists.isEmpty(activeVouchers)}" class="p-4 text-center text-muted">
-                        Hiện chưa có voucher khả dụng.
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Modal xác nhận đặt hàng -->
     <div class="modal fade" id="confirmOrderModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
+            <div class="modal-content overflow-hidden">
+                <div class="modal-header" style="background:#000;color:#fff;">
                     <h5 class="modal-title"><i class="bi bi-exclamation-circle me-2"></i>Xác nhận đặt hàng</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <p class="mb-3">Vui lòng kiểm tra lại thông tin trước khi đặt hàng:</p>
@@ -232,10 +220,10 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-3" data-bs-dismiss="modal">
                         Kiểm tra lại
                     </button>
-                    <button type="button" class="btn btn-dark" id="btn-submit-order">
+                    <button type="button" class="btn btn-dark rounded-pill px-3" id="btn-submit-order">
                         <i class="bi bi-check-lg me-1"></i>Xác nhận đặt hàng
                     </button>
                 </div>
@@ -261,7 +249,7 @@
 
         const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked');
         document.getElementById('confirm-payment').textContent =
-            paymentMethod.value === 'VNPAY' ? 'Thanh toán qua VNPay' : 'Thanh toán khi nhận hàng (COD)';
+            paymentMethod.value === 'VNPAY' ? 'Chuyển khoản ngân hàng / VNPay' : 'Thanh toán khi nhận hàng (COD)';
 
         document.getElementById('confirm-total').textContent =
             document.getElementById('final-price').textContent;
@@ -276,13 +264,11 @@
         document.getElementById('checkout-form').submit();
     });
 
-    function selectVoucherFromModal(el) {
-        document.getElementById('voucherCode').value = el.dataset.code;
+    // Chọn voucher trực tiếp từ danh sách gợi ý (không dùng modal nữa)
+    function selectVoucher(btn) {
+        const code = btn.closest('.voucher-item').dataset.code;
+        document.getElementById('voucherCode').value = code;
         applyVoucher();
-
-        const modalEl = document.getElementById('voucherModal');
-        const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-        modal.hide();
     }
 
     function applyVoucher() {
@@ -308,13 +294,13 @@
                         '<i class="bi bi-check-circle me-1"></i>' +
                         'Áp dụng thành công!</span>';
 
-                    // ✅ Dòng 2: hiện tiền giảm
+                    // ✅ Dòng giảm giá trong bảng
                     document.getElementById('discount-row').classList.remove('d-none');
                     document.getElementById('discount-label').textContent = label;
                     document.getElementById('discount-amount').textContent =
                         '- ' + data.discountAmount + ' đ';
 
-                    // ✅ Dòng 3: tổng sau giảm
+                    // ✅ Tổng sau giảm
                     document.getElementById('final-price').textContent =
                         data.finalPrice + ' đ';
 
@@ -349,14 +335,27 @@
             codOption.checked   = false;
             vnpayOption.checked = true;
             codWarning.classList.remove('d-none');
+            togglePaymentDesc();
         } else {
             codOption.disabled = false;
             codWarning.classList.add('d-none');
         }
     }
 
+    // Hiện/ẩn mô tả dưới mỗi lựa chọn thanh toán, giống box mở rộng trong ảnh mẫu
+    function togglePaymentDesc() {
+        document.querySelectorAll('.payment-desc').forEach(function (el) {
+            const input = document.getElementById(el.dataset.for);
+            el.classList.toggle('d-none', !input.checked);
+        });
+    }
+    document.querySelectorAll('input[name="paymentMethod"]').forEach(function (input) {
+        input.addEventListener('change', togglePaymentDesc);
+    });
+
     document.addEventListener('DOMContentLoaded', function () {
         updatePaymentMethod(originalTotal);
+        togglePaymentDesc();
     });
 </script>
 </body>
