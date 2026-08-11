@@ -1,83 +1,259 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head><title>Chính sách đổi trả</title></head>
-<body>
-<div class="container py-5" style="max-width:800px">
+<div xmlns:th="http://www.thymeleaf.org" class="container py-5" style="max-width:960px">
 
-    <!-- Header banner -->
-    <div class="bg-dark text-white rounded p-4 mb-4 d-flex justify-content-between align-items-center">
+    <style>
+        .rt-eyebrow{
+            font-size:.78rem; font-weight:700; letter-spacing:.06em;
+            color:var(--mustard-dark); text-transform:uppercase; margin-bottom:.4rem;
+        }
+        .rt-hero{
+            background:var(--ink); color:#fff; border-radius:20px;
+            padding:2.5rem; display:flex; align-items:center;
+            justify-content:space-between; gap:2rem; flex-wrap:wrap;
+        }
+        .rt-hero h1{ font-weight:800; font-size:2.1rem; line-height:1.15; margin-bottom:.9rem; }
+        .rt-hero h1 .accent{ color:var(--mustard); }
+        .rt-hero p{ color:#cfcac0; max-width:480px; margin-bottom:0; }
+        .rt-badge{
+            background:var(--mustard); color:var(--ink); border-radius:16px;
+            padding:1.4rem 1.8rem; text-align:center; flex-shrink:0; min-width:150px;
+        }
+        .rt-badge .num{ font-weight:800; font-size:2.6rem; line-height:1; }
+        .rt-badge .lbl{ font-size:.72rem; font-weight:700; letter-spacing:.02em; margin-top:.3rem; }
+
+        .rt-stats{ margin-top:1.5rem; }
+        .rt-stat-card{
+            background:var(--paper); border:1px solid var(--line); border-radius:16px;
+            padding:1.25rem 1.4rem; height:100%;
+        }
+        .rt-stat-card .ico{ color:var(--mustard-dark); font-size:1.1rem; }
+        .rt-stat-card .lbl{
+            font-size:.72rem; font-weight:700; letter-spacing:.05em;
+            color:var(--mute); text-transform:uppercase; margin:.4rem 0 .3rem;
+        }
+        .rt-stat-card .val{ font-weight:700; font-size:1.02rem; }
+        .rt-stat-card .val a{ color:var(--ink); text-decoration:none; }
+
+        .rt-section{ margin-top:3.2rem; }
+        .rt-section h2{ font-weight:800; font-size:1.5rem; margin-bottom:.4rem; }
+        .rt-section .desc{ color:var(--mute); margin-bottom:1.5rem; }
+
+        .rt-card{
+            background:var(--paper); border:1px solid var(--line); border-radius:16px;
+            padding:1.5rem; height:100%;
+        }
+        .rt-card .tag{
+            display:inline-block; font-size:.68rem; font-weight:700; letter-spacing:.04em;
+            text-transform:uppercase; color:var(--mute); margin-bottom:.9rem;
+        }
+        .rt-card.rt-card-accent{ background:#FFF7E1; border-color:#F1DFA8; }
+        .rt-card.rt-card-accent .tag{
+            background:var(--mustard); color:var(--ink); border-radius:999px;
+            padding:.25rem .7rem;
+        }
+        .rt-card.rt-card-muted .tag{
+            background:var(--cream); color:var(--mute); border-radius:999px;
+            padding:.25rem .7rem;
+        }
+        .rt-card .val{ font-weight:800; font-size:1.3rem; margin-bottom:.6rem; }
+        .rt-card ul{ list-style:none; padding:0; margin:0; }
+        .rt-card ul li{
+            display:flex; gap:.6rem; align-items:flex-start;
+            padding:.6rem 0; border-top:1px solid var(--line);
+        }
+        .rt-card ul li:first-child{ border-top:none; padding-top:0; }
+        .rt-card ul li i{ color:var(--mustard-dark); margin-top:.2rem; flex-shrink:0; }
+        .rt-card p.plain{ color:var(--ink); margin:0; }
+
+        .rt-step{
+            display:flex; gap:1.1rem; background:var(--paper); border:1px solid var(--line);
+            border-radius:16px; padding:1.4rem; margin-bottom:1rem;
+        }
+        .rt-step .num{
+            width:34px; height:34px; border-radius:10px; background:var(--ink); color:#fff;
+            display:flex; align-items:center; justify-content:center; font-weight:700;
+            flex-shrink:0;
+        }
+        .rt-step h6{ font-weight:700; margin-bottom:.35rem; }
+        .rt-step p{ color:var(--mute); margin-bottom:0; }
+        .rt-step .box{
+            background:var(--cream); border-radius:10px; padding:.9rem 1.1rem; margin:.7rem 0;
+        }
+
+        .rt-cta{
+            margin-top:3rem; background:var(--mustard); border-radius:18px;
+            padding:2rem; display:flex; align-items:center; justify-content:space-between;
+            gap:1.5rem; flex-wrap:wrap;
+        }
+        .rt-cta h4{ font-weight:800; margin-bottom:.35rem; }
+        .rt-cta p{ margin:0; color:#3a2f10; }
+        .rt-cta a.btn{
+            background:var(--ink); color:#fff; border-radius:999px; font-weight:700;
+            padding:.7rem 1.6rem; white-space:nowrap; text-decoration:none;
+        }
+    </style>
+
+    <!-- ═══ HERO ═══ -->
+    <div class="rt-hero">
         <div>
-            <h4 class="fw-bold mb-0">CHÍNH SÁCH ĐỔI/TRẢ HÀNG</h4>
-            <p class="mb-0 text-muted">The Casual Wear</p>
+            <div class="rt-eyebrow">Chính sách</div>
+            <h1>ĐỔI<br/><span class="accent">/ TRẢ HÀNG</span></h1>
+            <p>Mua tại The Casual Wear, bạn cứ yên tâm. Chưa vừa size hay chưa vừa gu,
+                chúng tôi hỗ trợ đổi/trả nhanh gọn, đúng quy trình.</p>
         </div>
-        <i class="bi bi-arrow-repeat" style="font-size:3rem"></i>
+        <div class="rt-badge">
+            <div class="num">15</div>
+            <div class="lbl">NGÀY ĐỔI<br/>TRẢ HÀNG</div>
+        </div>
     </div>
 
-    <h5 class="fw-bold mb-3">CHÍNH SÁCH ĐỔI/TRẢ HÀNG THE CASUAL WEAR</h5>
+    <!-- ═══ 3 STAT CARDS ═══ -->
+    <div class="row g-3 rt-stats">
+        <div class="col-12 col-md-4">
+            <div class="rt-stat-card">
+                <i class="bi bi-clock-history ico"></i>
+                <div class="lbl">Thời hạn</div>
+                <div class="val">15 ngày từ khi nhận hàng</div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="rt-stat-card">
+                <i class="bi bi-arrow-repeat ico"></i>
+                <div class="lbl">Chi phí</div>
+                <div class="val">Miễn phí nếu lỗi đến từ Shop</div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="rt-stat-card">
+                <i class="bi bi-telephone ico"></i>
+                <div class="lbl">Hotline</div>
+                <div class="val"><a href="tel:0901234567">0901 234 567 (Zalo)</a></div>
+            </div>
+        </div>
+    </div>
 
-    <ol>
-        <li class="mb-3">
-            <strong>Thời hạn đổi trả hàng:</strong>
-            15 ngày kể từ ngày khách hàng nhận sản phẩm.
-        </li>
-        <li class="mb-3">
-            <strong>Điều kiện đổi hàng:</strong>
-            <ul class="mt-2">
-                <li>Sản phẩm cần được giữ nguyên tem mác và chưa qua sử dụng.</li>
-                <li>Sản phẩm đổi có giá trị lớn hơn hoặc bằng sản phẩm ban đầu.</li>
+    <!-- ═══ PHẦN I — ĐIỀU KIỆN ═══ -->
+    <div class="rt-section">
+        <div class="rt-eyebrow">Phần I</div>
+        <h2>Điều kiện đổi / trả hàng</h2>
+        <p class="desc">Giữ nguyên tem mác và chưa qua sử dụng là điều kiện chung cho cả đổi và trả hàng.</p>
+
+        <div class="row g-3">
+            <div class="col-12 col-md-6">
+                <div class="rt-card">
+                    <span class="tag"><i class="bi bi-arrow-repeat me-1"></i>Điều kiện đổi hàng</span>
+                    <ul>
+                        <li><i class="bi bi-check-lg"></i><span>Sản phẩm giữ nguyên tem mác, chưa qua sử dụng.</span></li>
+                        <li><i class="bi bi-check-lg"></i><span>Sản phẩm đổi có giá trị lớn hơn hoặc bằng sản phẩm ban đầu.</span></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="rt-card">
+                    <span class="tag"><i class="bi bi-arrow-return-left me-1"></i>Điều kiện trả hàng</span>
+                    <ul>
+                        <li><i class="bi bi-check-lg"></i><span>Chỉ hỗ trợ trả hàng khi sản phẩm bị lỗi.</span></li>
+                        <li><i class="bi bi-check-lg"></i><span>Sản phẩm giữ nguyên tem mác, chưa qua sử dụng.</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ PHẦN II — CHI PHÍ ═══ -->
+    <div class="rt-section">
+        <div class="rt-eyebrow">Phần II</div>
+        <h2>Chi phí đổi / trả hàng</h2>
+        <p class="desc">Lỗi từ phía chúng tôi thì chúng tôi lo. Còn lại, chi phí đổi/trả do khách hàng chi trả.</p>
+
+        <div class="row g-3">
+            <div class="col-12 col-md-6">
+                <div class="rt-card rt-card-accent">
+                    <span class="tag">The Casual Wear chịu phí</span>
+                    <div class="val">Miễn phí</div>
+                    <p class="plain">Khi nguyên nhân đổi/trả đến từ phía chúng tôi: hàng lỗi, hư hỏng, tư vấn size không chính xác...</p>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="rt-card rt-card-muted">
+                    <span class="tag">Khách hàng chịu phí</span>
+                    <div class="val">Khách chịu phí</div>
+                    <p class="plain">Khi nguyên nhân đổi/trả là do mong muốn chủ quan từ phía khách hàng.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ PHẦN III — HỦY ĐƠN HÀNG ═══ -->
+    <div class="rt-section">
+        <div class="rt-eyebrow">Phần III</div>
+        <h2>Chính sách hủy đơn hàng đã thanh toán</h2>
+        <p class="desc">Áp dụng riêng cho các đơn hàng đã thanh toán trước hoặc đang chờ xử lý.</p>
+
+        <div class="rt-card">
+            <ul>
+                <li><i class="bi bi-check-lg"></i>
+                    <span>Đơn hàng <strong>chưa thanh toán (COD)</strong> ở trạng thái chờ xác nhận:
+                        khách hàng có thể tự hủy trực tiếp trên website.</span></li>
+                <li><i class="bi bi-check-lg"></i>
+                    <span>Đơn hàng <strong>đã thanh toán qua VNPay</strong>: không thể tự hủy trên website.
+                        Vui lòng liên hệ Zalo <strong>0901.234.567</strong> để được hỗ trợ.</span></li>
+                <li><i class="bi bi-check-lg"></i>
+                    <span>Phí xử lý hủy đơn đã thanh toán: <strong>5.000đ</strong>/đơn hàng.</span></li>
+                <li><i class="bi bi-check-lg"></i>
+                    <span>Tiền hoàn trả (sau khi trừ phí) sẽ được chuyển khoản trong vòng
+                        <strong>3–5 ngày làm việc</strong> kể từ khi xác nhận hủy.</span></li>
+                <li><i class="bi bi-check-lg"></i>
+                    <span>Đơn hàng đã ở trạng thái <strong>đang giao hoặc đã giao</strong>
+                        không hỗ trợ hủy, vui lòng tham khảo chính sách đổi/trả hàng.</span></li>
             </ul>
-        </li>
-        <li class="mb-3">
-            <strong>Điều kiện trả hàng:</strong>
-            <ul class="mt-2">
-                <li>Chúng tôi chỉ hỗ trợ trả hàng trong trường hợp sản phẩm bị lỗi.</li>
-                <li>Sản phẩm cần được giữ nguyên tem mác và chưa qua sử dụng.</li>
-            </ul>
-        </li>
-        <li class="mb-3">
-            <strong>Chi phí đổi/trả hàng:</strong>
-            <ul class="mt-2">
-                <li>Khách hàng được miễn phí đổi/trả hàng trong trường hợp nguyên nhân
-                    đổi/trả đến từ phía chúng tôi (hàng lỗi, hư hỏng, tư vấn size không chính xác...).</li>
-                <li>Khách hàng sẽ chịu chi phí đổi/trả hàng nếu nguyên nhân là do
-                    mong muốn chủ quan từ phía khách hàng.</li>
-            </ul>
-        </li>
-        <li class="mb-3">
-            <strong>Chính sách hủy đơn hàng đã thanh toán:</strong>
-            <ul class="mt-2">
-                <li>Đơn hàng <strong>chưa thanh toán (COD)</strong> ở trạng thái chờ xác nhận:
-                    khách hàng có thể tự hủy trực tiếp trên website.</li>
-                <li>Đơn hàng <strong>đã thanh toán qua VNPay</strong>: không thể tự hủy trên website.
-                    Vui lòng liên hệ Zalo <strong>0901.234.567</strong> để được hỗ trợ.</li>
-                <li>Phí xử lý hủy đơn đã thanh toán: <strong>5.000đ</strong>/đơn hàng.</li>
-                <li>Tiền hoàn trả (sau khi trừ phí) sẽ được chuyển khoản trong vòng
-                    <strong>3–5 ngày làm việc</strong> kể từ khi xác nhận hủy.</li>
-                <li>Đơn hàng đã ở trạng thái <strong>đang giao hoặc đã giao</strong>
-                    không hỗ trợ hủy, vui lòng tham khảo chính sách đổi/trả hàng.</li>
-            </ul>
-        </li>
-    </ol>
+        </div>
+    </div>
 
-    <h5 class="fw-bold mb-3">HƯỚNG DẪN ĐỔI/TRẢ HÀNG</h5>
+    <!-- ═══ PHẦN IV — HƯỚNG DẪN ═══ -->
+    <div class="rt-section">
+        <div class="rt-eyebrow">Phần IV</div>
+        <h2>Hướng dẫn đổi / trả hàng</h2>
+        <p class="desc">Ba bước, làm theo là xong.</p>
 
-    <p class="text-warning fw-bold">
-        <i class="bi bi-telephone me-2"></i>
-        Hotline hỗ trợ đổi trả hàng: 0901 234 567 (Zalo)
-    </p>
+        <div class="rt-step">
+            <div class="num">1</div>
+            <div>
+                <h6>Liên hệ với chúng tôi</h6>
+                <p>Nhắn hoặc gọi hotline / Zalo <strong>0901 234 567</strong> để được hướng dẫn cụ thể cho đơn hàng của bạn.</p>
+            </div>
+        </div>
 
-    <p><strong>Bước 1:</strong> Gửi lại hàng về cho The Casual Wear theo địa chỉ:</p>
-    <blockquote class="border-start border-3 border-dark ps-3 mb-3">
-        The Casual Wear, 33 Đường ABC, Phường XYZ, Hà Nội. SĐT: 0901.234.567
-    </blockquote>
+        <div class="rt-step">
+            <div class="num">2</div>
+            <div>
+                <h6>Gửi hàng về The Casual Wear</h6>
+                <div class="box">
+                    <strong>The Casual Wear</strong><br/>
+                    33 Đường ABC, Phường XYZ, Hà Nội<br/>
+                    SĐT: 0901.234.567
+                </div>
+                <p class="fst-italic">Vui lòng để kèm hoá đơn mua hàng và ghi chú sản phẩm cần đổi/trả.
+                    Chúng tôi hỗ trợ lấy hàng tận nơi tại các khu vực có hỗ trợ của đơn vị vận chuyển.</p>
+            </div>
+        </div>
 
-    <p class="fst-italic text-muted">
-        Lưu ý: Vui lòng để kèm hoá đơn mua hàng và ghi chú sản phẩm cần đổi/trả.
-        Chúng tôi hỗ trợ lấy hàng tận nơi tại các khu vực có hỗ trợ của đơn vị vận chuyển.
-    </p>
+        <div class="rt-step">
+            <div class="num">3</div>
+            <div>
+                <h6>Nhận sản phẩm đổi hoặc hoàn tiền</h6>
+                <p>Sau khi nhận hàng và kiểm tra tình trạng hàng hoá, chúng tôi sẽ gửi lại sản phẩm đổi
+                    hoặc hoàn tiền đối với các đơn trả hàng.</p>
+            </div>
+        </div>
+    </div>
 
-    <p><strong>Bước 2:</strong> Sau khi nhận hàng và kiểm tra tình trạng hàng hoá,
-        chúng tôi sẽ gửi lại sản phẩm đổi hoặc hoàn tiền đối với các đơn trả hàng.</p>
+    <!-- ═══ CTA ═══ -->
+    <div class="rt-cta">
+        <div>
+            <h4>Còn thắc mắc?</h4>
+            <p>Nhắn cho chúng tôi qua Zalo hoặc gọi hotline — The Casual Wear trả lời trong giờ làm việc.</p>
+        </div>
+        <a class="btn" href="tel:0901234567"><i class="bi bi-telephone-fill me-1"></i> Gọi 0901 234 567</a>
+    </div>
+
 </div>
-</body>
-</html>
