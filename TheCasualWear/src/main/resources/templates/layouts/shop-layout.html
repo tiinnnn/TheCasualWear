@@ -7,198 +7,226 @@
     <title>The Casual Wear</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css"/>
     <link rel="icon" type="image/png" href="/images/footer.png"/>
     <style>
-        /* ── TOKENS ── nền trắng, chữ đen, không bo góc, không đổ bóng —
-           đúng ngôn ngữ thị giác smaker.vn (thanh đen thông tin cửa hàng,
-           navbar phẳng, chữ hoa tracked-out, hover chỉ đổi màu chứ không
-           phồng/nổi). */
+        /* ══ TOKENS — lấy theo tông guysclosetvn.com: nền kem ấm, chữ đen
+           mềm, điểm nhấn mù tạt/vàng, bo tròn khắp nơi, không còn flat đen
+           trắng sắc cạnh như bản Smaker trước ══ */
         :root {
-            --ink: #111111;
-            --paper: #ffffff;
-            --line: #e5e2dc;
-            --mute: #8a8a8a;
+            --cream: #FBF6EC;
+            --paper: #FFFFFF;
+            --ink: #1A1A1A;
+            --mute: #7a7368;
+            --line: #ECE3D2;
+            --mustard: #F5C247;
+            --mustard-dark: #E2AC1F;
+            --sale: #E14B4B;
         }
         * { box-sizing: border-box; }
-        body { color: var(--ink); -webkit-font-smoothing: antialiased; }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50%       { opacity: 0.3; }
+        html { scroll-behavior: smooth; }
+        body {
+            color: var(--ink);
+            background: var(--cream);
+            font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+            -webkit-font-smoothing: antialiased;
         }
+        a { color: inherit; }
         li.nav-item { list-style: none; }
 
-        /* ===== Thanh địa chỉ (đen, trên cùng) ===== */
-        .store-bar {
-            background: var(--ink);
-            color: rgba(255,255,255,.75);
-            font-size: .72rem;
-            letter-spacing: .03em;
-            padding: .5rem 0;
-        }
-        .store-bar .container {
-            display: flex;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: .3rem 1.5rem;
+        .site-container {
+            width: 100%;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            padding-left: 1rem;
+            padding-right: 1rem;
         }
 
-        /* ===== Navbar chính (trắng, phẳng) ===== */
+        .btn-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: .82rem;
+            padding: .6rem 1.5rem;
+            text-decoration: none;
+            transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+        }
+        .btn-pill-dark { background: var(--ink); color: #fff; }
+        .btn-pill-dark:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0,0,0,.18); color:#fff; }
+        .btn-pill-mustard { background: var(--mustard); color: var(--ink); }
+        .btn-pill-mustard:hover { background: var(--mustard-dark); transform: translateY(-2px); color: var(--ink); }
+
+        /* ══ NAVBAR ══ */
         .navbar-main {
+            background: var(--paper);
             border-bottom: 1px solid var(--line);
             padding: .9rem 0;
         }
         .navbar-brand-text {
-            font-weight: 700;
+            font-weight: 800;
             font-size: 1.15rem;
-            letter-spacing: .02em;
-            text-transform: uppercase;
+            letter-spacing: -.01em;
         }
         .nav-main-link {
-            font-size: .78rem;
+            position: relative;
+            font-size: .86rem;
             font-weight: 600;
-            letter-spacing: .1em;
-            text-transform: uppercase;
             color: var(--ink) !important;
-            padding: .5rem .9rem !important;
-            transition: opacity .2s;
+            padding: .5rem .85rem !important;
         }
-        .nav-main-link:hover { opacity: .5; }
-        .navbar-nav .dropdown-menu {
+        /* animation: gạch chân trượt ra khi hover — hiệu ứng #2 yêu cầu */
+        .nav-main-link::after {
+            content: "";
+            position: absolute;
+            left: .85rem; right: .85rem; bottom: .1rem;
+            height: 2px;
+            background: var(--mustard-dark);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform .25s ease;
+        }
+        .nav-main-link:hover::after { transform: scaleX(1); }
+
+        /* Dropdown Shop — hiện khi hover, có animation trượt+mờ dần */
+        .dropdown-hover .dropdown-menu {
+            display: block;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(8px);
+            transition: opacity .2s ease, transform .2s ease, visibility .2s;
             border: 1px solid var(--line);
-            border-radius: 0;
-            box-shadow: none;
-            margin-top: 0;
+            border-radius: 14px;
+            box-shadow: 0 14px 30px rgba(0,0,0,.08);
+            margin-top: .5rem !important;
+            padding: .6rem;
         }
-        .navbar-nav .dropdown-item {
-            font-size: .78rem;
-            letter-spacing: .04em;
-            text-transform: uppercase;
-            padding: .5rem 1.1rem;
+        .dropdown-hover:hover .dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
         }
-        .navbar-nav .dropdown-item:hover { background: #f4f2ef; }
+        .dropdown-hover .dropdown-item {
+            border-radius: 10px;
+            font-size: .84rem;
+            font-weight: 500;
+            padding: .55rem .9rem;
+            transition: background .15s ease;
+        }
+        .dropdown-hover .dropdown-item:hover { background: var(--cream); }
 
-        .navbar-icons a { color: var(--ink); transition: opacity .2s; }
-        .navbar-icons a:hover { opacity: .55; }
-        .navbar-icons .badge { font-size: .58rem !important; background: var(--ink) !important; }
-
+        .navbar-icons a { color: var(--ink); transition: transform .18s ease, color .18s ease; }
+        .navbar-icons a:hover { transform: translateY(-2px); color: var(--mustard-dark); }
+        .navbar-icons .badge {
+            font-size: .58rem !important;
+            background: var(--sale) !important;
+        }
+        .navbar-search {
+            background: var(--cream);
+            border-radius: 999px;
+            padding: .3rem .3rem .3rem 1rem;
+        }
         .navbar-search input {
             border: none;
-            border-bottom: 1px solid var(--line);
-            border-radius: 0;
+            background: transparent;
             font-size: .82rem;
-            padding: .3rem .1rem;
-        }
-        .navbar-search input:focus {
-            border-color: var(--ink);
-            box-shadow: none;
             outline: none;
+            width: 100%;
         }
         .navbar-search button {
-            border-radius: 0;
-            background: transparent;
             border: none;
-            color: var(--ink);
+            background: var(--ink);
+            color: #fff;
+            width: 34px; height: 34px;
+            border-radius: 999px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
         }
 
-        /* ===== Ticker freeship — mảnh, tĩnh, không hoa mỹ ===== */
+        /* ══ TICKER — marquee cuộn vô hạn (hiệu ứng #2) ══ */
         .freeship-bar {
-            background: var(--paper);
-            border-bottom: 1px solid var(--line);
-            color: var(--ink);
-            text-align: center;
-            padding: .45rem 0;
-            font-size: .68rem;
+            background: var(--ink);
+            color: #fff;
+            overflow: hidden;
+            white-space: nowrap;
+            padding: .55rem 0;
+        }
+        .freeship-bar__track {
+            display: inline-block;
+            animation: marquee 26s linear infinite;
+            font-size: .74rem;
             font-weight: 600;
-            letter-spacing: .16em;
-            text-transform: uppercase;
+            letter-spacing: .03em;
+        }
+        .freeship-bar__track span { margin: 0 1.4rem; }
+        @keyframes marquee {
+            from { transform: translateX(0); }
+            to   { transform: translateX(-50%); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .freeship-bar__track { animation: none; }
         }
 
         #notificationArea { position: relative; }
 
-        /* ===== Footer — sáng màu, tối giản, chữ hoa mảnh, giống smaker ===== */
+        /* ══ FOOTER ══ */
         .site-footer {
-            background: var(--paper);
+            background: #F3ECDC;
             color: var(--ink);
             border-top: 1px solid var(--line);
         }
         .site-footer h6 {
-            font-size: .74rem;
+            font-size: .78rem;
             font-weight: 700;
-            letter-spacing: .12em;
+            letter-spacing: .06em;
             text-transform: uppercase;
+            color: var(--mute);
             margin-bottom: 1rem;
         }
-        .site-footer .footer-link,
-        .site-footer li {
-            color: var(--mute);
-            font-size: .82rem;
-        }
-        .site-footer .footer-link {
-            text-decoration: none;
-            transition: color .2s;
-        }
-        .site-footer .footer-link:hover { color: var(--ink); }
+        .site-footer li, .site-footer p { color: #4a463d; font-size: .86rem; }
+        .site-footer .footer-link { text-decoration: none; transition: color .2s; }
+        .site-footer .footer-link:hover { color: var(--mustard-dark); }
         .site-footer .social-icon {
-            width: 34px; height: 34px;
+            width: 38px; height: 38px;
             display: flex; align-items: center; justify-content: center;
-            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: var(--paper);
             color: var(--ink);
-            transition: background .2s, color .2s;
+            transition: background .2s, color .2s, transform .2s;
         }
-        .site-footer .social-icon:hover { background: var(--ink); color: #fff; }
-        .site-footer .brand-mark {
-            font-weight: 700;
-            font-size: 1.1rem;
-            letter-spacing: .02em;
-            text-transform: uppercase;
-        }
+        .site-footer .social-icon:hover { background: var(--mustard); transform: translateY(-2px); }
+        .site-footer .brand-mark { font-weight: 800; font-size: 1.15rem; }
 
         .pagination .page-link {
             color: var(--ink);
             border-color: var(--line);
             background-color: var(--paper);
-            border-radius: 0;
+            border-radius: 999px !important;
+            margin: 0 3px;
         }
-        .pagination .page-link:hover {
-            color: #fff;
-            background-color: var(--ink);
-            border-color: var(--ink);
-        }
-        .pagination .page-item.active .page-link {
-            background-color: var(--ink);
-            border-color: var(--ink);
-            color: #fff;
-        }
-        .pagination .page-item.disabled .page-link {
-            color: #ccc;
-            background-color: var(--paper);
-            border-color: var(--line);
-        }
+        .pagination .page-link:hover { color: #fff; background-color: var(--ink); border-color: var(--ink); }
+        .pagination .page-item.active .page-link { background-color: var(--mustard); border-color: var(--mustard); color: var(--ink); }
+        .pagination .page-item.disabled .page-link { color: #ccc; background-color: var(--paper); }
 
+        @media (max-width: 991px) {
+            .navbar-search { max-width: none !important; margin: .6rem 0; }
+        }
         @media (max-width: 576px) {
-            .store-bar { display: none; }
             .navbar-brand-text { font-size: 1rem; }
         }
     </style>
 </head>
 <body>
 
-<!-- ═══ THANH ĐỊA CHỈ (đen, trên cùng) ═══ -->
-<div class="store-bar">
-    <div class="container">
-        <span>Chinh Nhánh 1: 33 Đường ABC, Phường XYZ, Hà Nội</span>
-        <span>Chinh Nhánh 2: 157 Đường DEF, Phường GHI, Hà Nội</span>
-    </div>
-</div>
-
 <!-- ═══ NAVBAR CHÍNH ═══ -->
-<nav class="navbar navbar-expand-lg navbar-light bg-white navbar-main sticky-top">
-    <div class="container">
-        <!-- Logo -->
+<nav class="navbar navbar-expand-lg navbar-light navbar-main sticky-top">
+    <div class="site-container">
         <a class="navbar-brand d-flex align-items-center gap-2" th:href="@{/}">
-            <img src="/images/logo.png" alt="The Casual Wear Logo" style="height:44px;">
+            <img src="/images/logo.png" alt="The Casual Wear Logo" style="height:42px;">
             <span class="navbar-brand-text">The Casual Wear</span>
         </a>
 
@@ -214,30 +242,31 @@
                     <a class="nav-link nav-main-link" th:href="@{/}">Home</a>
                 </li>
 
-                <!-- Dropdown Shop — liệt kê toàn bộ danh mục -->
-                <li class="nav-item dropdown">
-                    <a class="nav-link nav-main-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Shop</a>
-                    <ul class="dropdown-menu shadow-none py-2">
-                        <li>
-                            <a class="dropdown-item" th:href="@{/shop}">Tất cả sản phẩm</a>
-                        </li>
+                <!-- Dropdown Shop — hover hiện toàn bộ danh mục -->
+                <li class="nav-item dropdown dropdown-hover">
+                    <a class="nav-link nav-main-link dropdown-toggle" th:href="@{/shop}">Shop</a>
+                    <ul class="dropdown-menu shadow-none">
+                        <li><a class="dropdown-item" th:href="@{/shop}">Tất cả sản phẩm</a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li th:each="cat : ${navCategories}">
-                            <a class="dropdown-item"
-                               th:href="@{/shop(category=${cat.id})}"
-                               th:text="${cat.name}"></a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <a class="dropdown-item" th:href="@{/clearance}">Sale</a>
+                        <li th:each="cat : ${navCategories}" th:if="${cat.name != 'Phụ kiện'}">
+                            <a class="dropdown-item" th:href="@{/shop(category=${cat.id})}" th:text="${cat.name}"></a>
                         </li>
                     </ul>
+                </li>
+
+                <!-- Phụ kiện — link thẳng nếu danh mục này tồn tại -->
+                <li class="nav-item" th:each="cat : ${navCategories}" th:if="${cat.name == 'Phụ kiện'}">
+                    <a class="nav-link nav-main-link" th:href="@{/shop(category=${cat.id})}">Phụ kiện</a>
+                </li>
+
+                <!-- Clearance Sale -->
+                <li class="nav-item">
+                    <a class="nav-link nav-main-link" th:href="@{/clearance}">Clearance Sale</a>
                 </li>
 
                 <li class="nav-item">
                     <a th:href="@{/collections}" class="nav-link nav-main-link">Collections</a>
                 </li>
-
                 <li class="nav-item">
                     <a class="nav-link nav-main-link" th:href="@{/chinh-sach-doi-tra}">Chính sách đổi trả</a>
                 </li>
@@ -248,27 +277,21 @@
 
             <!-- Search + Icons -->
             <div class="d-flex align-items-center flex-wrap gap-3 mt-3 mt-lg-0 navbar-icons">
-                <!-- Search -->
                 <form th:action="@{/shop}" method="get"
-                      class="d-flex flex-grow-1 flex-lg-grow-0 navbar-search"
-                      style="min-width:140px;max-width:220px">
-                    <input type="text" name="keyword"
-                           placeholder="Tìm kiếm..." style="width:100%"/>
-                    <button type="submit"><i class="bi bi-search"></i></button>
+                      class="d-flex align-items-center navbar-search flex-grow-1 flex-lg-grow-0"
+                      style="max-width:220px">
+                    <input type="text" name="keyword" placeholder="Tìm kiếm..."/>
+                    <button type="submit"><i class="bi bi-search" style="font-size:.8rem"></i></button>
                 </form>
 
-                <!-- Icon tài khoản -->
                 <div sec:authorize="!isAuthenticated()">
-                    <a th:href="@{/auth/login}">
-                        <i class="bi bi-person fs-5"></i>
-                    </a>
+                    <a th:href="@{/auth/login}"><i class="bi bi-person fs-5"></i></a>
                 </div>
                 <div class="dropdown" sec:authorize="isAuthenticated()">
-                    <a href="#" class="dropdown-toggle text-decoration-none"
-                       data-bs-toggle="dropdown">
+                    <a href="#" class="dropdown-toggle text-decoration-none" data-bs-toggle="dropdown">
                         <i class="bi bi-person fs-5"></i>
                     </a>
-                    <ul class="dropdown-menu dropdown-menu-end">
+                    <ul class="dropdown-menu dropdown-menu-end" style="border-radius:14px;border-color:var(--line)">
                         <li><a class="dropdown-item" th:href="@{/account}">Tài khoản</a></li>
                         <li><a class="dropdown-item" th:href="@{/account/orders}">Đơn hàng</a></li>
                         <li sec:authorize="hasAnyRole('ADMIN','OWNER')">
@@ -284,74 +307,44 @@
                     </ul>
                 </div>
 
-                <!-- Icon yêu thích -->
-                <a th:href="@{/wishlist}" sec:authorize="isAuthenticated()">
-                    <i class="bi bi-heart fs-5"></i>
-                </a>
-                <a th:href="@{/auth/login}" sec:authorize="!isAuthenticated()">
-                    <i class="bi bi-heart fs-5"></i>
-                </a>
+                <a th:href="@{/wishlist}" sec:authorize="isAuthenticated()"><i class="bi bi-heart fs-5"></i></a>
+                <a th:href="@{/auth/login}" sec:authorize="!isAuthenticated()"><i class="bi bi-heart fs-5"></i></a>
 
-                <!-- Icon giỏ hàng -->
-                <a th:href="@{/cart}" class="position-relative"
-                   sec:authorize="isAuthenticated()">
+                <a th:href="@{/cart}" class="position-relative" sec:authorize="isAuthenticated()">
                     <i class="bi bi-cart3 fs-5"></i>
                     <span th:if="${cartCount != null and cartCount > 0}"
                           class="position-absolute top-0 start-100 translate-middle badge rounded-pill"
                           style="font-size:0.6rem;"
-                          th:text="${cartCount > 9} ? '9+' : ${cartCount}">
-                    </span>
+                          th:text="${cartCount > 9} ? '9+' : ${cartCount}"></span>
                 </a>
-                <a th:href="@{/auth/login}" sec:authorize="!isAuthenticated()">
-                    <i class="bi bi-cart3 fs-5"></i>
-                </a>
+                <a th:href="@{/auth/login}" sec:authorize="!isAuthenticated()"><i class="bi bi-cart3 fs-5"></i></a>
 
-                <!-- Icon thông báo -->
                 <div class="dropdown" sec:authorize="isAuthenticated()">
-                    <a href="#" class="position-relative dropdown-toggle"
-                       data-bs-toggle="dropdown"
-                       style="text-decoration:none">
+                    <a href="#" class="position-relative dropdown-toggle" data-bs-toggle="dropdown" style="text-decoration:none">
                         <i class="bi bi-bell fs-5"></i>
                         <span th:if="${unreadCount > 0}"
-                              class="position-absolute top-0 start-100 translate-middle
-                              badge rounded-pill"
-                              style="font-size:0.6rem;animation:blink 1s infinite"
-                              th:text="${unreadCount}">
-                        </span>
+                              class="position-absolute top-0 start-100 translate-middle badge rounded-pill"
+                              style="font-size:0.6rem;"
+                              th:text="${unreadCount}"></span>
                     </a>
-
-                    <!-- Dropdown thông báo -->
                     <ul class="dropdown-menu dropdown-menu-end"
-                        style="width:90vw;max-width:320px;max-height:400px;overflow-y:auto">
+                        style="width:90vw;max-width:320px;max-height:400px;overflow-y:auto;border-radius:14px;border-color:var(--line)">
                         <li class="px-3 py-2 d-flex justify-content-between align-items-center border-bottom">
-                            <strong class="small text-uppercase" style="letter-spacing:.06em">Thông báo</strong>
-                            <a th:if="${unreadCount > 0}"
-                               th:href="@{/notifications/read-all}"
-                               class="text-muted small">Đánh dấu đã đọc</a>
+                            <strong class="small">Thông báo</strong>
+                            <a th:if="${unreadCount > 0}" th:href="@{/notifications/read-all}" class="text-muted small">Đánh dấu đã đọc</a>
                         </li>
-
-                        <li th:each="n : ${userNotifications}"
-                            th:classappend="${!n.isRead} ? 'bg-light'">
-                            <a th:href="@{/notifications/read/{id}(id=${n.id})}"
-                               class="dropdown-item py-2 text-wrap"
-                               style="white-space:normal">
+                        <li th:each="n : ${userNotifications}" th:classappend="${!n.isRead} ? 'bg-light'">
+                            <a th:href="@{/notifications/read/{id}(id=${n.id})}" class="dropdown-item py-2 text-wrap" style="white-space:normal">
                                 <div class="d-flex gap-2 align-items-start">
-                                    <i th:classappend="${!n.isRead} ? 'text-danger' : 'text-muted'"
-                                       class="bi bi-bell mt-1 flex-shrink-0"></i>
+                                    <i th:classappend="${!n.isRead} ? 'text-danger' : 'text-muted'" class="bi bi-bell mt-1 flex-shrink-0"></i>
                                     <div>
                                         <p class="mb-0 small" th:text="${n.message}"></p>
-                                        <small class="text-muted"
-                                               th:text="${#temporals.format(n.createdAt,
-                                         'HH:mm dd/MM/yyyy')}"></small>
+                                        <small class="text-muted" th:text="${#temporals.format(n.createdAt,'HH:mm dd/MM/yyyy')}"></small>
                                     </div>
                                 </div>
                             </a>
                         </li>
-
-                        <li th:if="${#lists.isEmpty(userNotifications)}"
-                            class="text-center text-muted py-3 small">
-                            Không có thông báo nào
-                        </li>
+                        <li th:if="${#lists.isEmpty(userNotifications)}" class="text-center text-muted py-3 small">Không có thông báo nào</li>
                     </ul>
                 </div>
             </div>
@@ -359,8 +352,23 @@
     </div>
 </nav>
 
-<!-- ═══ TICKER FREESHIP ═══
-<div class="freeship-bar">Freeship cho mọi đơn hàng</div> -->
+<!-- ═══ TICKER MARQUEE ═══ -->
+<div class="freeship-bar">
+    <div class="freeship-bar__track">
+        <span>Freeship cho đơn hàng từ 200.000đ</span>
+        <span>•</span>
+        <span>Đổi/trả hàng trong 30 ngày</span>
+        <span>•</span>
+        <span>Freeship cho đơn hàng từ 200.000đ</span>
+        <span>•</span>
+        <span>Đổi/trả hàng trong 30 ngày</span>
+        <span>•</span>
+        <span>Freeship cho đơn hàng từ 200.000đ</span>
+        <span>•</span>
+        <span>Đổi/trả hàng trong 30 ngày</span>
+        <span>•</span>
+    </div>
+</div>
 
 <div id="notificationArea">
     <div th:replace="~{fragments/alerts :: alerts}"></div>
@@ -372,15 +380,14 @@
 
 <!-- ═══ FOOTER ═══ -->
 <footer class="site-footer mt-5">
-    <div class="container py-5">
+    <div class="site-container py-5">
         <div class="row g-4">
             <div class="col-12 col-md-4">
                 <div class="brand-mark mb-3">The Casual Wear</div>
-                <p class="mb-1 small" style="color:var(--mute)">
-                    <i class="bi bi-envelope me-1"></i>
-                    <a href="mailto:info@thecasualwear.vn" class="footer-link">admin@casualwear.vn</a>
+                <p class="mb-1"><i class="bi bi-envelope me-1"></i>
+                    <a href="mailto:admin@casualwear.vn" class="footer-link">admin@casualwear.vn</a>
                 </p>
-                <p class="mb-3 small" style="color:var(--mute)">Mặc chuẩn, sống chất!</p>
+                <p class="mb-3">Mặc chuẩn, sống chất!</p>
                 <div class="d-flex gap-2 mt-2">
                     <a href="#" class="social-icon"><i class="bi bi-instagram"></i></a>
                     <a href="#" class="social-icon"><i class="bi bi-facebook"></i></a>
@@ -409,21 +416,15 @@
             <div class="col-12 col-md-2">
                 <h6>Tuyển dụng</h6>
                 <ul class="list-unstyled" style="line-height:2.2;">
-                    <li>
-                        <a href="https://forms.gle/cF6dDPqJUbGGK9z39" target="_blank" class="footer-link">
-                            Vị trí tuyển dụng
-                        </a>
-                    </li>
+                    <li><a href="https://forms.gle/cF6dDPqJUbGGK9z39" target="_blank" class="footer-link">Vị trí tuyển dụng</a></li>
                 </ul>
             </div>
         </div>
     </div>
 
     <div style="border-top: 1px solid var(--line);">
-        <div class="container py-3">
-            <p class="mb-0 small text-center" style="color:var(--mute)">
-                © 2026 · The Casual Wear. All rights reserved.
-            </p>
+        <div class="site-container py-3">
+            <p class="mb-0 small text-center">© 2026 · The Casual Wear. All rights reserved.</p>
         </div>
     </div>
 </footer>

@@ -3,253 +3,195 @@
 <head>
     <title>Shop</title>
     <style>
-        /* ── TOKENS (đồng bộ với home.html) ── */
         :root {
-            --ink: #111111;
-            --paper: #ffffff;
-            --line: #eceae5;
-            --mute: #8a8a8a;
+            --cream: #FBF6EC;
+            --paper: #FFFFFF;
+            --ink: #1A1A1A;
+            --mute: #7a7368;
+            --line: #ECE3D2;
+            --mustard: #F5C247;
+            --mustard-dark: #E2AC1F;
+            --sale: #E14B4B;
         }
         * { box-sizing: border-box; }
-        body { color: var(--ink); -webkit-font-smoothing: antialiased; }
-        a { color: inherit; }
+        a { color: inherit; text-decoration: none; }
 
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(14px); }
             to   { opacity: 1; transform: translateY(0); }
         }
 
-        .shop-head {
-            display: flex;
-            align-items: baseline;
-            justify-content: space-between;
-            padding-bottom: 1.1rem;
-            margin-bottom: 1.6rem;
-            border-bottom: 1px solid var(--line);
-        }
-        .sec-title {
-            font-size: 1rem;
-            font-weight: 700;
-            letter-spacing: .06em;
-            text-transform: uppercase;
-            margin: 0;
-        }
-        .sec-title small {
-            font-size: .68rem;
-            font-weight: 500;
-            letter-spacing: .02em;
-            text-transform: none;
-            color: var(--mute);
-        }
+        .shop-head { padding: 1.8rem 0 1.2rem; }
+        .sec-title { font-size: 1.5rem; font-weight: 800; margin: 0; }
+        .shop-count { font-size: .84rem; color: var(--mute); font-weight: 500; }
 
-        /* ===== Toolbar: tìm kiếm + sắp xếp — phẳng, đơn sắc ===== */
-        .shop-toolbar { margin-bottom: 2.4rem; }
+        /* ═══ Pill danh mục nhanh ═══ */
+        .cat-pill {
+            display: inline-flex; align-items: center;
+            background: var(--paper); border: 1px solid var(--line);
+            border-radius: 999px; padding: .5rem 1.2rem;
+            font-size: .82rem; font-weight: 600;
+            transition: background .2s, transform .2s, border-color .2s, color .2s;
+        }
+        .cat-pill:hover { background: var(--mustard); border-color: var(--mustard); transform: translateY(-2px); }
+        .cat-pill.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+        /* ═══ Toolbar tìm kiếm + sắp xếp ═══ */
+        .shop-toolbar { margin: 1.4rem 0 2rem; }
         .shop-toolbar .form-control,
         .shop-toolbar .form-select {
             border: 1px solid var(--line);
-            border-radius: 0;
-            font-size: .85rem;
-            padding: .6rem .9rem;
+            border-radius: 999px;
+            font-size: .84rem;
+            padding: .6rem 1.2rem;
+            background: var(--paper);
         }
         .shop-toolbar .form-control:focus,
         .shop-toolbar .form-select:focus {
-            border-color: var(--ink);
-            box-shadow: none;
+            border-color: var(--mustard-dark);
+            box-shadow: 0 0 0 .16rem rgba(245,194,71,.3);
         }
         .shop-toolbar .btn-dark {
             background: var(--ink);
             border: 1px solid var(--ink);
-            border-radius: 0;
-            font-size: .72rem;
+            border-radius: 999px;
+            font-size: .78rem;
             font-weight: 700;
-            letter-spacing: .12em;
-            text-transform: uppercase;
             padding: .6rem 1.6rem;
-            transition: background-color .2s ease, color .2s ease;
+            transition: background .2s, transform .2s;
         }
-        .shop-toolbar .btn-dark:hover { background: var(--paper); color: var(--ink); }
+        .shop-toolbar .btn-dark:hover { background: var(--mustard-dark); border-color: var(--mustard-dark); color: var(--ink); transform: translateY(-2px); }
         .shop-toolbar .btn-outline-secondary {
             border: 1px solid var(--line);
-            border-radius: 0;
+            border-radius: 999px;
             color: var(--mute);
-            padding: .6rem .9rem;
+            padding: .6rem .95rem;
             transition: all .2s ease;
         }
-        .shop-toolbar .btn-outline-secondary:hover {
-            background: var(--ink);
-            border-color: var(--ink);
-            color: #fff;
-        }
+        .shop-toolbar .btn-outline-secondary:hover { background: var(--ink); border-color: var(--ink); color: #fff; }
 
-        /* ===== Product card — đúng bố cục /san-pham thật:
-           tag đơn sắc góc trái ("New" hoặc "-X%"), không nhãn danh mục,
-           tên hoa, giá đơn giản, không khung/không đổ bóng ===== */
+        /* ═══ Product card — đồng bộ với home.html ═══ */
         .p-card {
             display: block;
-            text-decoration: none;
-            color: var(--ink);
+            background: var(--paper);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            overflow: hidden;
             opacity: 0;
             animation: fadeInUp .5s ease forwards;
+            transition: transform .25s ease, box-shadow .25s ease;
         }
-        .p-card__img-wrap { position: relative; overflow: hidden; background: #f4f2ef; aspect-ratio: 3/4; }
-        .p-card__img-wrap img {
-            width: 100%; height: 100%;
-            object-fit: cover;
-            display: block;
-            transition: transform .5s ease;
+        .p-card:hover { transform: translateY(-5px); box-shadow: 0 16px 30px rgba(0,0,0,.09); }
+        .p-card__img-wrap { position: relative; overflow: hidden; background: #f1ece0; aspect-ratio: 3/4; }
+        .p-card__img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s ease; }
+        .p-card:hover .p-card__img-wrap img { transform: scale(1.06); }
+        .p-card__sale {
+            position: absolute; top: 10px; left: 10px; z-index: 2;
+            background: var(--sale); color: #fff;
+            font-size: .68rem; font-weight: 700; border-radius: 999px; padding: 3px 10px;
         }
-        .p-card:hover .p-card__img-wrap img { transform: scale(1.04); }
-        .p-card__tag {
-            position: absolute;
-            top: 10px; left: 10px;
-            z-index: 2;
-            background: var(--ink);
-            color: #fff;
-            font-size: .62rem;
-            font-weight: 700;
-            letter-spacing: .06em;
-            text-transform: uppercase;
-            padding: 3px 9px;
+        .p-card__cat {
+            position: absolute; top: 10px; right: 10px; z-index: 2;
+            background: rgba(255,255,255,.92); color: var(--ink);
+            font-size: .62rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
+            border-radius: 999px; padding: 3px 9px;
         }
-        .p-card__body { padding: .85rem .05rem 0; }
+        .p-card__body { padding: .9rem 1rem 1.1rem; }
         .p-card__name {
-            font-size: .8rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            margin-bottom: .3rem;
-            transition: opacity .2s;
+            font-size: .86rem; font-weight: 600; margin-bottom: .35rem;
+            display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
         }
-        .p-card:hover .p-card__name { opacity: .55; }
-        .p-card__price { font-size: .8rem; font-weight: 500; color: var(--ink); }
-        .p-card__price-original {
-            font-size: .72rem;
-            color: var(--mute);
-            text-decoration: line-through;
-            margin-right: 6px;
-        }
+        .p-card__price { font-size: .88rem; font-weight: 800; }
+        .p-card__price-original { font-size: .74rem; color: var(--mute); text-decoration: line-through; margin-right: 6px; font-weight: 500; }
+        .p-card__price-sale { color: var(--sale); }
 
-        /* ===== Empty state ===== */
-        .empty-state { padding: 5rem 0; }
-        .empty-state i { font-size: 2.2rem; color: var(--mute); }
-        .empty-state p { color: var(--mute); letter-spacing: .04em; }
-        .empty-state .btn-outline-dark {
-            border-radius: 0;
-            font-size: .72rem;
-            font-weight: 700;
-            letter-spacing: .12em;
-            text-transform: uppercase;
-            padding: .6rem 1.8rem;
-            transition: all .2s ease;
+        /* ═══ Empty state ═══ */
+        .empty-state { padding: 5rem 0; text-align: center; }
+        .empty-state i { font-size: 2.4rem; color: var(--mustard-dark); }
+        .empty-state p { color: var(--mute); margin: 1rem 0; }
+        .empty-state .btn-dark {
+            background: var(--ink); border-radius: 999px; border: none;
+            font-size: .78rem; font-weight: 700; padding: .6rem 1.8rem;
+            transition: background .2s;
         }
-        .empty-state .btn-outline-dark:hover { background: var(--ink); color: #fff; }
+        .empty-state .btn-dark:hover { background: var(--mustard-dark); color: var(--ink); }
     </style>
 </head>
 <body>
-<div class="container py-3">
+<div class="site-container">
 
     <!-- ═══ TIÊU ĐỀ ═══ -->
-    <div class="shop-head">
-        <p class="sec-title">
-            Sản phẩm
-            <small th:text="'(' + ${totalItems} + ')'"></small>
-        </p>
+    <div class="shop-head d-flex justify-content-between align-items-end flex-wrap gap-2">
+        <h1 class="sec-title">Cửa hàng</h1>
+        <span class="shop-count" th:text="${totalItems} + ' sản phẩm'"></span>
+    </div>
+
+    <!-- ═══ PILL DANH MỤC NHANH ═══ -->
+    <div class="d-flex flex-wrap gap-2 mb-2" th:if="${navCategories != null and !#lists.isEmpty(navCategories)}">
+        <a th:href="@{/shop}" class="cat-pill" th:classappend="${selectedCategory == null} ? 'active'">Tất cả</a>
+        <a th:each="cat : ${navCategories}"
+           th:href="@{/shop(category=${cat.id})}"
+           th:classappend="${selectedCategory != null and selectedCategory == cat.id} ? 'active'"
+           class="cat-pill" th:text="${cat.name}"></a>
     </div>
 
     <!-- ═══ TÌM KIẾM + SẮP XẾP ═══ -->
-    <form th:action="@{/shop}" method="get" class="d-flex gap-2 shop-toolbar">
-        <input type="hidden" name="category" th:value="${selectedCategory}"
-               th:if="${selectedCategory != null}"/>
-        <input type="text" name="keyword" th:value="${keyword}"
-               class="form-control" placeholder="Tìm kiếm sản phẩm..."/>
+    <form th:action="@{/shop}" method="get" class="d-flex gap-2 shop-toolbar flex-wrap">
+        <input type="hidden" name="category" th:value="${selectedCategory}" th:if="${selectedCategory != null}"/>
+        <input type="text" name="keyword" th:value="${keyword}" class="form-control" style="max-width:260px"
+               placeholder="Tìm kiếm sản phẩm..."/>
         <select name="sort" class="form-select w-auto" onchange="this.form.submit()">
-            <option value="newest"
-                    th:selected="${sort == 'newest' or sort == null}">Mới nhất</option>
-            <option value="price_asc"
-                    th:selected="${sort == 'price_asc'}">Giá: thấp → cao</option>
-            <option value="price_desc"
-                    th:selected="${sort == 'price_desc'}">Giá: cao → thấp</option>
+            <option value="newest" th:selected="${sort == 'newest' or sort == null}">Mới nhất</option>
+            <option value="price_asc" th:selected="${sort == 'price_asc'}">Giá: thấp → cao</option>
+            <option value="price_desc" th:selected="${sort == 'price_desc'}">Giá: cao → thấp</option>
         </select>
         <button type="submit" class="btn btn-dark">Tìm</button>
-        <!-- Reset filter -->
-        <a th:if="${keyword != null or selectedCategory != null}"
-           th:href="@{/shop}" class="btn btn-outline-secondary">✕</a>
+        <a th:if="${keyword != null or selectedCategory != null}" th:href="@{/shop}" class="btn btn-outline-secondary">✕</a>
     </form>
 
     <!-- ═══ DANH SÁCH SẢN PHẨM ═══ -->
-    <div th:if="${#lists.isEmpty(products)}" class="text-center empty-state">
-        <i class="bi bi-emoji-frown d-block mb-3"></i>
-        <p class="mb-3">Không tìm thấy sản phẩm nào</p>
-        <a th:href="@{/shop}" class="btn btn-outline-dark">Xem tất cả</a>
+    <div th:if="${#lists.isEmpty(products)}" class="empty-state">
+        <i class="bi bi-emoji-frown d-block mb-2"></i>
+        <p>Không tìm thấy sản phẩm nào</p>
+        <a th:href="@{/shop}" class="btn btn-dark">Xem tất cả</a>
     </div>
 
-    <div class="row row-cols-2 row-cols-md-4 g-4"
-         th:unless="${#lists.isEmpty(products)}">
-        <div class="col" th:each="p, iterStat : ${products}"
-             th:with="sale=${activeSales.get(p.id)}">
+    <div class="row row-cols-2 row-cols-md-4 g-3" th:unless="${#lists.isEmpty(products)}">
+        <div class="col" th:each="p, iterStat : ${products}" th:with="sale=${activeSales.get(p.id)}">
             <a th:href="@{'/product/' + ${p.id}}" class="p-card"
                th:style="'animation-delay:' + ${iterStat.index % 8 * 0.06} + 's'">
                 <div class="p-card__img-wrap">
-                    <span th:if="${sale == null}" class="p-card__tag">New</span>
-                    <span th:if="${sale != null}" class="p-card__tag"
+                    <span th:if="${sale != null}" class="p-card__sale"
                           th:text="'-' + ${#numbers.formatDecimal(sale.discountPercent,1,0)} + '%'"></span>
+                    <span th:if="${p.category != null}" class="p-card__cat" th:text="${p.category.name}"></span>
                     <img th:if="${p.images != null and !p.images.isEmpty()}"
                          th:src="${p.images[0].imageUrl}" th:alt="${p.name}"/>
-                    <img th:unless="${p.images != null and !p.images.isEmpty()}"
-                         src="/images/no-image.png" alt=""/>
+                    <img th:unless="${p.images != null and !p.images.isEmpty()}" src="/images/no-image.png" alt=""/>
                 </div>
                 <div class="p-card__body">
                     <p class="p-card__name" th:text="${p.name}"></p>
-
-                    <!-- Còn sale: giá gốc gạch ngang + giá sau giảm -->
                     <p th:if="${sale != null}" class="p-card__price mb-0">
-                        <span class="p-card__price-original"
-                              th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></span>
-                        <span th:text="${#numbers.formatInteger(
-                                p.price - (p.price * sale.discountPercent / 100), 0, 'COMMA') + ' đ'}"></span>
+                        <span class="p-card__price-original" th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + 'đ'}"></span>
+                        <span class="p-card__price-sale" th:text="${#numbers.formatInteger(p.price - (p.price * sale.discountPercent / 100), 0, 'COMMA') + 'đ'}"></span>
                     </p>
-                    <!-- Không sale: giá thường -->
-                    <p th:unless="${sale != null}" class="p-card__price mb-0"
-                       th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></p>
+                    <p th:unless="${sale != null}" class="p-card__price mb-0" th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + 'đ'}"></p>
                 </div>
             </a>
         </div>
     </div>
 
-    <!-- ═══ PHÂN TRANG ═══
-         Dùng nguyên class .pagination của shop-layout.html (đã theo tông
-         đen-trắng flat sẵn, giống dãy số đơn giản của /san-pham thật). -->
-    <div th:if="${totalPages > 1}"
-         class="d-flex justify-content-center mt-5">
+    <!-- ═══ PHÂN TRANG ═══ -->
+    <div th:if="${totalPages > 1}" class="d-flex justify-content-center mt-5 pb-4">
         <nav>
             <ul class="pagination">
-                <li class="page-item"
-                    th:classappend="${currentPage == 0} ? 'disabled'">
-                    <a class="page-link"
-                       th:href="@{/shop(page=${currentPage-1},
-                                       keyword=${keyword},
-                                       sort=${sort},
-                                       category=${selectedCategory})}">←</a>
+                <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                    <a class="page-link" th:href="@{/shop(page=${currentPage-1}, keyword=${keyword}, sort=${sort}, category=${selectedCategory})}">←</a>
                 </li>
-                <li th:each="i : ${#numbers.sequence(0, totalPages-1)}"
-                    class="page-item"
-                    th:classappend="${i == currentPage} ? 'active'">
-                    <a class="page-link"
-                       th:href="@{/shop(page=${i},
-                                       keyword=${keyword},
-                                       sort=${sort},
-                                       category=${selectedCategory})}"
-                       th:text="${i + 1}"></a>
+                <li th:each="i : ${#numbers.sequence(0, totalPages-1)}" class="page-item" th:classappend="${i == currentPage} ? 'active'">
+                    <a class="page-link" th:href="@{/shop(page=${i}, keyword=${keyword}, sort=${sort}, category=${selectedCategory})}" th:text="${i + 1}"></a>
                 </li>
-                <li class="page-item"
-                    th:classappend="${currentPage == totalPages-1} ? 'disabled'">
-                    <a class="page-link"
-                       th:href="@{/shop(page=${currentPage+1},
-                                       keyword=${keyword},
-                                       sort=${sort},
-                                       category=${selectedCategory})}">→</a>
+                <li class="page-item" th:classappend="${currentPage == totalPages-1} ? 'disabled'">
+                    <a class="page-link" th:href="@{/shop(page=${currentPage+1}, keyword=${keyword}, sort=${sort}, category=${selectedCategory})}">→</a>
                 </li>
             </ul>
         </nav>
