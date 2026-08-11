@@ -242,12 +242,11 @@
                     <a class="nav-link nav-main-link" th:href="@{/}">Home</a>
                 </li>
 
-                <!-- Dropdown Shop — hover hiện toàn bộ danh mục -->
+                <!-- Dropdown Shop — hover chỉ hiện các danh mục, bấm chữ
+                     "Shop" đi thẳng /shop (toàn bộ sản phẩm) -->
                 <li class="nav-item dropdown dropdown-hover">
                     <a class="nav-link nav-main-link dropdown-toggle" th:href="@{/shop}">Shop</a>
                     <ul class="dropdown-menu shadow-none">
-                        <li><a class="dropdown-item" th:href="@{/shop}">Tất cả sản phẩm</a></li>
-                        <li><hr class="dropdown-divider"></li>
                         <li th:each="cat : ${navCategories}" th:if="${cat.name != 'Phụ kiện'}">
                             <a class="dropdown-item" th:href="@{/shop(category=${cat.id})}" th:text="${cat.name}"></a>
                         </li>
