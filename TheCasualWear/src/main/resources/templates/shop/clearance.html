@@ -3,148 +3,139 @@
 <head>
     <title>Clearance Sale</title>
     <style>
+        :root {
+            --cream: #FBF6EC;
+            --paper: #FFFFFF;
+            --ink: #1A1A1A;
+            --mute: #7a7368;
+            --line: #ECE3D2;
+            --mustard: #F5C247;
+            --mustard-dark: #E2AC1F;
+            --sale: #E14B4B;
+        }
+        * { box-sizing: border-box; }
+        a { color: inherit; text-decoration: none; }
+
         @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(18px); }
+            from { opacity: 0; transform: translateY(14px); }
             to   { opacity: 1; transform: translateY(0); }
         }
 
-        /* ── Header ── */
+        /* ══ HERO — thay gradient cam bằng nền ink + chữ mustard, đồng bộ
+           tông "clearance/sale" nhưng vẫn nằm trong bảng màu chung ══ */
         .clearance-hero {
-            background: linear-gradient(135deg, #ff5a36 0%, #c0392b 100%);
-            border-radius: 16px;
+            background: var(--ink);
+            border-radius: 22px;
             padding: 2.2rem 2rem;
             color: #fff;
-            margin-bottom: 2rem;
+            margin: 1.6rem 0 2.2rem;
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+            flex-wrap: wrap;
         }
-        .clearance-hero h4 { font-weight: 800; letter-spacing: -.02em; margin-bottom: .25rem; }
-        .clearance-hero p { opacity: .9; margin: 0; font-size: .9rem; }
+        .clearance-hero__icon {
+            width: 52px; height: 52px; border-radius: 999px;
+            background: var(--mustard);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; color: var(--ink); flex-shrink: 0;
+        }
+        .clearance-hero h1 { font-weight: 800; font-size: 1.4rem; margin: 0 0 .3rem; }
+        .clearance-hero p { opacity: .8; margin: 0; font-size: .88rem; }
 
-        /* ── Product card (giống shop.html) ── */
-        .product-card-link {
+        .sec-title { font-size: 1.1rem; font-weight: 700; margin: 0 0 1.4rem; }
+
+        /* ══ Product card — dùng chung ngôn ngữ với home.html/shop.html ══ */
+        .p-card {
             display: block;
+            background: var(--paper);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            overflow: hidden;
             opacity: 0;
             animation: fadeInUp .5s ease forwards;
+            transition: transform .25s ease, box-shadow .25s ease;
         }
-        .product-card {
-            position: relative;
-            overflow: hidden;
-            border-radius: 14px;
-            transition: transform .3s ease, box-shadow .3s ease;
+        .p-card:hover { transform: translateY(-5px); box-shadow: 0 16px 30px rgba(0,0,0,.09); }
+        .p-card__img-wrap { position: relative; overflow: hidden; background: #f1ece0; aspect-ratio: 3/4; }
+        .p-card__img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s ease; }
+        .p-card:hover .p-card__img-wrap img { transform: scale(1.06); }
+        .p-card__sale {
+            position: absolute; top: 10px; left: 10px; z-index: 2;
+            background: var(--sale); color: #fff;
+            font-size: .68rem; font-weight: 700; border-radius: 999px; padding: 3px 10px;
         }
-        .product-card:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 16px 30px rgba(0,0,0,.14) !important;
+        .p-card__cat {
+            position: absolute; top: 10px; right: 10px; z-index: 2;
+            background: rgba(255,255,255,.92); color: var(--ink);
+            font-size: .62rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
+            border-radius: 999px; padding: 3px 9px;
         }
-        .product-card .img-wrap {
-            overflow: hidden;
-            height: 280px;
+        .p-card__body { padding: .9rem 1rem 1.1rem; }
+        .p-card__name {
+            font-size: .86rem; font-weight: 600; margin-bottom: .35rem;
+            display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
         }
-        .product-card .img-wrap img {
-            height: 280px;
-            width: 100%;
-            object-fit: cover;
-            transition: transform .5s ease;
-        }
-        .product-card:hover .img-wrap img { transform: scale(1.08); }
-        .product-card .card-title { transition: color .2s ease; }
-        .product-card:hover .card-title { color: #ff5a36; }
-        .product-card .price-tag { color: #ff5a36 !important; }
-        .product-card .category-badge {
-            display: inline-block;
-            font-size: .72rem;
-            font-weight: 600;
-            letter-spacing: .02em;
-            color: #ff5a36;
-            background: #fff0eb;
-            border-radius: 999px;
-            padding: 2px 10px;
-            margin-bottom: 6px;
-        }
-        .product-card .sale-badge {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 2;
-            background: #ff5a36;
-            color: #fff;
-            font-size: .72rem;
-            font-weight: 700;
-            border-radius: 999px;
-            padding: 3px 10px;
-            box-shadow: 0 2px 8px rgba(255,90,54,.35);
-        }
-        .product-card .price-original {
-            font-size: .8rem;
-            color: #999;
-            text-decoration: line-through;
-            margin-right: 6px;
-        }
+        .p-card__price { font-size: .88rem; font-weight: 800; }
+        .p-card__price-original { font-size: .74rem; color: var(--mute); text-decoration: line-through; margin-right: 6px; font-weight: 500; }
+        .p-card__price-sale { color: var(--sale); }
 
-        /* ── Empty state ── */
-        .empty-state i {
-            font-size: 2.6rem;
-            color: #ff5a36;
-            animation: fadeInUp .4s ease;
+        /* ══ Empty state ══ */
+        .empty-state { padding: 5rem 0; text-align: center; }
+        .empty-state i { font-size: 2.4rem; color: var(--mustard-dark); }
+        .empty-state p { color: var(--mute); margin: 1rem 0; }
+        .empty-state .btn-dark {
+            background: var(--ink); border-radius: 999px; border: none;
+            font-size: .78rem; font-weight: 700; padding: .6rem 1.8rem;
+            transition: background .2s;
         }
-        .empty-state .btn-outline-dark { transition: all .2s ease; }
-        .empty-state .btn-outline-dark:hover {
-            background: #ff5a36;
-            border-color: #ff5a36;
-            color: #fff;
-            transform: translateY(-2px);
+        .empty-state .btn-dark:hover { background: var(--mustard-dark); color: var(--ink); }
+
+        @media (max-width: 576px) {
+            .clearance-hero { padding: 1.6rem 1.4rem; }
         }
     </style>
 </head>
 <body>
-<div class="container">
+<div class="site-container">
 
+    <!-- ═══ HERO ═══ -->
     <div class="clearance-hero">
-        <h4><i class="bi bi-fire me-2"></i>Clearance Sale</h4>
-        <p th:text="${#lists.isEmpty(products)}
-                     ? 'Hiện chưa có sản phẩm nào đang giảm giá — quay lại sau nhé!'
-                     : 'Đang có ' + ${#lists.size(products)} + ' sản phẩm giảm giá — số lượng có hạn!'"></p>
+        <div class="clearance-hero__icon"><i class="bi bi-fire"></i></div>
+        <div>
+            <h1>Clearance Sale</h1>
+            <p th:text="${#lists.isEmpty(products)}
+                         ? 'Hiện chưa có sản phẩm nào đang giảm giá — quay lại sau nhé!'
+                         : 'Đang có ' + ${#lists.size(products)} + ' sản phẩm giảm giá — số lượng có hạn!'"></p>
+        </div>
     </div>
 
-    <div th:if="${#lists.isEmpty(products)}" class="text-center py-5 empty-state">
-        <i class="bi bi-emoji-frown d-block mb-3"></i>
-        <p class="text-muted">Chưa có sản phẩm nào đang sale.</p>
-        <a th:href="@{/shop}" class="btn btn-outline-dark">Xem toàn bộ sản phẩm</a>
+    <!-- ═══ DANH SÁCH SẢN PHẨM ═══ -->
+    <div th:if="${#lists.isEmpty(products)}" class="empty-state">
+        <i class="bi bi-emoji-frown d-block mb-2"></i>
+        <p>Chưa có sản phẩm nào đang sale.</p>
+        <a th:href="@{/shop}" class="btn btn-dark">Xem toàn bộ sản phẩm</a>
     </div>
 
-    <div class="row row-cols-2 row-cols-md-4 g-4" th:unless="${#lists.isEmpty(products)}">
-        <div class="col" th:each="p, iterStat : ${products}"
-             th:with="sale=${activeSales.get(p.id)}">
-            <a th:href="@{'/product/' + ${p.id}}"
-               class="text-decoration-none text-dark product-card-link"
+    <div class="row row-cols-2 row-cols-md-4 g-3 pb-5" th:unless="${#lists.isEmpty(products)}">
+        <div class="col" th:each="p, iterStat : ${products}" th:with="sale=${activeSales.get(p.id)}">
+            <a th:href="@{'/product/' + ${p.id}}" class="p-card"
                th:style="'animation-delay:' + ${iterStat.index % 8 * 0.06} + 's'">
-                <div class="card product-card h-100 border-0 shadow-sm" style="cursor:pointer">
-                    <span th:if="${sale != null}" class="sale-badge"
+                <div class="p-card__img-wrap">
+                    <span th:if="${sale != null}" class="p-card__sale"
                           th:text="'-' + ${#numbers.formatDecimal(sale.discountPercent,1,0)} + '%'"></span>
-                    <div class="img-wrap">
-                        <img th:if="${p.images != null and !p.images.isEmpty()}"
-                             th:src="${p.images[0].imageUrl}"
-                             class="card-img-top"/>
-                        <img th:unless="${p.images != null and !p.images.isEmpty()}"
-                             src="/images/no-image.png"
-                             class="card-img-top"/>
-                    </div>
-                    <div class="card-body">
-                        <span th:if="${p.category != null}"
-                              class="category-badge"
-                              th:text="${p.category.name}"></span>
-                        <h6 class="card-title mb-1" th:text="${p.name}"></h6>
-
-                        <p th:if="${sale != null}" class="mb-0">
-                            <span class="price-original"
-                                  th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></span>
-                            <span class="price-tag fw-bold"
-                                  th:text="${#numbers.formatInteger(
-                                        p.price - (p.price * sale.discountPercent / 100),
-                                        0, 'COMMA') + ' đ'}"></span>
-                        </p>
-                        <p th:unless="${sale != null}" class="price-tag fw-bold mb-0"
-                           th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + ' đ'}"></p>
-                    </div>
+                    <span th:if="${p.category != null}" class="p-card__cat" th:text="${p.category.name}"></span>
+                    <img th:if="${p.images != null and !p.images.isEmpty()}"
+                         th:src="${p.images[0].imageUrl}" th:alt="${p.name}"/>
+                    <img th:unless="${p.images != null and !p.images.isEmpty()}" src="/images/no-image.png" alt=""/>
+                </div>
+                <div class="p-card__body">
+                    <p class="p-card__name" th:text="${p.name}"></p>
+                    <p th:if="${sale != null}" class="p-card__price mb-0">
+                        <span class="p-card__price-original" th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + 'đ'}"></span>
+                        <span class="p-card__price-sale" th:text="${#numbers.formatInteger(p.price - (p.price * sale.discountPercent / 100), 0, 'COMMA') + 'đ'}"></span>
+                    </p>
+                    <p th:unless="${sale != null}" class="p-card__price mb-0" th:text="${#numbers.formatInteger(p.price, 0, 'COMMA') + 'đ'}"></p>
                 </div>
             </a>
         </div>

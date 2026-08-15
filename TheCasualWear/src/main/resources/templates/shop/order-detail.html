@@ -236,7 +236,13 @@
     }
     .ord-page-line { width: 100%; height: 1px; background: var(--line); margin: 1rem 0 1.75rem; }
 
-    .ord-card { border: 1px solid var(--line); padding: 1.2rem; }
+    .ord-card {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 1.2rem;
+        box-shadow: 0 10px 26px rgba(0,0,0,.05);
+    }
     .ord-card-title {
         display: block;
         font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
@@ -307,7 +313,10 @@
     .ord-sum-row--total span:first-child { color: var(--ink); }
 
     .ord-notice {
-        border: 1px solid #a8760a; padding: 1rem; font-size: .78rem; color: var(--ink); line-height: 1.6;
+        background: var(--paper);
+        border: 1px solid #a8760a;
+        border-radius: 12px;
+        padding: 1rem; font-size: .78rem; color: var(--ink); line-height: 1.6;
     }
     .ord-notice i { color: #a8760a; margin-right: .4rem; }
 

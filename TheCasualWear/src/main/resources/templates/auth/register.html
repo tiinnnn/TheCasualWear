@@ -5,81 +5,197 @@
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title>Đăng ký</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/images/footer.png"/>
+    <style>
+        :root {
+            --cream: #FBF6EC;
+            --paper: #FFFFFF;
+            --ink: #1A1A1A;
+            --mute: #7a7368;
+            --line: #ECE3D2;
+            --mustard: #F5C247;
+            --mustard-dark: #E2AC1F;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            color: var(--ink);
+            font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+        }
+        a { color: inherit; }
+
+        .auth-split { min-height: 100vh; display: flex; }
+
+        .auth-visual {
+            flex: 1 1 42%;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 2.4rem;
+            background: #e9e2d0 url('/images/banner2.jpg') center/cover no-repeat;
+            color: #fff;
+            min-height: 100vh;
+        }
+        .auth-visual::before {
+            content: "";
+            position: absolute; inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,.68) 10%, rgba(0,0,0,.15) 60%, rgba(0,0,0,.4) 100%);
+        }
+        .auth-visual > * { position: relative; z-index: 1; }
+        .auth-visual-brand { font-weight: 800; font-size: 1.3rem; text-decoration: none; color: #fff; }
+        .auth-visual-quote { max-width: 380px; }
+        .auth-visual-quote .pill-tag {
+            display: inline-block; background: var(--mustard); color: var(--ink);
+            font-size: .7rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+            padding: .35rem .9rem; border-radius: 999px; margin-bottom: 1rem;
+        }
+        .auth-visual-quote h2 { font-size: 1.6rem; font-weight: 800; line-height: 1.25; margin: 0 0 .6rem; }
+        .auth-visual-quote p { font-size: .86rem; color: rgba(255,255,255,.8); margin: 0; }
+        .auth-visual-perks { list-style: none; padding: 0; margin: 1.4rem 0 0; display: flex; flex-direction: column; gap: .6rem; }
+        .auth-visual-perks li { display: flex; align-items: center; gap: .6rem; font-size: .84rem; color: rgba(255,255,255,.9); }
+        .auth-visual-perks i { color: var(--mustard); }
+
+        .auth-form-panel {
+            flex: 1 1 58%;
+            background: var(--cream);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2.4rem 1.4rem;
+        }
+        .auth-form-box { width: 100%; max-width: 440px; }
+        .auth-form-eyebrow { font-size: .74rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--mustard-dark); margin-bottom: .5rem; }
+        .auth-form-title { font-size: 1.6rem; font-weight: 800; margin: 0 0 .4rem; }
+        .auth-form-sub { color: var(--mute); font-size: .88rem; margin-bottom: 1.6rem; }
+
+        .form-label { font-size: .82rem; font-weight: 600; margin-bottom: .4rem; }
+        .form-control {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            font-size: .9rem;
+            padding: .68rem .9rem;
+        }
+        .form-control:focus {
+            border-color: var(--mustard-dark);
+            box-shadow: 0 0 0 .16rem rgba(245,194,71,.3);
+        }
+        .form-control.is-valid { border-color: #2f9e44; background-image: none; }
+        .form-control.is-invalid { border-color: #e14b4b; background-image: none; }
+        .form-text { font-size: .75rem; color: var(--mute) !important; }
+
+        .btn-auth-primary {
+            background: var(--ink);
+            color: #fff;
+            border: none;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: .9rem;
+            padding: .8rem 1rem;
+            transition: background .2s, transform .2s, box-shadow .2s;
+        }
+        .btn-auth-primary:hover { background: var(--mustard-dark); color: var(--ink); transform: translateY(-2px); box-shadow: 0 10px 22px rgba(0,0,0,.14); }
+
+        .auth-link { color: var(--mute); font-size: .84rem; text-decoration: none; }
+        .auth-link:hover { color: var(--mustard-dark); }
+        .auth-link-strong { color: var(--ink); font-weight: 700; text-decoration: none; }
+        .auth-link-strong:hover { color: var(--mustard-dark); }
+
+        @media (max-width: 900px) {
+            .auth-visual { display: none; }
+            .auth-form-panel { flex: 1 1 100%; padding: 2.4rem 1.2rem; }
+        }
+    </style>
 </head>
-<body class="container mt-3 mt-md-5" style="max-width:450px">
-<div class="text-center mb-4">
-    <a th:href="@{/}" class="text-dark text-decoration-none">
-        <h3 class="fw-bold">The Casual Wear</h3>
-    </a>
+<body>
+<div class="auth-split">
+    <!-- ═══ CỘT TRÁI ═══ -->
+    <div class="auth-visual">
+        <a th:href="@{/}" class="auth-visual-brand">The Casual Wear</a>
+        <div class="auth-visual-quote">
+            <span class="pill-tag">Gia nhập cộng đồng</span>
+            <h2>Tủ đồ của bạn,<br/>bắt đầu từ đây.</h2>
+            <p>Tạo tài khoản để mua sắm nhanh hơn và theo dõi mọi đơn hàng.</p>
+            <ul class="auth-visual-perks">
+                <li><i class="bi bi-check-circle-fill"></i>Lưu địa chỉ giao hàng</li>
+                <li><i class="bi bi-check-circle-fill"></i>Theo dõi trạng thái đơn hàng</li>
+                <li><i class="bi bi-check-circle-fill"></i>Nhận ưu đãi dành riêng cho thành viên</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ═══ CỘT PHẢI — FORM ═══ -->
+    <div class="auth-form-panel">
+        <div class="auth-form-box">
+            <p class="auth-form-eyebrow">Thành viên mới</p>
+            <h1 class="auth-form-title">Đăng ký</h1>
+            <p class="auth-form-sub">Chỉ mất chưa đầy một phút.</p>
+
+            <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+            <form th:action="@{/auth/register}" th:object="${user}" method="post">
+                <div class="mb-3">
+                    <label class="form-label">Tên đăng nhập <span class="text-danger">*</span></label>
+                    <input type="text" th:field="*{username}" class="form-control" required/>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">
+                        Email
+                        <span class="auth-link">(* lưu ý chỉ email mới reset được password)</span>
+                    </label>
+                    <input type="email" name="email"
+                           th:value="${user != null ? user.email : ''}"
+                           class="form-control"
+                           placeholder="example@gmail.com"
+                           pattern="[a-zA-Z0-9._%+\-]+@gmail\.com"
+                           title="Email phải có đuôi @gmail.com"/>
+                    <div class="form-text"><i class="bi bi-info-circle me-1"></i>Chỉ chấp nhận email @gmail.com</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">
+                        Số điện thoại
+                        <span class="auth-link">(* cần ít nhất Email hoặc SĐT)</span>
+                    </label>
+                    <input type="text" name="phone"
+                           th:value="${user != null ? user.phone : ''}"
+                           class="form-control"
+                           placeholder="0901234567"
+                           pattern="\d{10}"
+                           maxlength="10"
+                           title="Số điện thoại phải đúng 10 chữ số"/>
+                    <div class="form-text"><i class="bi bi-info-circle me-1"></i>Nhập đúng 10 chữ số</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Mật khẩu <span class="text-danger">*</span></label>
+                    <input type="password" th:field="*{password}" id="password" class="form-control" required/>
+                    <div class="form-text">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Mật khẩu phải chứa ít nhất 6 ký tự và chứa ít nhất 1 chữ số
+                    </div>
+                    <div class="mt-1" id="pwStrength"></div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Nhập lại mật khẩu <span class="text-danger">*</span></label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" class="form-control" required/>
+                    <div class="invalid-feedback">Mật khẩu không khớp!</div>
+                </div>
+
+                <button type="submit" class="btn btn-auth-primary w-100">Đăng ký</button>
+            </form>
+
+            <p class="mt-4 text-center auth-link mb-0">
+                Đã có tài khoản? <a th:href="@{/auth/login}" class="auth-link-strong">Đăng nhập</a>
+            </p>
+        </div>
+    </div>
 </div>
-<h2 class="mb-4 text-center fw-bold">Đăng ký</h2>
-
-<div th:replace="~{fragments/alerts :: alerts}"></div>
-
-<form th:action="@{/auth/register}" th:object="${user}" method="post">
-    <div class="mb-3">
-        <label class="form-label">Tên đăng nhập <span class="text-danger">*</span></label>
-        <input type="text" th:field="*{username}" class="form-control" required/>
-    </div>
-
-    <div class="mb-3">
-        <label class="form-label">
-            Email
-            <span class="text-muted small">(* lưu ý chỉ email mới reset được password)</span>
-        </label>
-        <input type="email" name="email"
-               th:value="${user != null ? user.email : ''}"
-               class="form-control"
-               placeholder="example@gmail.com"
-               pattern="[a-zA-Z0-9._%+\-]+@gmail\.com"
-               title="Email phải có đuôi @gmail.com"/>
-        <div class="form-text text-muted">
-            <i class="bi bi-info-circle me-1"></i>Chỉ chấp nhận email @gmail.com
-        </div>
-    </div>
-
-    <div class="mb-3">
-        <label class="form-label">
-            Số điện thoại
-            <span class="text-muted small">(* cần ít nhất Email hoặc SĐT)</span>
-        </label>
-        <input type="text" name="phone"
-               th:value="${user != null ? user.phone : ''}"
-               class="form-control"
-               placeholder="0901234567"
-               pattern="\d{10}"
-               maxlength="10"
-               title="Số điện thoại phải đúng 10 chữ số"/>
-        <div class="form-text text-muted">
-            <i class="bi bi-info-circle me-1"></i>Nhập đúng 10 chữ số
-        </div>
-    </div>
-
-    <div class="mb-3">
-        <label class="form-label">Mật khẩu <span class="text-danger">*</span></label>
-        <input type="password" th:field="*{password}" id="password"
-               class="form-control" required/>
-        <div class="form-text text-muted">
-            <i class="bi bi-info-circle me-1"></i>
-            Mật khẩu phải chứa ít nhất 6 ký tự và chứa ít nhất 1 chữ số
-        </div>
-        <!-- Password strength indicator -->
-        <div class="mt-1" id="pwStrength"></div>
-    </div>
-
-    <div class="mb-3">
-        <label class="form-label">Nhập lại mật khẩu <span class="text-danger">*</span></label>
-        <input type="password" id="confirmPassword" name="confirmPassword"
-               class="form-control" required/>
-        <div class="invalid-feedback">Mật khẩu không khớp!</div>
-    </div>
-
-    <button type="submit" class="btn btn-dark w-100">Đăng ký</button>
-</form>
-
-<p class="mt-3 text-center">
-    Đã có tài khoản? <a th:href="@{/auth/login}">Đăng nhập</a>
-</p>
 
 <script>
     // Kiểm tra độ mạnh password

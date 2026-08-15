@@ -4,87 +4,188 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title>Đăng nhập</title>
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="/images/footer.png"/>
     <style>
-        /* Ẩn icon mắt mặc định của Edge/Chrome/Safari */
+        :root {
+            --cream: #FBF6EC;
+            --paper: #FFFFFF;
+            --ink: #1A1A1A;
+            --mute: #7a7368;
+            --line: #ECE3D2;
+            --mustard: #F5C247;
+            --mustard-dark: #E2AC1F;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            color: var(--ink);
+            font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+        }
+        a { color: inherit; }
         input[type="password"]::-ms-reveal,
         input[type="password"]::-ms-clear { display: none !important; }
+
+        .auth-split { min-height: 100vh; display: flex; }
+
+        /* ══ CỘT TRÁI — ảnh lifestyle + tagline ══ */
+        .auth-visual {
+            flex: 1 1 46%;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 2.4rem;
+            background: #e9e2d0 url('/images/banner2.jpg') center/cover no-repeat;
+            color: #fff;
+            min-height: 100vh;
+        }
+        .auth-visual::before {
+            content: "";
+            position: absolute; inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,.68) 10%, rgba(0,0,0,.15) 60%, rgba(0,0,0,.4) 100%);
+        }
+        .auth-visual > * { position: relative; z-index: 1; }
+        .auth-visual-brand { font-weight: 800; font-size: 1.3rem; text-decoration: none; color: #fff; }
+        .auth-visual-quote { max-width: 380px; }
+        .auth-visual-quote .pill-tag {
+            display: inline-block; background: var(--mustard); color: var(--ink);
+            font-size: .7rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+            padding: .35rem .9rem; border-radius: 999px; margin-bottom: 1rem;
+        }
+        .auth-visual-quote h2 { font-size: 1.7rem; font-weight: 800; line-height: 1.25; margin: 0 0 .6rem; }
+        .auth-visual-quote p { font-size: .88rem; color: rgba(255,255,255,.8); margin: 0; }
+
+        /* ══ CỘT PHẢI — form ══ */
+        .auth-form-panel {
+            flex: 1 1 54%;
+            background: var(--cream);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2.4rem 1.4rem;
+        }
+        .auth-form-box { width: 100%; max-width: 400px; }
+        .auth-form-eyebrow { font-size: .74rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--mustard-dark); margin-bottom: .5rem; }
+        .auth-form-title { font-size: 1.6rem; font-weight: 800; margin: 0 0 .4rem; }
+        .auth-form-sub { color: var(--mute); font-size: .88rem; margin-bottom: 1.8rem; }
+
+        .form-label { font-size: .82rem; font-weight: 600; margin-bottom: .4rem; }
+        .input-group-text {
+            background: var(--paper);
+            border: 1px solid var(--line);
+            border-right: none;
+            color: var(--mute);
+            border-radius: 12px 0 0 12px;
+        }
+        .form-control {
+            border: 1px solid var(--line);
+            border-radius: 0 12px 12px 0;
+            font-size: .9rem;
+            padding: .7rem .9rem;
+        }
+        .form-control:focus {
+            border-color: var(--mustard-dark);
+            box-shadow: 0 0 0 .16rem rgba(245,194,71,.3);
+        }
+        .btn-outline-secondary {
+            border: 1px solid var(--line);
+            border-radius: 0 12px 12px 0;
+            color: var(--mute);
+        }
+        .btn-outline-secondary:hover { background: var(--mustard); border-color: var(--mustard); color: var(--ink); }
+
+        .form-check-input:checked { background-color: var(--ink); border-color: var(--ink); }
+
+        .btn-auth-primary {
+            background: var(--ink);
+            color: #fff;
+            border: none;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: .9rem;
+            padding: .8rem 1rem;
+            transition: background .2s, transform .2s, box-shadow .2s;
+        }
+        .btn-auth-primary:hover { background: var(--mustard-dark); color: var(--ink); transform: translateY(-2px); box-shadow: 0 10px 22px rgba(0,0,0,.14); }
+
+        .auth-link { color: var(--mute); font-size: .84rem; text-decoration: none; }
+        .auth-link:hover { color: var(--mustard-dark); }
+        .auth-link-strong { color: var(--ink); font-weight: 700; text-decoration: none; }
+        .auth-link-strong:hover { color: var(--mustard-dark); }
+
+        @media (max-width: 900px) {
+            .auth-visual { display: none; }
+            .auth-form-panel { flex: 1 1 100%; }
+        }
     </style>
 </head>
-<body class="bg-light">
-<div class="container mt-3 mt-md-5" style="max-width:500px">
-    <div class="text-center mb-4">
-        <a th:href="@{/}" class="text-dark text-decoration-none">
-            <h3 class="fw-bold">The Casual Wear</h3>
-        </a>
-        <p class="text-muted">Đăng nhập để tiếp tục</p>
+<body>
+<div class="auth-split">
+    <!-- ═══ CỘT TRÁI ═══ -->
+    <div class="auth-visual">
+        <a th:href="@{/}" class="auth-visual-brand">The Casual Wear</a>
+        <div class="auth-visual-quote">
+            <span class="pill-tag">Chào mừng trở lại</span>
+            <h2>Giản dị. Tử tế.<br/>Hiện đại.</h2>
+            <p>Đăng nhập để theo dõi đơn hàng, lưu sản phẩm yêu thích và nhận ưu đãi dành riêng cho thành viên.</p>
+        </div>
     </div>
 
-    <div class="card border-0 shadow-sm">
-        <div class="card-body p-3 p-md-4">
+    <!-- ═══ CỘT PHẢI — FORM ═══ -->
+    <div class="auth-form-panel">
+        <div class="auth-form-box">
+            <p class="auth-form-eyebrow">Thành viên</p>
+            <h1 class="auth-form-title">Đăng nhập</h1>
+            <p class="auth-form-sub">Nhập thông tin tài khoản để tiếp tục mua sắm.</p>
 
             <div th:replace="~{fragments/alerts :: alerts}"></div>
 
             <form th:action="@{/auth/login}" method="post">
                 <div class="mb-3">
-                    <label class="form-label fw-500">
-                        Tên đăng nhập / Email / Số điện thoại
-                    </label>
+                    <label class="form-label">Tên đăng nhập / Email / Số điện thoại</label>
                     <div class="input-group">
-                        <span class="input-group-text bg-white">
-                            <i class="bi bi-person"></i>
-                        </span>
-                        <input type="text" name="username"
-                               class="form-control border-start-0"
-                               placeholder="Username, email hoặc SĐT"
-                               required autofocus/>
+                        <span class="input-group-text"><i class="bi bi-person"></i></span>
+                        <input type="text" name="username" class="form-control"
+                               placeholder="Username, email hoặc SĐT" required autofocus/>
                     </div>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label fw-500">Mật khẩu</label>
+                    <label class="form-label">Mật khẩu</label>
                     <div class="input-group">
-                        <span class="input-group-text bg-white">
-                            <i class="bi bi-lock"></i>
-                        </span>
+                        <span class="input-group-text"><i class="bi bi-lock"></i></span>
                         <input type="password" name="password" id="password"
-                               class="form-control border-start-0"
-                               placeholder="Nhập mật khẩu" required/>
-                        <button type="button" class="btn btn-outline-secondary"
-                                onclick="togglePassword()">
+                               class="form-control" placeholder="Nhập mật khẩu" required/>
+                        <button type="button" class="btn btn-outline-secondary" onclick="togglePassword()">
                             <i class="bi bi-eye" id="eyeIcon"></i>
                         </button>
                     </div>
                 </div>
 
                 <div class="text-end mb-3">
-                    <a th:href="@{/forgot-password}" class="text-muted small">Quên mật khẩu?</a>
+                    <a th:href="@{/forgot-password}" class="auth-link">Quên mật khẩu?</a>
                 </div>
 
                 <div class="form-check mb-3">
-                    <input type="checkbox" name="remember-me"
-                           class="form-check-input" id="rememberMe"/>
-                    <label class="form-check-label text-muted small"
-                           for="rememberMe">
+                    <input type="checkbox" name="remember-me" class="form-check-input" id="rememberMe"/>
+                    <label class="form-check-label auth-link" for="rememberMe" style="font-size:.82rem">
                         Ghi nhớ đăng nhập (3 ngày)
                     </label>
                 </div>
 
-                <button type="submit" class="btn btn-dark w-100 py-2">
-                    Đăng nhập
-                </button>
+                <button type="submit" class="btn btn-auth-primary w-100">Đăng nhập</button>
             </form>
+
+            <p class="text-center mt-4 auth-link mb-0">
+                Chưa có tài khoản?
+                <a th:href="@{/auth/register}" class="auth-link-strong">Đăng ký ngay</a>
+            </p>
         </div>
     </div>
-
-    <p class="text-center mt-3 text-muted">
-        Chưa có tài khoản?
-        <a th:href="@{/auth/register}" class="text-dark fw-bold">Đăng ký ngay</a>
-    </p>
 </div>
 
 <script>
