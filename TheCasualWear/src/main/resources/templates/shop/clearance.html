@@ -21,10 +21,11 @@
             to   { opacity: 1; transform: translateY(0); }
         }
 
-        /* ══ HERO — thay gradient cam bằng nền ink + chữ mustard, đồng bộ
-           tông "clearance/sale" nhưng vẫn nằm trong bảng màu chung ══ */
+        /* ══ HERO — nền ảnh thay vì màu đặc, có lớp phủ tối để chữ vẫn
+           đọc rõ, giống cách xử lý .hero ở home.html ══ */
         .clearance-hero {
-            background: var(--ink);
+            position: relative;
+            overflow: hidden;
             border-radius: 22px;
             padding: 2.2rem 2rem;
             color: #fff;
@@ -33,7 +34,15 @@
             align-items: center;
             gap: 1.2rem;
             flex-wrap: wrap;
+            min-height: 160px;
+            background: #2a2a2a url('/images/banner2.jpg') center/cover no-repeat;
         }
+        .clearance-hero::before {
+            content: "";
+            position: absolute; inset: 0;
+            background: linear-gradient(120deg, rgba(0,0,0,.78) 0%, rgba(0,0,0,.45) 60%, rgba(0,0,0,.25) 100%);
+        }
+        .clearance-hero > * { position: relative; z-index: 1; }
         .clearance-hero__icon {
             width: 52px; height: 52px; border-radius: 999px;
             background: var(--mustard);
@@ -41,7 +50,7 @@
             font-size: 1.3rem; color: var(--ink); flex-shrink: 0;
         }
         .clearance-hero h1 { font-weight: 800; font-size: 1.4rem; margin: 0 0 .3rem; }
-        .clearance-hero p { opacity: .8; margin: 0; font-size: .88rem; }
+        .clearance-hero p { opacity: .85; margin: 0; font-size: .88rem; }
 
         .sec-title { font-size: 1.1rem; font-weight: 700; margin: 0 0 1.4rem; }
 
