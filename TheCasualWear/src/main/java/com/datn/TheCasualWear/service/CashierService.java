@@ -39,12 +39,11 @@ public class CashierService {
     private final OrderVoucherRepository   orderVoucherRepository;
     private final StockMovementLogService  stockMovementLogService;
     private final ProductSaleService       productSaleService; // MỚI: giá sale áp cho cả bán tại quầy
-    private final ShiftService             shiftService;
     private final PosCartRegistry          cartRegistry; // MỚI: giỏ POS đa-cart, in-memory
 
     // Cashier tự hủy đơn trong vòng bao nhiêu phút kể từ lúc tạo.
     // Admin/Owner không bị giới hạn bởi mốc thời gian này.
-    private static final int CANCEL_WINDOW_MINUTES = 30;
+    public static final int CANCEL_WINDOW_MINUTES = 30;
 
     // ─────────────────────────────────────────────────────────────
     // INTERNAL HELPERS
@@ -64,10 +63,6 @@ public class CashierService {
         return getCurrentUser();
     }
 
-    /**
-     * Tính số tiền được giảm từ voucher dựa trên tổng đơn hàng.
-     * discountPercent% của orderTotal, không vượt quá maxDiscount (nếu có).
-     */
     private BigDecimal calcDiscount(Voucher v, BigDecimal orderTotal) {
         BigDecimal discount = orderTotal
                 .multiply(v.getDiscountPercent())
@@ -417,8 +412,6 @@ public class CashierService {
         order.setIsPaid(true);
         order.setOrderDate(LocalDateTime.now());
         order.setDeliveredAt(LocalDateTime.now());
-        Shift shift = shiftService.getOpenShiftOrThrow(cashier);
-        order.setShift(shift);
 
         if (customerId != null) {
             AppUser customer = appUserRepository.findById(customerId)
@@ -500,10 +493,6 @@ public class CashierService {
         return order;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // CÁC METHOD KHÁC (giữ nguyên)
-    // ─────────────────────────────────────────────────────────────
-
     public AppOrder getOrderForInvoice(Integer orderId) {
         return orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng"));
@@ -515,11 +504,18 @@ public class CashierService {
         return orderRepository.findRecentCounterOrdersByCashier(cashier.getId(), from);
     }
 
-    private boolean isCurrentUserAdminOrOwner() {
+    public boolean isCurrentUserAdminOrOwner() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         return auth != null && auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")
                         || a.getAuthority().equals("ROLE_OWNER"));
+    }
+
+    // Đơn đã tạo quá CANCEL_WINDOW_MINUTES chưa — dùng cả trong cancelOrder()
+    // lẫn ở Controller để quyết định hiển thị/bắt buộc ô ghi chú trên view.
+    public boolean isOrderPastCancelWindow(AppOrder order) {
+        LocalDateTime deadline = order.getOrderDate().plusMinutes(CANCEL_WINDOW_MINUTES);
+        return LocalDateTime.now().isAfter(deadline);
     }
 
     public AppOrder getOwnOrderDetail(Integer orderId) {
@@ -541,7 +537,10 @@ public class CashierService {
     //     (đơn POS luôn tạo thẳng COMPLETED, không có trạng thái PENDING).
     //   • Cashier chỉ hủy được đơn của chính mình, trong vòng
     //     CANCEL_WINDOW_MINUTES kể từ lúc tạo. Admin/Owner hủy được
-    //     bất kỳ lúc nào (không giới hạn thời gian).
+    //     bất kỳ lúc nào (không giới hạn thời gian), NHƯNG nếu hủy đơn đã
+    //     quá CANCEL_WINDOW_MINUTES thì bắt buộc nhập ghi chú chi tiết
+    //     (không được để trống dù chọn lý do khác OTHER) — để minh bạch,
+    //     vì hủy đơn cũ có thể làm lệch số liệu doanh thu đã tính trước đó.
     //   • Hoàn kho từng dòng sản phẩm + hoàn lượt dùng voucher (nếu có).
     // ─────────────────────────────────────────────────────────────
 
@@ -558,17 +557,25 @@ public class CashierService {
         if (reason == null) {
             throw new IllegalStateException("Vui lòng chọn lý do hủy!");
         }
-        if (reason == CancelReason.OTHER && (note == null || note.isBlank())) {
-            throw new IllegalStateException("Vui lòng nhập ghi chú khi chọn lý do 'Khác'!");
+
+        boolean isAdmin = isCurrentUserAdminOrOwner();
+        boolean isPastWindow = isOrderPastCancelWindow(order);
+
+        if (!isAdmin && isPastWindow) {
+            throw new IllegalStateException(
+                    "Đơn hàng đã tạo quá " + CANCEL_WINDOW_MINUTES
+                            + " phút, không thể tự hủy. Vui lòng liên hệ quản lý!");
         }
 
-        if (!isCurrentUserAdminOrOwner()) {
-            LocalDateTime deadline = order.getOrderDate().plusMinutes(CANCEL_WINDOW_MINUTES);
-            if (LocalDateTime.now().isAfter(deadline)) {
-                throw new IllegalStateException(
-                        "Đơn hàng đã tạo quá " + CANCEL_WINDOW_MINUTES
-                                + " phút, không thể tự hủy. Vui lòng liên hệ quản lý!");
-            }
+        // Bắt buộc ghi chú khi: lý do "Khác", HOẶC admin/owner hủy đơn đã
+        // quá cửa sổ thời gian chuẩn (đơn cũ, cần lý giải rõ ràng cho việc
+        // hủy trễ, tránh lạm dụng quyền không giới hạn thời gian).
+        boolean noteRequired = reason == CancelReason.OTHER || (isAdmin && isPastWindow);
+        if (noteRequired && (note == null || note.isBlank())) {
+            throw new IllegalStateException(isAdmin && isPastWindow
+                    ? "Đơn hàng đã tạo quá " + CANCEL_WINDOW_MINUTES
+                    + " phút — vui lòng nhập ghi chú lý do hủy trễ!"
+                    : "Vui lòng nhập ghi chú khi chọn lý do 'Khác'!");
         }
 
         // Hoàn kho từng dòng sản phẩm

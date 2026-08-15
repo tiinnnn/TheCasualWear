@@ -1,13 +1,11 @@
 package com.datn.TheCasualWear.config;
 
 import com.datn.TheCasualWear.entity.AppUser;
-import com.datn.TheCasualWear.entity.Shift;
 import com.datn.TheCasualWear.repository.AppUserRepository;
 import com.datn.TheCasualWear.service.AppUserService;
 import com.datn.TheCasualWear.service.CartService;
 import com.datn.TheCasualWear.service.CategoryService;
 import com.datn.TheCasualWear.service.NotificationService;
-import com.datn.TheCasualWear.service.ShiftService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,7 +24,6 @@ public class GlobalControllerAdvice {
     private final NotificationService notificationService;
     private final CartService cartService;
     private final AppUserRepository appUserRepository;
-    private final ShiftService shiftService;
 
     // Tự động truyền categories vào tất cả trang
     @ModelAttribute("navCategories")
@@ -72,22 +69,6 @@ public class GlobalControllerAdvice {
             return cartService.getCartItemCount(user);
         } catch (Exception e) {
             return 0;
-        }
-    }
-
-    // Ca đang mở của cashier hiện tại (null nếu chưa mở ca hoặc không phải cashier).
-    // Dùng để hiển thị nút "Đóng ca" + giờ mở ca trên navbar của cashier-layout.html.
-    @ModelAttribute("currentShift")
-    public Shift currentShift(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()
-                || authentication.getName().equals("anonymousUser")) {
-            return null;
-        }
-        try {
-            AppUser user = appUserService.getUserByUsername(authentication.getName());
-            return shiftService.getOpenShift(user).orElse(null);
-        } catch (Exception e) {
-            return null;
         }
     }
 }

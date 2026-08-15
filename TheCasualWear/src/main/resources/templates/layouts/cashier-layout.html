@@ -35,16 +35,6 @@
                 <a class="text-white text-decoration-none" th:href="@{/cashier/orders}">
                     <i class="bi bi-receipt"></i> Đơn đã bán
                 </a>
-                <span th:if="${currentShift != null}" class="text-white-50 small">
-                    <i class="bi bi-shop-window"></i>
-                    Quầy <strong th:text="${currentShift.counter.code}"></strong>
-                    — mở lúc <span th:text="${#temporals.format(currentShift.openedAt, 'HH:mm')}"></span>
-                </span>
-                <a th:if="${currentShift != null}"
-                   class="btn btn-outline-warning btn-sm"
-                   th:href="@{/cashier/shift/close}">
-                    <i class="bi bi-lock"></i> Đóng ca
-                </a>
                 <a class="text-white text-decoration-none" sec:authorize="hasAnyRole('ADMIN','OWNER')"
                    th:href="@{/admin}">
                     <i class="bi bi-gear"></i> Về trang Admin

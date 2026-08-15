@@ -517,8 +517,12 @@ public class CashierController {
     @GetMapping("/orders/{id}")
     public String myOrderDetail(@PathVariable Integer id, Model model, RedirectAttributes ra) {
         try {
-            model.addAttribute("order", cashierService.getOwnOrderDetail(id));
+            AppOrder order = cashierService.getOwnOrderDetail(id);
+            model.addAttribute("order", order);
             model.addAttribute("cancelReasons", CancelReason.values());
+            model.addAttribute("isAdminOrOwner", cashierService.isCurrentUserAdminOrOwner());
+            model.addAttribute("orderPastCancelWindow", cashierService.isOrderPastCancelWindow(order));
+            model.addAttribute("cancelWindowMinutes", CashierService.CANCEL_WINDOW_MINUTES);
             model.addAttribute("view", "cashier/order-detail");
             return "layouts/cashier-layout";
         } catch (Exception e) {

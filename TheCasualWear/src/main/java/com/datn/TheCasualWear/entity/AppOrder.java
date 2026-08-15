@@ -84,12 +84,6 @@ public class AppOrder {
     @JoinColumn(name = "cashier_id")
     private AppUser cashier; // Nhân viên thu ngân tạo đơn (chỉ có khi order_type = COUNTER)
 
-    // ── MỚI: giao ca (Shift handover) ─────────────────────────────────────
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "shift_id")
-    private Shift shift; // Ca làm việc tạo ra đơn này (chỉ có khi order_type = COUNTER)
-
     // ── MỚI: audit lý do hủy/hoàn — chỉ có giá trị khi status = CANCELLED
     // hoặc RETURNED. Dùng chung cho cả 2 trạng thái vì đều là hành động
     // "kết thúc đơn hàng ngoài dự kiến", chỉ khác thời điểm xảy ra.

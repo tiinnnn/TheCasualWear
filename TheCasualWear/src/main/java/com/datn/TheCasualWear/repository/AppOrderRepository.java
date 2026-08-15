@@ -20,10 +20,6 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
 
     List<AppOrder> findByCustomerIdAndStatus(Integer customerId, String status);
 
-    // Toàn bộ đơn (cả COMPLETED lẫn CANCELLED) thuộc 1 ca — dùng cho trang
-    // xem log sản phẩm đã bán/hủy theo ca.
-    List<AppOrder> findByShiftIdOrderByOrderDateDesc(Integer shiftId);
-
     @Query("SELECT o FROM AppOrder o ORDER BY " +
             "CASE o.status " +
             "WHEN 'PENDING'   THEN 1 " +
@@ -60,19 +56,6 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
             "ORDER BY o.orderDate DESC")
     List<AppOrder> findRecentCounterOrdersByCashier(@Param("cashierId") Integer cashierId,
                                                     @Param("fromDate") LocalDateTime fromDate);
-
-    @Query("SELECT SUM(o.totalPrice) FROM AppOrder o " +
-            "WHERE o.shift.id = :shiftId AND o.paymentMethod = :paymentMethod")
-    BigDecimal sumTotalPriceByShiftIdAndPaymentMethod(@Param("shiftId") Integer shiftId,
-                                                      @Param("paymentMethod") String paymentMethod);
-
-    // Tổng số lượng sản phẩm (tất cả order_detail) đã bán trong 1 ca —
-    // dùng để "chốt" itemsSoldCount lúc đóng ca. Chỉ tính đơn COMPLETED
-    // (đơn đã hủy trong ca không tính là đã bán).
-    @Query("SELECT COALESCE(SUM(od.quantity), 0) FROM OrderDetail od " +
-            "WHERE od.order.shift.id = :shiftId " +
-            "AND od.order.status = com.datn.TheCasualWear.enums.OrderStatus.COMPLETED")
-    Integer sumItemQuantityByShiftId(@Param("shiftId") Integer shiftId);
 
     // ── DASHBOARD: doanh thu theo kênh bán (ONLINE/COUNTER) ─────────────
     @Query("""
@@ -115,14 +98,6 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
         ORDER BY COUNT(o) DESC
         """)
     List<Object[]> findFrequentCancellers(@Param("minCount") long minCount);
-
-    // Tổng doanh thu TOÀN BỘ phương thức thanh toán (CASH+TRANSFER+VNPAY)
-    // của danh sách ca — dùng cho báo cáo tổng kết cuối ngày (khác với
-    // sumTotalPriceByShiftIdAndPaymentMethod chỉ tính CASH để đối chiếu ngăn kéo).
-    @Query("SELECT COALESCE(SUM(o.totalPrice), 0) FROM AppOrder o " +
-            "WHERE o.shift.id IN :shiftIds " +
-            "AND o.status = com.datn.TheCasualWear.enums.OrderStatus.COMPLETED")
-    BigDecimal sumTotalPriceByShiftIds(@Param("shiftIds") List<Integer> shiftIds);
 
     // ── DASHBOARD: doanh thu theo khoảng thời gian tùy chọn (2.4/2.5) ──────
     // Công thức doanh thu = POS (COUNTER, COMPLETED) + Online VNPay đã thanh
@@ -187,6 +162,4 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
           )
         """)
     BigDecimal sumCostForRevenueOrders(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
-
-    boolean existsByShift_Counter_Id(Integer counterId);
 }

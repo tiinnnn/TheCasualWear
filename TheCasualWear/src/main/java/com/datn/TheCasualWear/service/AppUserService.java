@@ -18,15 +18,12 @@ public class AppUserService {
 
     private final AppUserRepository appUserRepository;
     private final RoleRepository    roleRepository;
-    private final ShiftService      shiftService;
     private static final int ADMIN_PAGE_SIZE = 10;
 
     public AppUserService(AppUserRepository appUserRepository,
-                          RoleRepository roleRepository,
-                          ShiftService shiftService) {
+                          RoleRepository roleRepository) {
         this.appUserRepository = appUserRepository;
         this.roleRepository    = roleRepository;
-        this.shiftService      = shiftService;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -165,12 +162,6 @@ public class AppUserService {
         }
         if (user.getRoles().size() == 1) {
             throw new IllegalStateException("User phải có ít nhất 1 role!");
-        }
-        // Chặn sửa quyền giữa lúc đang có ca mở — tránh kẹt ca vĩnh viễn
-        // (không ai đóng được nữa) nếu role cashier bị thu hồi đột ngột.
-        if (shiftService.hasOpenShift(user)) {
-            throw new IllegalStateException(
-                    "Người này đang có ca làm việc mở! Vui lòng đóng ca trước khi chỉnh sửa quyền.");
         }
 
         user.getRoles().remove(role);

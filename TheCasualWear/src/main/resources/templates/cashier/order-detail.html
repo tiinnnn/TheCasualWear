@@ -127,10 +127,23 @@
                 <form th:action="@{'/cashier/orders/' + ${order.id} + '/cancel'}" method="post">
                     <div class="modal-body">
                         <p class="small text-muted">Kho sẽ được hoàn lại sau khi hủy.</p>
+
+                        <!-- Cảnh báo khi Admin/Owner hủy đơn đã quá cửa sổ thời gian chuẩn:
+                             bắt buộc phải ghi rõ lý do vì có thể ảnh hưởng số liệu doanh thu
+                             đã tính ở các ngày trước. -->
+                        <div th:if="${isAdminOrOwner and orderPastCancelWindow}"
+                             class="alert alert-warning small py-2 mb-3">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            Đơn này đã tạo quá <span th:text="${cancelWindowMinutes}"></span> phút.
+                            Vui lòng nhập ghi chú rõ lý do hủy trễ — hành động này có thể ảnh hưởng
+                            số liệu doanh thu đã ghi nhận.
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label small fw-bold">Lý do hủy</label>
-                            <select name="reason" class="form-select form-select-sm" required
-                                    onchange="document.getElementById('cashierCancelNoteWrap').style.display = (this.value === 'OTHER') ? 'block' : 'none';">
+                            <select name="reason" id="cashierCancelReason"
+                                    class="form-select form-select-sm" required
+                                    onchange="toggleCashierCancelNote()">
                                 <option value="">-- Chọn lý do --</option>
                                 <option value="DUPLICATE_ORDER">Tạo nhầm / trùng đơn</option>
                                 <option value="PAYMENT_ISSUE">Lỗi thanh toán</option>
@@ -139,8 +152,11 @@
                             </select>
                         </div>
                         <div class="mb-1" id="cashierCancelNoteWrap" style="display:none">
-                            <label class="form-label small fw-bold">Ghi chú (bắt buộc nếu chọn "Khác")</label>
-                            <textarea name="note" class="form-control form-control-sm" rows="2"></textarea>
+                            <label class="form-label small fw-bold" id="cashierCancelNoteLabel">
+                                Ghi chú (bắt buộc nếu chọn "Khác")
+                            </label>
+                            <textarea name="note" id="cashierCancelNote"
+                                      class="form-control form-control-sm" rows="2"></textarea>
                         </div>
                     </div>
                     <div class="modal-footer border-0 pt-0">
@@ -154,4 +170,36 @@
             </div>
         </div>
     </div>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const cashierCancelNoteAlwaysRequired = /*[[${isAdminOrOwner and orderPastCancelWindow}]]*/ false;
+        /*]]>*/
+
+        function toggleCashierCancelNote() {
+            const reason = document.getElementById('cashierCancelReason').value;
+            const wrap   = document.getElementById('cashierCancelNoteWrap');
+            const note   = document.getElementById('cashierCancelNote');
+            const label  = document.getElementById('cashierCancelNoteLabel');
+
+            const noteNeeded = cashierCancelNoteAlwaysRequired || reason === 'OTHER';
+
+            wrap.style.display = noteNeeded ? 'block' : 'none';
+            note.required = noteNeeded;
+            label.textContent = cashierCancelNoteAlwaysRequired
+                ? 'Ghi chú (bắt buộc — đơn đã quá hạn hủy chuẩn)'
+                : 'Ghi chú (bắt buộc nếu chọn "Khác")';
+        }
+
+        // Nếu đơn đã quá hạn và người xem là admin/owner, hiện sẵn ô ghi chú
+        // ngay khi mở modal, không cần đợi chọn lý do trước.
+        document.addEventListener('DOMContentLoaded', function () {
+            if (cashierCancelNoteAlwaysRequired) {
+                document.getElementById('cashierCancelNoteWrap').style.display = 'block';
+                document.getElementById('cashierCancelNote').required = true;
+                document.getElementById('cashierCancelNoteLabel').textContent =
+                    'Ghi chú (bắt buộc — đơn đã quá hạn hủy chuẩn)';
+            }
+        });
+    </script>
 </div>
