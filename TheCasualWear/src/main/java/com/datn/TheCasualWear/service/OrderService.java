@@ -5,6 +5,7 @@ import com.datn.TheCasualWear.dto.CancelReasonStatDTO;
 import com.datn.TheCasualWear.dto.FrequentCancellerDTO;
 import com.datn.TheCasualWear.dto.OrderListDTO;
 import com.datn.TheCasualWear.dto.RevenueByChannelDTO;
+import com.datn.TheCasualWear.dto.RevenueSummaryDTO;
 import org.springframework.data.domain.PageImpl;
 import com.datn.TheCasualWear.entity.*;
 import com.datn.TheCasualWear.enums.CancelReason;
@@ -55,6 +56,10 @@ public class OrderService {
 
     private static final int ADMIN_PAGE_SIZE = 10;
     private static final int RETURN_DAYS     = 15;
+
+    // Phí ship cố định (fallback an toàn) — sẽ thay bằng GHN API tính phí thực tế ở Giai đoạn 3.
+    // public để OrderController tái sử dụng cùng một giá trị (tránh khai báo trùng 2 chỗ).
+    public static final BigDecimal SHIPPING_FEE = BigDecimal.valueOf(30_000);
 
     // ─────────────────────────────────────────────────────────────
     // QUERY
@@ -132,11 +137,17 @@ public class OrderService {
             totalPrice           = discounted;
         }
 
+        // Cộng phí ship sau khi đã áp voucher — đây là số tiền cuối cùng khách phải trả
+        BigDecimal grandTotal = totalPrice.add(SHIPPING_FEE);
+
         AppOrder order = new AppOrder();
         order.setCustomer(user);
         order.setShippingAddress(shippingAddress);
         order.setBillingAddress(billingAddress);
-        order.setTotalPrice(totalPrice);
+        // TODO: cần thêm field `shippingFee` (BigDecimal) vào entity AppOrder + migration SQL
+        // để lưu lại phí ship của từng đơn (hiện tại đang set tạm, sẽ lỗi compile nếu field chưa có).
+        order.setShippingFee(SHIPPING_FEE);
+        order.setTotalPrice(grandTotal);
         order.setStatus(OrderStatus.PENDING);
         order.setPaymentMethod(paymentMethod);
         order.setIsPaid("VNPAY".equals(paymentMethod));
@@ -169,15 +180,10 @@ public class OrderService {
             detail.setOriginalPrice(originalPrice);
             orderDetailRepository.save(detail);
 
-            stockMovementLogService.logMovement(
-                    variant,
-                    StockMovementType.SALE,
-                    -item.getQuantity(),
-                    StockRefType.ORDER,
-                    order.getId(),
-                    "Đặt hàng online - đơn #" + order.getId(),
-                    user
-            );
+            // KHÔNG trừ kho ở đây nữa — đơn online chỉ thực sự trừ kho khi admin
+            // xác nhận (confirmOrder), kèm validate lại tồn kho tại thời điểm đó.
+            // Việc check variant.getStock() ở trên chỉ là cảnh báo sớm cho khách,
+            // không phải giữ chỗ (không lock/reserve stock lúc đặt hàng).
         }
 
         if (voucher != null) {
@@ -212,7 +218,8 @@ public class OrderService {
         }
         validateCancelReason(reason, note);
 
-        restoreVariantStock(order, StockMovementType.CANCEL, user);
+        // Đơn đang PENDING chưa từng bị trừ kho (kho chỉ trừ khi admin confirm),
+        // nên không cần restoreVariantStock ở đây — restore sẽ làm sai lệch tồn kho.
         removeOrderVoucher(order, orderId);
         order.setStatus(OrderStatus.CANCELLED);
         applyCancelMetadata(order, reason, note, user);
@@ -234,11 +241,49 @@ public class OrderService {
     // ADMIN
     // ─────────────────────────────────────────────────────────────
 
+    /**
+     * Admin xác nhận đơn PENDING → CONFIRMED. Đây là thời điểm duy nhất đơn
+     * online thực sự trừ kho (không trừ lúc đặt hàng nữa) — vì vậy phải
+     * validate lại tồn kho ở đây: kho có thể đã đổi kể từ lúc khách đặt
+     * (đơn khác được confirm trước, hoặc admin điều chỉnh tay).
+     */
+    @Transactional
     public void confirmOrder(Integer orderId) {
         AppOrder order = getOrderById(orderId);
         if (order.getStatus() != OrderStatus.PENDING) {
             throw new IllegalStateException("Đơn hàng không ở trạng thái chờ xác nhận!");
         }
+
+        List<OrderDetail> details = orderDetailRepository.findByOrderId(order.getId());
+
+        // Validate lại tồn kho tại thời điểm confirm — không cho confirm nếu
+        // bất kỳ variant nào không còn đủ hàng.
+        for (OrderDetail detail : details) {
+            ProductVariant variant = detail.getVariant();
+            Integer needed = detail.getQuantity();
+            if (variant.getStock() < needed) {
+                throw new IllegalStateException(
+                        "Sản phẩm '" + variant.getProduct().getName()
+                                + "' (size: " + (variant.getSize()  != null ? variant.getSize().getName()  : "?")
+                                + ", màu: "   + (variant.getColor() != null ? variant.getColor().getName() : "?")
+                                + ") chỉ còn " + variant.getStock()
+                                + " trong kho, không đủ để xác nhận đơn (cần " + needed + ")!");
+            }
+        }
+
+        AppUser actor = getCurrentUserOrNull();
+        for (OrderDetail detail : details) {
+            stockMovementLogService.logMovement(
+                    detail.getVariant(),
+                    StockMovementType.SALE,
+                    -detail.getQuantity(),
+                    StockRefType.ORDER,
+                    order.getId(),
+                    "Xác nhận đơn online #" + order.getId(),
+                    actor
+            );
+        }
+
         order.setStatus(OrderStatus.CONFIRMED);
         orderRepository.save(order);
 
@@ -310,9 +355,19 @@ public class OrderService {
                 || order.getStatus() == OrderStatus.RETURNED) {
             throw new IllegalStateException("Không thể hủy đơn hàng này!");
         }
+        // Đã có mã vận đơn GHN (tức đã gửi hàng) -> không cho hủy trực tiếp
+        // nữa, kể cả khi request được gửi thẳng qua form (bỏ qua FE).
+        if (order.getTrackingCode() != null) {
+            throw new IllegalStateException(
+                    "Đơn hàng đã có mã vận đơn GHN, không thể hủy trực tiếp. "
+                            + "Liên hệ GHN để yêu cầu thu hồi nếu cần.");
+        }
         validateCancelReason(reason, note);
 
         AppUser actor = getCurrentUserOrNull();
+        // Chỉ restore kho nếu đơn đã qua confirm (từ CONFIRMED trở lên) — vì giờ
+        // đơn online chỉ trừ kho lúc confirmOrder(), đơn còn PENDING chưa từng
+        // bị trừ nên không cần (và không được) restore.
         if (order.getStatus() != OrderStatus.PENDING) {
             restoreVariantStock(order, StockMovementType.CANCEL, actor);
         }
@@ -387,6 +442,74 @@ public class OrderService {
     // ─────────────────────────────────────────────────────────────
     // DASHBOARD
     // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Chuẩn hóa khoảng thời gian [from, to] cho các query dashboard (2.4).
+     * Quy tắc:
+     *  - Không điền gì            → [null, null]      (toàn bộ lịch sử)
+     *  - Chỉ điền from            → [from, now()]      (từ from đến hiện tại)
+     *  - Chỉ điền to              → [null, to]         (từ đầu đến to)
+     *  - Điền cả 2                → [from, to]
+     * Dùng chung 1 method này rồi truyền effectiveFrom/effectiveTo vào mọi
+     * query, tránh lặp lại if-else ở nhiều nơi. Các query phía repository
+     * tự xử lý from/to = null (nghĩa là không giới hạn theo hướng đó).
+     */
+    public DateRange resolveDateRange(LocalDateTime from, LocalDateTime to) {
+        LocalDateTime effectiveTo = (to != null) ? to
+                : (from != null ? LocalDateTime.now() : null);
+        return new DateRange(from, effectiveTo);
+    }
+
+    public record DateRange(LocalDateTime from, LocalDateTime to) {}
+
+    // SUM/COUNT không GROUP BY luôn trả về đúng 1 dòng, nhưng lấy an toàn
+    // qua List<Object[]> để phòng trường hợp bất thường (tránh IndexOutOfBounds).
+    private Object[] firstRow(List<Object[]> rows) {
+        return (rows != null && !rows.isEmpty())
+                ? rows.get(0)
+                : new Object[]{BigDecimal.ZERO, 0L};
+    }
+
+    /**
+     * Doanh thu/lợi nhuận theo khoảng thời gian tùy chọn (2.4/2.5).
+     * Công thức: doanh thu = POS (COUNTER, COMPLETED)
+     *                      + Online VNPay đã thanh toán (chưa hủy/hoàn)
+     *                      + Online COD đã hoàn tất giao hàng (COMPLETED)
+     *            lợi nhuận = doanh thu - giá vốn (costPrice) của các sản phẩm
+     *                        trong đúng tập đơn được tính ở trên.
+     */
+    public RevenueSummaryDTO getRevenueSummary(LocalDateTime from, LocalDateTime to) {
+        DateRange range = resolveDateRange(from, to);
+        LocalDateTime effFrom = range.from();
+        LocalDateTime effTo   = range.to();
+
+        // Query aggregate (SUM/COUNT không GROUP BY) luôn trả về đúng 1 dòng,
+        // nhưng Spring Data JPA yêu cầu khai báo List<Object[]> chứ không phải
+        // Object[] trực tiếp — nếu khai Object[] nó sẽ lấy nguyên dòng làm
+        // phần tử (gây ClassCastException khi cast pos[0] sang BigDecimal).
+        Object[] pos   = firstRow(orderRepository.sumPosRevenue(effFrom, effTo));
+        Object[] vnpay = firstRow(orderRepository.sumOnlineVnpayRevenue(effFrom, effTo));
+        Object[] cod   = firstRow(orderRepository.sumOnlineCodRevenue(effFrom, effTo));
+        BigDecimal cost = orderRepository.sumCostForRevenueOrders(effFrom, effTo);
+
+        BigDecimal posRevenue   = (BigDecimal) pos[0];
+        long       posOrders    = (Long) pos[1];
+        BigDecimal vnpayRevenue = (BigDecimal) vnpay[0];
+        long       vnpayOrders  = (Long) vnpay[1];
+        BigDecimal codRevenue   = (BigDecimal) cod[0];
+        long       codOrders    = (Long) cod[1];
+
+        BigDecimal totalRevenue = posRevenue.add(vnpayRevenue).add(codRevenue);
+        BigDecimal totalCost    = (cost != null) ? cost : BigDecimal.ZERO;
+        BigDecimal totalProfit  = totalRevenue.subtract(totalCost);
+
+        return new RevenueSummaryDTO(
+                posRevenue, posOrders,
+                vnpayRevenue, vnpayOrders,
+                codRevenue, codOrders,
+                totalRevenue, totalCost, totalProfit
+        );
+    }
 
     // Doanh thu ONLINE vs COUNTER trong khoảng thời gian (chỉ đơn COMPLETED)
     public List<RevenueByChannelDTO> getRevenueByChannel(LocalDateTime from, LocalDateTime to) {

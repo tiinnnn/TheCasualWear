@@ -86,6 +86,35 @@ public class StockMovementLogService {
     }
 
     // ─────────────────────────────────────────────────────────────
+    // POS: GIỮ CHỖ / HOÀN CHỖ KHO THEO GIỎ TẠM (PosCart, không phải AppOrder)
+    //
+    // Dùng findByIdForUpdate() (PESSIMISTIC_WRITE) thay vì variant đã load
+    // sẵn ở tầng gọi, vì 2 cashier có thể cùng thao tác 1 variant sắp hết
+    // hàng ở 2 giỏ khác nhau cùng lúc — phải khóa dòng lại trước khi đọc
+    // stock hiện tại rồi mới trừ/cộng, tránh đọc số cũ rồi ghi đè lẫn nhau.
+    // ─────────────────────────────────────────────────────────────
+
+    @Transactional
+    public void reserveForPosCart(Integer variantId, int qty, String cartId, AppUser cashier) {
+        if (qty <= 0) return;
+        ProductVariant variant = variantRepository.findByIdForUpdate(variantId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy variant với id: " + variantId));
+        logMovement(variant, StockMovementType.POS_RESERVED, -qty,
+                StockRefType.MANUAL, null, "Giữ chỗ giỏ POS #" + cartId, cashier);
+    }
+
+    @Transactional
+    public void releaseForPosCart(Integer variantId, int qty, String cartId, String reason, AppUser actor) {
+        if (qty <= 0) return;
+        ProductVariant variant = variantRepository.findByIdForUpdate(variantId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy variant với id: " + variantId));
+        logMovement(variant, StockMovementType.POS_RELEASED, qty,
+                StockRefType.MANUAL, null, reason + " — giỏ POS #" + cartId, actor);
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // DASHBOARD
     // ─────────────────────────────────────────────────────────────
 

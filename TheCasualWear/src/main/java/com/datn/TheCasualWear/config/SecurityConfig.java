@@ -1,6 +1,7 @@
 package com.datn.TheCasualWear.config;
 
 import com.datn.TheCasualWear.repository.AppUserRepository;
+import com.datn.TheCasualWear.util.HomeRedirectResolver;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -11,6 +12,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 
 @Configuration
 @EnableWebSecurity
@@ -45,6 +47,24 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
             throws Exception {
         return config.getAuthenticationManager();
+    }
+
+    // MỚI: thay cho defaultSuccessUrl("/", true) — trước đây mọi role đăng
+    // nhập xong đều bị ép về "/" bất kể quyền hạn. Handler này gọi
+    // HomeRedirectResolver để bắn ADMIN/OWNER -> /admin, CASHIER -> /cashier,
+    // CUSTOMER (và mọi role khác) -> "/". Đây là nơi DUY NHẤT xử lý redirect
+    // sau login thực sự (không phải AuthController, vì POST /auth/login được
+    // Spring Security filter xử lý trực tiếp, không đi qua controller).
+    @Bean
+    public AuthenticationSuccessHandler authenticationSuccessHandler() {
+        return (request, response, authentication) -> {
+            String redirect = HomeRedirectResolver.resolveHomeRedirect(authentication);
+            // resolveHomeRedirect trả về dạng "redirect:/xxx", bỏ prefix để dùng với sendRedirect
+            String targetUrl = redirect.startsWith("redirect:")
+                    ? redirect.substring("redirect:".length())
+                    : redirect;
+            response.sendRedirect(request.getContextPath() + targetUrl);
+        };
     }
 
     @Bean
@@ -97,7 +117,7 @@ public class SecurityConfig {
                         .loginProcessingUrl("/auth/login")
                         .usernameParameter("username")
                         .passwordParameter("password")
-                        .defaultSuccessUrl("/", true)
+                        .successHandler(authenticationSuccessHandler())
                         .failureUrl("/auth/login?error=true")
                         .permitAll()
                 )

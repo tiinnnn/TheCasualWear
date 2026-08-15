@@ -2,7 +2,11 @@ package com.datn.TheCasualWear.repository;
 
 import com.datn.TheCasualWear.entity.Color;
 import com.datn.TheCasualWear.entity.ProductVariant;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -50,8 +54,24 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     boolean existsByColorId(Integer colorId);
 
     // ── MỚI: tìm kiếm variant cho màn hình bán hàng tại quầy (Cashier) ────
+    // Đã đổi sang phân trang để không load hết variants khớp keyword cùng lúc.
     @Query("SELECT v FROM ProductVariant v WHERE v.stock > 0 AND (" +
             "LOWER(v.product.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
             "OR LOWER(v.sku) LIKE LOWER(CONCAT('%', :keyword, '%')))")
-    List<ProductVariant> searchAvailableByKeyword(@Param("keyword") String keyword);
+    Page<ProductVariant> searchAvailableByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+    // ── MỚI: keyword rỗng ở POS → trả toàn bộ variant còn hàng (có phân trang)
+    // thay vì list rỗng. Cùng điều kiện lọc (stock > 0) với searchAvailableByKeyword
+    // để nhất quán giữa 2 nhánh tìm kiếm.
+    @Query("SELECT v FROM ProductVariant v WHERE v.stock > 0")
+    Page<ProductVariant> findAllAvailable(Pageable pageable);
+
+    // ── MỚI: đọc variant có khóa PESSIMISTIC_WRITE (SELECT ... WITH UPDLOCK
+    // trên SQL Server) — dùng khi giữ chỗ/hoàn chỗ kho cho giỏ POS, để 2
+    // cashier thao tác cùng 1 variant sắp hết hàng không bị lệch số tồn.
+    // Chỉ dùng bên trong 1 @Transactional ngắn (reserve/release 1 dòng),
+    // không dùng cho các query đọc thông thường.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT v FROM ProductVariant v WHERE v.id = :id")
+    Optional<ProductVariant> findByIdForUpdate(@Param("id") Integer id);
 }

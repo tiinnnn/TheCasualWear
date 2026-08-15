@@ -17,8 +17,8 @@
             </div>
         </div>
 
-        <!-- ==================== TỔNG QUAN ==================== -->
-        <div class="dm-grid dm-grid--4 dm-stagger">
+        <!-- ==================== TỔNG QUAN (TOÀN THỜI GIAN) ==================== -->
+        <div class="dm-grid dm-grid--2 dm-stagger">
             <div class="dm-card dm-stat">
                 <div class="dm-icon"><i class="bi bi-box-seam"></i></div>
                 <h3 class="dm-stat-value dm-countup" th:attr="data-value=${totalProducts}">0</h3>
@@ -29,41 +29,96 @@
                 <h3 class="dm-stat-value dm-countup" th:attr="data-value=${totalUsers}">0</h3>
                 <p class="dm-stat-label">Người dùng</p>
             </div>
-            <div class="dm-card dm-stat">
-                <div class="dm-icon"><i class="bi bi-cart-check"></i></div>
-                <h3 class="dm-stat-value dm-countup" th:attr="data-value=${totalOrders}">0</h3>
-                <p class="dm-stat-label">Đơn hàng</p>
-            </div>
-            <div class="dm-card dm-stat dm-stat--accent">
-                <div class="dm-icon"><i class="bi bi-cash-stack"></i></div>
-                <h3 class="dm-stat-value dm-countup" th:attr="data-value=${totalRevenue}" data-suffix=" đ">0</h3>
-                <p class="dm-stat-label">Doanh thu</p>
-            </div>
         </div>
 
-        <!-- ==================== DOANH THU & LỢI NHUẬN ==================== -->
-        <div class="dm-grid dm-grid--3 dm-stagger">
-            <div class="dm-card dm-metric">
-                <div class="dm-metric-top">
-                    <p class="dm-stat-label">Tổng lợi nhuận</p>
+        <!-- ==================== SỐ LIỆU THEO BỘ LỌC THỜI GIAN ====================
+             Gộp mọi card bị ảnh hưởng bởi filter "Từ ngày - Đến ngày" ở trên cùng
+             vào chung 1 ô để dễ quan sát: Đơn hàng, Doanh thu, Tổng lợi nhuận,
+             Doanh thu theo nguồn (POS / VNPay / COD). -->
+        <div class="dm-card dm-filter-scope dm-stagger" id="dm-filter-scope">
+            <div class="dm-section-title dm-section-title--wrap">
+                <span><i class="bi bi-funnel"></i>Số liệu theo bộ lọc thời gian</span>
+                <form class="dm-filter-form" method="get" th:action="@{/admin/dashboard}"
+                      th:attr="hx-get=@{/admin/dashboard}"
+                      hx-trigger="change"
+                      hx-target="#dm-filter-scope"
+                      hx-select="#dm-filter-scope"
+                      hx-swap="outerHTML"
+                      hx-push-url="true"
+                      hx-indicator="#dm-filter-loading">
+                    <div class="dm-filter-field">
+                        <label for="dm-from">Từ ngày</label>
+                        <input type="date" id="dm-from" name="from" class="dm-input"
+                               th:value="${filterFrom}"/>
+                    </div>
+                    <div class="dm-filter-field">
+                        <label for="dm-to">Đến ngày</label>
+                        <input type="date" id="dm-to" name="to" class="dm-input"
+                               th:value="${filterTo}"/>
+                    </div>
+                    <a th:if="${filterFrom != null or filterTo != null}"
+                       th:href="@{/admin/dashboard}"
+                       th:attr="hx-get=@{/admin/dashboard}"
+                       hx-target="#dm-filter-scope"
+                       hx-select="#dm-filter-scope"
+                       hx-swap="outerHTML"
+                       hx-push-url="true"
+                       hx-indicator="#dm-filter-loading"
+                       class="dm-btn dm-btn--filter">
+                        <i class="bi bi-x-lg"></i>Xóa lọc
+                    </a>
+                    <span id="dm-filter-loading" class="dm-filter-loading htmx-indicator">
+                        <i class="bi bi-arrow-repeat dm-spin"></i>Đang cập nhật...
+                    </span>
+                </form>
+            </div>
+
+            <div class="dm-subgrid dm-subgrid--3">
+                <div class="dm-stat">
+                    <div class="dm-icon"><i class="bi bi-cart-check"></i></div>
+                    <h3 class="dm-stat-value dm-countup" th:attr="data-value=${totalOrders}">0</h3>
+                    <p class="dm-stat-label">Đơn hàng</p>
+                </div>
+                <div class="dm-stat">
+                    <div class="dm-icon dm-icon--accent"><i class="bi bi-cash-stack"></i></div>
+                    <h3 class="dm-stat-value dm-countup" th:attr="data-value=${totalRevenue}" data-suffix=" đ">0</h3>
+                    <p class="dm-stat-label">Doanh thu</p>
+                </div>
+                <div class="dm-stat">
                     <div class="dm-icon dm-icon--good"><i class="bi bi-graph-up-arrow"></i></div>
+                    <h3 class="dm-stat-value dm-countup" th:attr="data-value=${totalProfit}" data-suffix=" đ">0</h3>
+                    <p class="dm-stat-label">Tổng lợi nhuận</p>
                 </div>
-                <h4 class="dm-metric-value dm-countup" th:attr="data-value=${totalProfit}" data-suffix=" đ">0</h4>
             </div>
-            <div class="dm-card dm-metric">
-                <div class="dm-metric-top">
-                    <p class="dm-stat-label">Doanh thu tuần này</p>
-                    <div class="dm-icon"><i class="bi bi-calendar-week"></i></div>
+
+            <div th:if="${revenueSummary != null}" class="dm-subgrid dm-subgrid--3 dm-subgrid--divider">
+                <div class="dm-metric">
+                    <div class="dm-metric-top">
+                        <p class="dm-stat-label">POS (tại quầy)</p>
+                        <div class="dm-icon"><i class="bi bi-shop"></i></div>
+                    </div>
+                    <h4 class="dm-metric-value dm-countup"
+                        th:attr="data-value=${revenueSummary.posRevenue}" data-suffix=" đ">0</h4>
+                    <small class="dm-text-faint" th:text="${revenueSummary.posOrders + ' đơn hoàn thành'}"></small>
                 </div>
-                <h4 class="dm-metric-value dm-countup" th:attr="data-value=${weekRevenue}" data-suffix=" đ">0</h4>
-                <small class="dm-text-faint" th:text="${weekOrders + ' đơn hoàn thành'}"></small>
-            </div>
-            <div class="dm-card dm-metric">
-                <div class="dm-metric-top">
-                    <p class="dm-stat-label">Lợi nhuận tuần này</p>
-                    <div class="dm-icon dm-icon--warn"><i class="bi bi-piggy-bank"></i></div>
+                <div class="dm-metric">
+                    <div class="dm-metric-top">
+                        <p class="dm-stat-label">Online - VNPay</p>
+                        <div class="dm-icon"><i class="bi bi-credit-card"></i></div>
+                    </div>
+                    <h4 class="dm-metric-value dm-countup"
+                        th:attr="data-value=${revenueSummary.onlineVnpayRevenue}" data-suffix=" đ">0</h4>
+                    <small class="dm-text-faint" th:text="${revenueSummary.onlineVnpayOrders + ' đơn đã thanh toán'}"></small>
                 </div>
-                <h4 class="dm-metric-value dm-countup" th:attr="data-value=${weekProfit}" data-suffix=" đ">0</h4>
+                <div class="dm-metric">
+                    <div class="dm-metric-top">
+                        <p class="dm-stat-label">Online - COD</p>
+                        <div class="dm-icon"><i class="bi bi-box-seam-fill"></i></div>
+                    </div>
+                    <h4 class="dm-metric-value dm-countup"
+                        th:attr="data-value=${revenueSummary.onlineCodRevenue}" data-suffix=" đ">0</h4>
+                    <small class="dm-text-faint" th:text="${revenueSummary.onlineCodOrders + ' đơn đã giao'}"></small>
+                </div>
             </div>
         </div>
 
@@ -236,29 +291,8 @@
             </div>
         </div>
 
-        <!-- ==================== SẢN PHẨM BÁN CHẠY & TỒN KHO CẦN CHÚ Ý ==================== -->
-        <div class="dm-grid dm-grid--2 dm-stagger">
-            <div class="dm-card">
-                <div class="dm-section-title">
-                    <span><i class="bi bi-fire"></i>Top 5 sản phẩm bán chạy</span>
-                </div>
-                <div th:if="${#lists.isEmpty(topSelling)}" class="dm-empty">Chưa có dữ liệu</div>
-                <div th:each="entry, i : ${topSelling}" class="dm-row-item">
-                    <div class="dm-row-left">
-                        <span class="dm-rank" th:classappend="${i.index == 0} ? ' dm-rank--top'"
-                              th:text="${i.index + 1}"></span>
-                        <img th:if="${entry.key.images != null and !entry.key.images.isEmpty()}"
-                             th:src="${entry.key.images[0].imageUrl}" class="dm-thumb"/>
-                        <div>
-                            <p class="dm-row-title" th:text="${entry.key.name}"></p>
-                            <small class="dm-text-faint"
-                                   th:text="${entry.key.category != null ? entry.key.category.name : ''}"></small>
-                        </div>
-                    </div>
-                    <span class="dm-pill dm-pill--muted" th:text="${entry.value + ' đã bán'}"></span>
-                </div>
-            </div>
-
+        <!-- ==================== TỒN KHO CẦN CHÚ Ý ==================== -->
+        <div class="dm-grid dm-grid--1 dm-stagger">
             <div class="dm-card">
                 <div class="dm-section-title">
                     <span><i class="bi bi-exclamation-triangle"></i>Tồn kho cần chú ý</span>
@@ -428,14 +462,31 @@
 
     .dm-content { position: relative; z-index: 1; }
 
-    .dm-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 28px; }
+    .dm-header {
+        display: flex; align-items: flex-end; justify-content: space-between;
+        margin-bottom: 28px; gap: 16px; flex-wrap: wrap;
+    }
     .dm-eyebrow {
         text-transform: uppercase; letter-spacing: .12em; font-size: .7rem;
         font-weight: 700; color: var(--accent); margin: 0 0 4px;
     }
     .dm-title { font-size: 1.7rem; font-weight: 800; margin: 0; letter-spacing: -.02em; }
 
+    .dm-filter-form { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+    .dm-filter-field { display: flex; flex-direction: column; gap: 4px; }
+    .dm-filter-field label { font-size: .72rem; color: var(--text-dim); font-weight: 600; }
+    .dm-input {
+        background: var(--surface-2); border: 1px solid var(--border);
+        color: var(--text); border-radius: 10px; padding: 7px 10px;
+        font-family: inherit; font-size: .82rem; color-scheme: dark;
+        transition: border-color .2s ease;
+    }
+    .dm-input:focus { outline: none; border-color: var(--accent); }
+    .dm-btn--filter { padding: 8px 16px; height: fit-content; }
+    .dm-btn--filter i { margin-right: 6px; }
+
     .dm-grid { display: grid; gap: 16px; margin-bottom: 24px; }
+    .dm-grid--1 { grid-template-columns: 1fr; }
     .dm-grid--2 { grid-template-columns: repeat(2, 1fr); }
     .dm-grid--3 { grid-template-columns: repeat(3, 1fr); }
     .dm-grid--4 { grid-template-columns: repeat(4, 1fr); }
@@ -482,6 +533,40 @@
     }
     .dm-icon--good { background: var(--good-soft); color: var(--good); }
     .dm-icon--warn { background: var(--warn-soft); color: var(--warn); }
+    .dm-icon--accent { background: var(--accent-soft); color: var(--accent); }
+
+    /* Ô gộp các card bị ảnh hưởng bởi filter Từ ngày - Đến ngày */
+    .dm-filter-scope {
+        border: 1px solid rgba(139,124,246,.4);
+        background: linear-gradient(180deg, var(--accent-soft), var(--surface) 55%);
+        margin-bottom: 24px;
+    }
+    .dm-filter-badge {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 5px 13px; border-radius: 999px;
+        background: var(--surface-2); border: 1px solid var(--border-strong);
+        color: var(--accent); font-size: .74rem; font-weight: 700;
+        white-space: nowrap;
+    }
+    .dm-filter-badge i { color: var(--accent); }
+
+    .dm-subgrid { display: grid; gap: 20px; }
+    .dm-subgrid--3 { grid-template-columns: repeat(3, 1fr); }
+    .dm-subgrid--divider { border-top: 1px solid var(--border); margin-top: 22px; padding-top: 22px; }
+    @media (max-width: 991px) {
+        .dm-subgrid--3 { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 767px) {
+        .dm-subgrid--3 { grid-template-columns: 1fr; }
+    }
+
+    /* Chỉ báo "Đang cập nhật..." khi htmx đang gọi AJAX (mặc định ẩn, htmx tự bật opacity) */
+    .dm-filter-loading {
+        display: inline-flex; align-items: center; gap: 6px;
+        font-size: .78rem; color: var(--text-faint);
+    }
+    .dm-spin { animation: dm-spin-rotate .8s linear infinite; }
+    @keyframes dm-spin-rotate { to { transform: rotate(360deg); } }
 
     .dm-stat { display: flex; flex-direction: column; gap: 10px; }
     .dm-stat--accent { border-color: rgba(139,124,246,.35); }
@@ -511,6 +596,8 @@
         padding-bottom: 14px; border-bottom: 1px solid var(--border);
     }
     .dm-section-title i { margin-right: 8px; color: var(--accent); }
+    .dm-section-title--wrap { flex-wrap: wrap; row-gap: 12px; }
+    .dm-section-title--wrap .dm-filter-form { margin-left: auto; }
     .dm-flex-gap { display: flex; align-items: center; gap: 12px; }
 
     .dm-bar-row { margin-bottom: 18px; }
@@ -599,25 +686,39 @@
     .dm-empty--good i { margin-right: 6px; }
 </style>
 
+<script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+
 <script th:inline="javascript">
     (function () {
         // ── Đếm số tăng dần cho các chỉ số lớn ─────────────────────────
         function formatNumber(n) {
             return Math.round(n).toLocaleString('en-US');
         }
-        document.querySelectorAll('.dm-countup').forEach(function (el) {
-            var target = parseFloat(el.getAttribute('data-value')) || 0;
-            var suffix = el.getAttribute('data-suffix') || '';
-            var duration = 900;
-            var start = null;
-            function step(ts) {
-                if (!start) start = ts;
-                var progress = Math.min((ts - start) / duration, 1);
-                var eased = 1 - Math.pow(1 - progress, 3);
-                el.textContent = formatNumber(target * eased) + suffix;
-                if (progress < 1) requestAnimationFrame(step);
-            }
-            requestAnimationFrame(step);
+        function initCountups(root) {
+            (root || document).querySelectorAll('.dm-countup').forEach(function (el) {
+                var target = parseFloat(el.getAttribute('data-value')) || 0;
+                var suffix = el.getAttribute('data-suffix') || '';
+                var duration = 900;
+                var start = null;
+                function step(ts) {
+                    if (!start) start = ts;
+                    var progress = Math.min((ts - start) / duration, 1);
+                    var eased = 1 - Math.pow(1 - progress, 3);
+                    el.textContent = formatNumber(target * eased) + suffix;
+                    if (progress < 1) requestAnimationFrame(step);
+                }
+                requestAnimationFrame(step);
+            });
+        }
+        initCountups(document);
+
+        // Ô "Số liệu theo bộ lọc thời gian" được htmx thay mới (không reload trang)
+        // mỗi khi đổi Từ ngày / Đến ngày → chạy lại hiệu ứng đếm số cho phần vừa thay.
+        document.body.addEventListener('htmx:afterSwap', function (evt) {
+            // Lưu ý: hx-swap="outerHTML" tạo hẳn phần tử mới thay cho phần tử cũ,
+            // nên evt.detail.target (tham chiếu tới phần tử CŨ) đã bị gỡ khỏi DOM.
+            // Phải querySelector lại bằng id để lấy đúng phần tử MỚI vừa được chèn vào.
+            initCountups(document.getElementById('dm-filter-scope') || document);
         });
 
         // ── Thanh so sánh doanh thu theo kênh / biến động kho ──────────

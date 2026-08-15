@@ -2,6 +2,7 @@ package com.datn.TheCasualWear.controller;
 
 import com.datn.TheCasualWear.entity.AppUser;
 import com.datn.TheCasualWear.service.AppUserService;
+import com.datn.TheCasualWear.util.HomeRedirectResolver;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
@@ -27,7 +28,7 @@ public class AuthController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated()
                 && !auth.getName().equals("anonymousUser")) {
-            return "redirect:/";
+            return HomeRedirectResolver.resolveHomeRedirect(auth);
         }
         if (error != null) model.addAttribute("errorMessage", "Tên đăng nhập hoặc mật khẩu không đúng!");
         if (logout != null) model.addAttribute("successMessage", "Đăng xuất thành công!");
@@ -39,7 +40,7 @@ public class AuthController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated()
                 && !auth.getName().equals("anonymousUser")) {
-            return "redirect:/";
+            return HomeRedirectResolver.resolveHomeRedirect(auth);
         }
         model.addAttribute("user", new AppUser());
         return "auth/register";

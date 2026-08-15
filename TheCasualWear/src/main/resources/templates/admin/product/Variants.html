@@ -222,15 +222,42 @@
                     <form th:action="@{'/admin/products/' + ${product.id} + '/variants/add-batch'}"
                           method="post" id="addBatchForm">
 
-                        <div class="mb-3">
+                        <div class="mb-2">
                             <label class="form-label fw-semibold">
-                                Màu sắc <span class="text-danger">*</span>
+                                Chọn màu <span class="text-danger">*</span>
                             </label>
-                            <select name="colorId" id="colorSelect" class="form-select" required>
-                                <option value="">-- Chọn màu --</option>
-                                <option th:each="c : ${colors}"
-                                        th:value="${c.id}" th:text="${c.name}"></option>
-                            </select>
+                            <div class="border rounded table-responsive">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead class="table-light">
+                                    <tr>
+                                        <th style="width:36px">
+                                            <input type="checkbox" id="checkAllColor"
+                                                   class="form-check-input"
+                                                   title="Chọn tất cả"/>
+                                        </th>
+                                        <th>Màu</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr th:each="c : ${colors}" class="color-row"
+                                        th:attr="data-color-id=${c.id}">
+                                        <td>
+                                            <input type="checkbox" name="colorId"
+                                                   th:value="${c.id}"
+                                                   class="form-check-input color-check"
+                                                   th:id="'chkc_' + ${c.id}"
+                                                   onchange="onColorCheck(this)"/>
+                                        </td>
+                                        <td>
+                                            <label th:for="'chkc_' + ${c.id}"
+                                                   class="fw-semibold mb-0"
+                                                   style="cursor:pointer"
+                                                   th:text="${c.name}"></label>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
 
                         <div class="mb-3">
@@ -247,7 +274,7 @@
                                     <i class="bi bi-magic"></i>
                                 </button>
                             </div>
-                            <small class="text-muted">Hệ thống thêm <code>-SIZE</code> vào sau</small>
+                            <small class="text-muted">Hệ thống thêm <code>-MÀU-SIZE</code> vào sau</small>
                         </div>
 
                         <div class="alert alert-info small mt-2 mb-3">
@@ -426,16 +453,23 @@
                 });
             });
 
+            document.getElementById('checkAllColor').addEventListener('change', function () {
+                document.querySelectorAll('.color-check').forEach(cb => {
+                    cb.checked = this.checked;
+                    onColorCheck(cb);
+                });
+            });
+
             // Validate phía client trước khi submit form thêm biến thể —
             // HTML `required` không áp dụng được cho nhóm checkbox size,
             // nên phải tự kiểm tra để tránh submit thiếu thông tin.
             document.getElementById('addBatchForm').addEventListener('submit', function (e) {
-                const colorId = document.getElementById('colorSelect').value;
-                const checkedSizes = document.querySelectorAll('.size-check:checked').length;
+                const checkedColors = document.querySelectorAll('.color-check:checked').length;
+                const checkedSizes  = document.querySelectorAll('.size-check:checked').length;
 
-                if (!colorId) {
+                if (checkedColors === 0) {
                     e.preventDefault();
-                    alert('Vui lòng chọn màu sắc!');
+                    alert('Vui lòng chọn ít nhất 1 màu sắc!');
                     return;
                 }
                 if (checkedSizes === 0) {
@@ -603,28 +637,15 @@
                 skuManuallyEdited = true;
             });
 
+            // Giờ có thể chọn nhiều màu cùng lúc nên prefix chỉ sinh từ tên
+            // sản phẩm; mã màu riêng cho từng variant do backend tự gắn
+            // (xem AdminProductController#addVariantBatch) để đảm bảo không
+            // trùng SKU giữa các màu khác nhau cùng 1 size.
             function buildSKU() {
-                const colorSel  = document.getElementById('colorSelect');
-                const colorText = colorSel.options[colorSel.selectedIndex]?.text || '';
-                if (!colorText || colorText.startsWith('--')) return '';
-                const nameCode  = removeDiac(PRODUCT_NAME)
+                return removeDiac(PRODUCT_NAME)
                     .split(' ').filter(Boolean)
                     .map(w => w[0].toUpperCase()).join('');
-                // Mỗi từ trong tên màu lấy 2 ký tự đầu → tránh collision
-                // VD: 'Xanh Navy' → 'XANA', 'Xanh Nhạt' → 'XANH'
-                const colorWords = removeDiac(colorText).split(' ').filter(Boolean);
-                const colorCode = colorWords.length === 1
-                    ? colorWords[0].substring(0, 4).toUpperCase()
-                    : colorWords.map(w => w.substring(0, 2)).join('').substring(0, 6).toUpperCase();
-                return [nameCode, colorCode].filter(Boolean).join('-');
             }
-
-            document.getElementById('colorSelect').addEventListener('change', function () {
-                if (!skuManuallyEdited) {
-                    const val = buildSKU();
-                    if (val) document.getElementById('skuPrefix').value = val;
-                }
-            });
 
             window.autoSKU = function () {
                 const val = buildSKU();
@@ -649,9 +670,14 @@
             recalcTotal();
         };
 
+        window.onColorCheck = function (cb) {
+            recalcTotal();
+        };
+
         window.recalcTotal = function () {
-            const total = document.querySelectorAll('.size-check:checked').length;
-            document.getElementById('totalPreview').textContent = total;
+            const sizeCount  = document.querySelectorAll('.size-check:checked').length;
+            const colorCount = document.querySelectorAll('.color-check:checked').length;
+            document.getElementById('totalPreview').textContent = sizeCount * colorCount;
         };
     </script>
 

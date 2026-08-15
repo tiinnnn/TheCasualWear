@@ -73,13 +73,25 @@ public class OrderController {
                 .distinct().toList();
         Map<Integer, ProductSale> activeSales = productSaleService.getActiveSalesByProductIds(productIds);
 
+        long totalPrice = cartService.getTotalPrice(user);
+        long grandTotal = totalPrice + OrderService.SHIPPING_FEE.longValue();
+
+        // Chỉ hiển thị voucher đủ điều kiện áp dụng (order.total >= voucher.minOrderValue)
+        BigDecimal totalPriceBD = BigDecimal.valueOf(totalPrice);
+        List<Voucher> eligibleVouchers = voucherService.getActiveVouchers().stream()
+                .filter(v -> v.getMinOrderValue() == null
+                        || totalPriceBD.compareTo(v.getMinOrderValue()) >= 0)
+                .toList();
+
         model.addAttribute("cartItems", cartItems);
         model.addAttribute("itemPrices", itemPrices);
         model.addAttribute("activeSales", activeSales);
-        model.addAttribute("totalPrice", cartService.getTotalPrice(user));
+        model.addAttribute("totalPrice", totalPrice);
+        model.addAttribute("shippingFee", OrderService.SHIPPING_FEE);
+        model.addAttribute("grandTotal", grandTotal);
         model.addAttribute("addresses", addressService.getAddressesByUser(user));
         model.addAttribute("defaultAddress", addressService.getDefaultAddress(user));
-        model.addAttribute("activeVouchers", voucherService.getActiveVouchers());
+        model.addAttribute("activeVouchers", eligibleVouchers);
         model.addAttribute("view", "shop/checkout");
         return "layouts/shop-layout";
     }
@@ -94,8 +106,9 @@ public class OrderController {
                              RedirectAttributes redirectAttributes) {
         AppUser user = getCurrentUser(auth);
 
-        // Validate COD > 1 triệu
+        // Validate COD > 1 triệu (áp dụng trên tổng tiền hàng, chưa gồm phí ship)
         long totalPrice = cartService.getTotalPrice(user);
+        long grandTotal = totalPrice + OrderService.SHIPPING_FEE.longValue();
         if (totalPrice > 1000000 && "COD".equals(paymentMethod)) {
             redirectAttributes.addFlashAttribute("errorMessage",
                     "Đơn hàng trên 1.000.000 đ bắt buộc thanh toán qua ngân hàng!");
@@ -110,8 +123,9 @@ public class OrderController {
                     billingAddressId != null ? billingAddressId : shippingAddressId);
             session.setAttribute("pendingVoucherCode", voucherCode);
 
+            // Số tiền thanh toán qua VNPay phải gồm cả phí ship
             String paymentUrl = vnPayService.createPaymentUrl(
-                    totalPrice,
+                    grandTotal,
                     "Thanh toan don hang",
                     request
             );

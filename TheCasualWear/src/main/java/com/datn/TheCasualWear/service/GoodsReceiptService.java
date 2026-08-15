@@ -95,6 +95,16 @@ public class GoodsReceiptService {
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Không tìm thấy sản phẩm với id: " + dto.variantId()));
 
+            // Giá nhập không được cao hơn giá bán hiện tại — nhập cao hơn bán
+            // là lỗ ngay từ đầu, chặn sớm trước khi cộng vào tồn kho/giá vốn.
+            BigDecimal sellingPrice = variant.getProduct().getPrice();
+            if (sellingPrice != null && unitCost.compareTo(sellingPrice) > 0) {
+                throw new IllegalArgumentException(
+                        "Giá nhập (" + unitCost + " đ) của SKU " +
+                                (variant.getSku() != null ? variant.getSku() : dto.variantId()) +
+                                " đang cao hơn giá bán hiện tại (" + sellingPrice + " đ)!");
+            }
+
             GoodsReceiptItem item = new GoodsReceiptItem();
             item.setGoodsReceipt(receipt);
             item.setVariant(variant);

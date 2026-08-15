@@ -293,14 +293,6 @@
                     <ul class="dropdown-menu dropdown-menu-end" style="border-radius:14px;border-color:var(--line)">
                         <li><a class="dropdown-item" th:href="@{/account}">Tài khoản</a></li>
                         <li><a class="dropdown-item" th:href="@{/account/orders}">Đơn hàng</a></li>
-                        <li sec:authorize="hasAnyRole('ADMIN','OWNER')">
-                            <a class="dropdown-item text-warning" th:href="@{/admin}">Quản trị</a>
-                        </li>
-                        <li sec:authorize="hasAnyRole('CASHIER','OWNER')">
-                            <a class="dropdown-item text-success" th:href="@{/cashier}">
-                                <i class="bi bi-cash-coin me-1"></i>Bán hàng tại quầy
-                            </a>
-                        </li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item text-danger" th:href="@{/auth/logout}">Đăng xuất</a></li>
                     </ul>

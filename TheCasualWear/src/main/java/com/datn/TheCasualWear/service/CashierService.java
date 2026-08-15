@@ -8,6 +8,8 @@ import com.datn.TheCasualWear.enums.OrderStatus;
 import com.datn.TheCasualWear.enums.OrderType;
 import com.datn.TheCasualWear.enums.StockMovementType;
 import com.datn.TheCasualWear.enums.StockRefType;
+import com.datn.TheCasualWear.pos.PosCart;
+import com.datn.TheCasualWear.pos.PosCartRegistry;
 import com.datn.TheCasualWear.repository.AppOrderRepository;
 import com.datn.TheCasualWear.repository.AppUserRepository;
 import com.datn.TheCasualWear.repository.OrderDetailRepository;
@@ -37,7 +39,8 @@ public class CashierService {
     private final OrderVoucherRepository   orderVoucherRepository;
     private final StockMovementLogService  stockMovementLogService;
     private final ProductSaleService       productSaleService; // MỚI: giá sale áp cho cả bán tại quầy
-    private final ShiftService       shiftService;
+    private final ShiftService             shiftService;
+    private final PosCartRegistry          cartRegistry; // MỚI: giỏ POS đa-cart, in-memory
 
     // Cashier tự hủy đơn trong vòng bao nhiêu phút kể từ lúc tạo.
     // Admin/Owner không bị giới hạn bởi mốc thời gian này.
@@ -54,6 +57,11 @@ public class CashierService {
         }
         return appUserRepository.findByUsernameOrEmailOrPhone(principal.getUsername())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản đăng nhập"));
+    }
+
+    /** Wrapper public để CashierController lấy cashier hiện tại (VD gán cashierId cho giỏ mới). */
+    public AppUser getCurrentCashier() {
+        return getCurrentUser();
     }
 
     /**
@@ -88,7 +96,9 @@ public class CashierService {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // XÂY DỰNG ITEM GIỎ TẠM
+    // XÂY DỰNG ITEM GIỎ TẠM (không tự trừ kho — dùng khi chỉ cần preview,
+    // không đi qua registry. Luồng add-to-cart thật sự dùng addItemToCart()
+    // bên dưới vì cần trừ/giữ chỗ kho đúng lúc.)
     // ─────────────────────────────────────────────────────────────
 
     public CounterCartItemDTO buildCartItem(Integer variantId, int quantity) {
@@ -104,6 +114,15 @@ public class CashierService {
                             + "' chỉ còn " + variant.getStock() + " trong kho!");
         }
 
+        return buildCartItemNoStockCheck(variant, quantity);
+    }
+
+    // Dựng DTO từ 1 variant đã load sẵn, KHÔNG validate lại tồn kho — dùng
+    // sau khi đã reserve kho thành công (addItemToCart), vì lúc đó
+    // variant.getStock() đã bị trừ đi đúng bằng quantity nên so sánh lại
+    // "stock < quantity" sẽ sai ý nghĩa (đó là tồn CÒN LẠI, không phải điều
+    // kiện hợp lệ của lần thêm này).
+    private CounterCartItemDTO buildCartItemNoStockCheck(ProductVariant variant, int quantity) {
         BigDecimal unitPrice = getEffectivePrice(variant);
         ProductSale activeSale = getActiveSale(variant);
 
@@ -138,6 +157,134 @@ public class CashierService {
             return product.getImages().get(0).getImageUrl();
         }
         return null;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // GIỎ HÀNG TẠM POS (đa giỏ — object trong PosCartRegistry, KHÔNG phải
+    // AppOrder trong DB). Stock bị trừ NGAY khi thêm vào giỏ (giữ chỗ) và
+    // hoàn lại khi xóa item / xóa giỏ / đóng tab / timeout — xem
+    // StockMovementLogService.reserveForPosCart()/releaseForPosCart().
+    // Chỉ tạo AppOrder thật khi checkout() thành công.
+    // ─────────────────────────────────────────────────────────────
+
+    public PosCart createCart(String label) {
+        return cartRegistry.create(getCurrentUser().getId(), label);
+    }
+
+    /** Trả về null nếu không tồn tại (đã timeout/đóng) — dùng để kiểm tra tồn tại, không ném lỗi. */
+    public PosCart getCart(String cartId) {
+        return cartRegistry.get(cartId);
+    }
+
+    public PosCart getCartOrThrow(String cartId) {
+        PosCart cart = cartRegistry.get(cartId);
+        if (cart == null) {
+            throw new IllegalStateException(
+                    "Giỏ hàng không tồn tại hoặc đã hết hạn do treo quá lâu không hoạt động!");
+        }
+        return cart;
+    }
+
+    @Transactional
+    public void addItemToCart(String cartId, Integer variantId, int addQty) {
+        if (addQty < 1) {
+            throw new IllegalStateException("Số lượng phải lớn hơn 0");
+        }
+        PosCart cart = getCartOrThrow(cartId);
+
+        ProductVariant variant = variantRepository.findById(variantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm"));
+        if (variant.getStock() < addQty) {
+            throw new IllegalStateException(
+                    "Sản phẩm '" + variant.getProduct().getName()
+                            + "' chỉ còn " + variant.getStock() + " trong kho!");
+        }
+
+        AppUser cashier = getCurrentUser();
+        // Giữ chỗ kho trước (có pessimistic lock bên trong) — nếu variant vừa
+        // hết hàng do cashier khác giữ chỗ trước, sẽ ném lỗi tồn kho âm ở đây.
+        stockMovementLogService.reserveForPosCart(variantId, addQty, cartId, cashier);
+
+        CounterCartItemDTO existing = cart.getItems().get(variantId);
+        if (existing != null) {
+            existing.setQuantity(existing.getQuantity() + addQty);
+        } else {
+            // variant.getStock() ở đây đã phản ánh số dư SAU khi trừ addQty ở trên
+            cart.getItems().put(variantId, buildCartItemNoStockCheck(variant, addQty));
+        }
+        cart.touch();
+    }
+
+    @Transactional
+    public void setItemQuantity(String cartId, Integer variantId, int newQty) {
+        PosCart cart = getCartOrThrow(cartId);
+        CounterCartItemDTO item = cart.getItems().get(variantId);
+        if (item == null) {
+            throw new IllegalStateException("Sản phẩm không có trong giỏ!");
+        }
+
+        if (newQty < 1) {
+            removeItemFromCart(cartId, variantId);
+            return;
+        }
+
+        int delta = newQty - item.getQuantity();
+        if (delta == 0) return;
+
+        AppUser cashier = getCurrentUser();
+
+        if (delta > 0) {
+            ProductVariant variant = variantRepository.findById(variantId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm"));
+            if (variant.getStock() < delta) {
+                throw new IllegalStateException(
+                        "Sản phẩm '" + variant.getProduct().getName() + "' chỉ còn "
+                                + variant.getStock() + " trong kho, không đủ để tăng thêm " + delta + "!");
+            }
+            stockMovementLogService.reserveForPosCart(variantId, delta, cartId, cashier);
+        } else {
+            stockMovementLogService.releaseForPosCart(
+                    variantId, -delta, cartId, "Giảm số lượng trong giỏ", cashier);
+        }
+
+        item.setQuantity(newQty);
+        cart.touch();
+    }
+
+    @Transactional
+    public void removeItemFromCart(String cartId, Integer variantId) {
+        PosCart cart = getCartOrThrow(cartId);
+        CounterCartItemDTO item = cart.getItems().remove(variantId);
+        if (item != null) {
+            stockMovementLogService.releaseForPosCart(
+                    variantId, item.getQuantity(), cartId, "Xóa khỏi giỏ POS", getCurrentUser());
+        }
+        cart.touch();
+    }
+
+    @Transactional
+    public void clearCartItems(String cartId) {
+        PosCart cart = getCartOrThrow(cartId);
+        AppUser cashier = getCurrentUser();
+        for (CounterCartItemDTO item : cart.getItemList()) {
+            stockMovementLogService.releaseForPosCart(
+                    item.getVariantId(), item.getQuantity(), cartId, "Xóa toàn bộ giỏ POS", cashier);
+        }
+        cart.getItems().clear();
+        cart.touch();
+    }
+
+    /** Đóng hẳn 1 tab giỏ (khác clearCartItems — giỏ này biến mất luôn khỏi registry). */
+    @Transactional
+    public void closeCart(String cartId) {
+        PosCart cart = cartRegistry.get(cartId);
+        if (cart == null) return; // đã bị timeout release trước đó — không có gì để hoàn thêm
+        AppUser cashier = getCurrentUser();
+        for (CounterCartItemDTO item : cart.getItemList()) {
+            stockMovementLogService.releaseForPosCart(
+                    item.getVariantId(), item.getQuantity(), cartId, "Đóng tab giỏ POS", cashier);
+        }
+        cartRegistry.remove(cartId);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -233,27 +380,32 @@ public class CashierService {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // CHECKOUT — trừ kho + áp voucher (nếu có) + tạo AppOrder
+    // CHECKOUT — tạo AppOrder từ giỏ POS (cartId). KHÔNG trừ kho thêm nữa:
+    // stock của từng item đã bị trừ (giữ chỗ) ngay từ lúc add-to-cart, nên
+    // ở đây chỉ ghi 1 dòng log audit (changeQty = 0) đánh dấu "giữ chỗ này
+    // đã chốt thành đơn hàng #X", để dễ tra cứu lịch sử biến động kho.
     //
-    // Toàn bộ nằm trong 1 @Transactional:
-    //   trừ kho → validate & trừ usedCount voucher → save order
-    // Nếu bất kỳ bước nào fail → rollback toàn bộ, không mất kho / lượt voucher.
+    // Toàn bộ nằm trong 1 @Transactional: tạo order → ghi log/OrderDetail
+    // từng dòng → áp voucher (nếu có) → save. Nếu bất kỳ bước nào fail →
+    // rollback toàn bộ; giỏ trong registry KHÔNG bị xóa (cashier có thể
+    // thử checkout lại), vì stock vẫn đang được giữ chỗ đúng.
     //
-    // Giá lưu vào order_detail lấy từ item.getUnitPrice() — đã được
-    // buildCartItem() tính theo giá sale ngay khi thêm vào giỏ tạm, nên
-    // ở đây không cần tính lại (và cũng không nên: giữ đúng giá lúc
-    // khách được báo giá, tránh lệch nếu sale hết hạn giữa lúc thao tác).
+    // Giá lưu vào order_detail lấy từ item.getUnitPrice() — đã được tính
+    // theo giá sale ngay khi thêm vào giỏ tạm, giữ đúng giá lúc khách được
+    // báo giá, tránh lệch nếu sale hết hạn giữa lúc thao tác.
     // ─────────────────────────────────────────────────────────────
 
     @Transactional
-    public AppOrder checkout(Integer customerId,
-                             List<CounterCartItemDTO> items,
+    public AppOrder checkout(String cartId,
+                             Integer customerId,
                              String paymentMethod,
                              String voucherCode) {
 
-        if (items == null || items.isEmpty()) {
+        PosCart cart = getCartOrThrow(cartId);
+        if (cart.isEmpty()) {
             throw new IllegalStateException("Giỏ hàng đang trống!");
         }
+        List<CounterCartItemDTO> items = cart.getItemList();
 
         AppUser cashier = getCurrentUser();
 
@@ -277,7 +429,7 @@ public class CashierService {
         // Lưu trước để có order.getId() dùng làm refId khi ghi log biến động kho
         orderRepository.save(order);
 
-        // ── Tính tổng hàng ──────────────────────────────────────
+        // ── Tính tổng hàng + ghi OrderDetail (không trừ kho — đã trừ lúc add) ──
         BigDecimal subtotal = BigDecimal.ZERO;
 
         for (CounterCartItemDTO item : items) {
@@ -285,20 +437,15 @@ public class CashierService {
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Sản phẩm không tồn tại: " + item.getVariantId()));
 
-            if (variant.getStock() < item.getQuantity()) {
-                throw new IllegalStateException(
-                        "Sản phẩm '" + variant.getProduct().getName() + "' chỉ còn "
-                                + variant.getStock() + " trong kho (giỏ yêu cầu "
-                                + item.getQuantity() + ")!");
-            }
-
+            // changeQty = 0: không đổi số dư (đã trừ từ lúc add-to-cart), chỉ
+            // ghi audit "chốt giữ chỗ giỏ POS #cartId thành đơn hàng #order.getId()"
             stockMovementLogService.logMovement(
                     variant,
                     StockMovementType.SALE,
-                    -item.getQuantity(),
+                    0,
                     StockRefType.ORDER,
                     order.getId(),
-                    "Bán tại quầy - đơn #" + order.getId(),
+                    "Chốt đơn từ giỏ POS #" + cartId + " - đơn #" + order.getId(),
                     cashier
             );
 
@@ -311,7 +458,7 @@ public class CashierService {
                     ? item.getOriginalPrice() : item.getUnitPrice());
             order.getOrderDetails().add(detail);
 
-            subtotal = subtotal.add(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
+            subtotal = subtotal.add(item.getLineTotal());
         }
 
         // ── Áp voucher (chỉ khi khách có tài khoản + nhập mã) ──
@@ -344,8 +491,13 @@ public class CashierService {
         }
 
         order.setTotalPrice(subtotal.subtract(discount).max(BigDecimal.ZERO));
+        orderRepository.save(order);
 
-        return orderRepository.save(order);
+        // Đơn đã tạo thành công — giỏ tạm không cần nữa, không release
+        // (hàng đã bán thật, khác với clearCart/timeout là bỏ dở không mua).
+        cartRegistry.remove(cartId);
+
+        return order;
     }
 
     // ─────────────────────────────────────────────────────────────

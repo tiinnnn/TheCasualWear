@@ -98,20 +98,23 @@
                    th:text="${order.shippingAddress.street + ', ' + order.shippingAddress.district + ', ' + order.shippingAddress.city}"></p>
             </div>
 
-            <div class="ord-card mb-3">
+            <div class="ord-card mb-3" th:with="shipping=${order.shippingFee != null ? order.shippingFee : 0},
+                                                 discount=${order.orderVoucher != null ? order.orderVoucher.discountAmount : 0}">
                 <span class="ord-card-title">Tổng đơn hàng</span>
 
                 <div class="ord-sum-row">
                     <span>Tạm tính</span>
-                    <span th:if="${order.orderVoucher == null}"
-                          th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></span>
-                    <span th:if="${order.orderVoucher != null}"
-                          th:text="${#numbers.formatInteger(order.totalPrice.add(order.orderVoucher.discountAmount), 0, 'COMMA') + ' đ'}"></span>
+                    <span th:text="${#numbers.formatInteger(order.totalPrice - shipping + discount, 0, 'COMMA') + ' đ'}"></span>
                 </div>
 
                 <div th:if="${order.orderVoucher != null}" class="ord-sum-row ord-sum-row--voucher">
                     <span>Voucher <em th:text="'(' + ${order.orderVoucher.voucher.code} + ')'"></em></span>
-                    <span th:text="'- ' + ${#numbers.formatInteger(order.orderVoucher.discountAmount, 0, 'COMMA') + ' đ'}"></span>
+                    <span th:text="'- ' + ${#numbers.formatInteger(discount, 0, 'COMMA') + ' đ'}"></span>
+                </div>
+
+                <div class="ord-sum-row">
+                    <span>Phí vận chuyển</span>
+                    <span th:text="${#numbers.formatInteger(shipping, 0, 'COMMA') + ' đ'}"></span>
                 </div>
 
                 <div class="ord-sum-line"></div>

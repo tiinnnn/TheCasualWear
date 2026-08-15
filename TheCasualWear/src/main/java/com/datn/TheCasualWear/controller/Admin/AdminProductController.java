@@ -128,13 +128,13 @@ public class AdminProductController {
     @PostMapping("/{id}/variants/add-batch")
     public String addVariantBatch(
             @PathVariable Integer id,
-            @RequestParam(required = false) Integer colorId,
-            @RequestParam(value = "sizeId", required = false) List<Integer> sizeIds,
+            @RequestParam(value = "colorId", required = false) List<Integer> colorIds,
+            @RequestParam(value = "sizeId",  required = false) List<Integer> sizeIds,
             @RequestParam(required = false) String skuPrefix,
             RedirectAttributes ra) {
 
-        if (colorId == null) {
-            ra.addFlashAttribute("errorMessage", "Vui lòng chọn màu sắc!");
+        if (colorIds == null || colorIds.isEmpty()) {
+            ra.addFlashAttribute("errorMessage", "Vui lòng chọn ít nhất 1 màu sắc!");
             return "redirect:/admin/products/" + id + "/variants";
         }
         if (sizeIds == null || sizeIds.isEmpty()) {
@@ -147,32 +147,43 @@ public class AdminProductController {
         StringBuilder errors = new StringBuilder();
         List<Integer> createdVariantIds = new java.util.ArrayList<>();
 
-        for (Integer sizeId : sizeIds) {
-            ProductVariant v = new ProductVariant();
-            Color c = new Color(); c.setId(colorId); v.setColor(c);
-            Size  s = new Size();  s.setId(sizeId);  v.setSize(s);
-            // Tồn kho + giá vốn luôn khởi tạo = 0 ở createVariant() — bắt buộc
-            // nhập kho qua module Quản lý kho (GoodsReceiptService) để đảm bảo
-            // audit trail đầy đủ và giá vốn tính bình quân gia quyền đúng.
+        // Tích Descartes: mỗi cặp (màu, size) sinh đúng 1 variant.
+        // Vòng lặp ngoài theo màu để tính sẵn colorCode dùng chung cho mọi
+        // size của màu đó, tránh gọi lại colorService nhiều lần không cần thiết.
+        for (Integer colorId : colorIds) {
+            String colorCode = removeDiacritics(colorService.getColorById(colorId).getName())
+                    .toUpperCase().replaceAll("[^A-Z0-9]", "");
 
-            if (skuPrefix != null && !skuPrefix.isBlank()) {
-                String sizeName = sizeService.getSizeById(sizeId).getName();
-                v.setSku(skuPrefix.toUpperCase().trim() + "-" + sizeName.toUpperCase());
-            } else {
-                // Không để sku = null: cột sku là UNIQUE, và SQL Server chỉ cho
-                // phép 1 giá trị NULL trong toàn cột — tạo variant thứ 2 trở đi
-                // với sku null sẽ vi phạm unique constraint. Tự sinh SKU dự
-                // phòng dựa trên product/color/size để đảm bảo luôn duy nhất.
-                v.setSku("SP" + id + "-C" + colorId + "-S" + sizeId);
-            }
+            for (Integer sizeId : sizeIds) {
+                ProductVariant v = new ProductVariant();
+                Color c = new Color(); c.setId(colorId); v.setColor(c);
+                Size  s = new Size();  s.setId(sizeId);  v.setSize(s);
+                // Tồn kho + giá vốn luôn khởi tạo = 0 ở createVariant() — bắt buộc
+                // nhập kho qua module Quản lý kho (GoodsReceiptService) để đảm bảo
+                // audit trail đầy đủ và giá vốn tính bình quân gia quyền đúng.
 
-            try {
-                ProductVariant saved = variantService.createVariant(product, v);
-                createdVariantIds.add(saved.getId());
-                added++;
-            } catch (IllegalArgumentException e) {
-                skipped++;
-                errors.append(e.getMessage()).append("; ");
+                if (skuPrefix != null && !skuPrefix.isBlank()) {
+                    String sizeName = sizeService.getSizeById(sizeId).getName();
+                    // Phải nhúng cả mã màu: 1 lần submit giờ có thể chọn nhiều
+                    // màu, nếu chỉ ghép size như trước sẽ trùng SKU khi 2 màu
+                    // khác nhau cùng chọn chung 1 size.
+                    v.setSku(skuPrefix.toUpperCase().trim() + "-" + colorCode + "-" + sizeName.toUpperCase());
+                } else {
+                    // Không để sku = null: cột sku là UNIQUE, và SQL Server chỉ cho
+                    // phép 1 giá trị NULL trong toàn cột — tạo variant thứ 2 trở đi
+                    // với sku null sẽ vi phạm unique constraint. Tự sinh SKU dự
+                    // phòng dựa trên product/color/size để đảm bảo luôn duy nhất.
+                    v.setSku("SP" + id + "-C" + colorId + "-S" + sizeId);
+                }
+
+                try {
+                    ProductVariant saved = variantService.createVariant(product, v);
+                    createdVariantIds.add(saved.getId());
+                    added++;
+                } catch (IllegalArgumentException e) {
+                    skipped++;
+                    errors.append(e.getMessage()).append("; ");
+                }
             }
         }
 
@@ -194,6 +205,14 @@ public class AdminProductController {
             ra.addFlashAttribute("errorMessage", errors.toString());
         }
         return "redirect:/admin/products/" + id + "/variants";
+    }
+
+    // Bỏ dấu tiếng Việt để sinh mã màu ngắn gọn nhúng vào SKU tự sinh
+    // (VD: "Xanh Navy" -> "XANHNAVY")
+    private String removeDiacritics(String s) {
+        String temp = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD);
+        temp = temp.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+        return temp.replace('đ', 'd').replace('Đ', 'D');
     }
 
     @PostMapping("/{productId}/variants/edit/{variantId}")

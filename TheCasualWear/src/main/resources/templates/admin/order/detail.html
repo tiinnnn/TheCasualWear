@@ -205,8 +205,10 @@
                               detail.price.doubleValue() * detail.quantity, 0, 'COMMA') + ' đ'}"></span>
                     </div>
                     <hr/>
-                    <div th:with="discount=${order.orderVoucher != null ? order.orderVoucher.discountAmount : 0}, subtotal=${order.totalPrice + discount}">
-                        <div th:if="${order.orderVoucher != null}" class="d-flex justify-content-between mb-1">
+                    <div th:with="discount=${order.orderVoucher != null ? order.orderVoucher.discountAmount : 0},
+                                  shipping=${order.shippingFee != null ? order.shippingFee : 0},
+                                  subtotal=${order.totalPrice + discount - shipping}">
+                        <div class="d-flex justify-content-between mb-1">
                             <span class="text-muted">Tạm tính:</span>
                             <span th:text="${#numbers.formatInteger(subtotal, 0, 'COMMA') + ' đ'}"></span>
                         </div>
@@ -217,8 +219,11 @@
                         </span>
                             <span class="text-success" th:text="'- ' + ${#numbers.formatInteger(discount, 0, 'COMMA') + ' đ'}"></span>
                         </div>
-                        <div class="d-flex justify-content-between fw-bold fs-5"
-                             th:classappend="${order.orderVoucher != null} ? 'mt-2 pt-2 border-top' : ''">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">Phí vận chuyển:</span>
+                            <span th:text="${#numbers.formatInteger(shipping, 0, 'COMMA') + ' đ'}"></span>
+                        </div>
+                        <div class="d-flex justify-content-between fw-bold fs-5 mt-2 pt-2 border-top">
                             <span>Tổng cộng:</span>
                             <span class="text-danger"
                                   th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></span>
@@ -337,12 +342,25 @@
 
                         <button th:if="${order.status.name() != 'COMPLETED'
                                 and order.status.name() != 'CANCELLED'
-                                and order.status.name() != 'RETURNED'}"
+                                and order.status.name() != 'RETURNED'
+                                and order.trackingCode == null}"
                                 type="button"
                                 class="btn btn-outline-danger"
                                 data-bs-toggle="modal" data-bs-target="#cancelModal">
                             <i class="bi bi-x-lg me-1"></i>Hủy đơn
                         </button>
+
+                        <!-- Đã có mã vận đơn GHN -> không cho hủy trực tiếp nữa,
+                             chỉ hiện ghi chú giải thích lý do ẩn nút -->
+                        <div th:if="${order.status.name() != 'COMPLETED'
+                                and order.status.name() != 'CANCELLED'
+                                and order.status.name() != 'RETURNED'
+                                and order.trackingCode != null}"
+                             class="alert alert-warning py-2 px-3 small mb-0">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Đơn đã có mã vận đơn GHN, không thể hủy trực tiếp.
+                            Liên hệ GHN để yêu cầu thu hồi nếu cần.
+                        </div>
                     </div>
                 </div>
             </div>

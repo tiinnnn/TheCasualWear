@@ -124,5 +124,69 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
             "AND o.status = com.datn.TheCasualWear.enums.OrderStatus.COMPLETED")
     BigDecimal sumTotalPriceByShiftIds(@Param("shiftIds") List<Integer> shiftIds);
 
+    // ── DASHBOARD: doanh thu theo khoảng thời gian tùy chọn (2.4/2.5) ──────
+    // Công thức doanh thu = POS (COUNTER, COMPLETED) + Online VNPay đã thanh
+    // toán (isPaid=true, chưa bị hủy/hoàn) + Online COD đã hoàn tất giao hàng
+    // (COMPLETED). from/to có thể null — null nghĩa là không giới hạn theo
+    // hướng đó (xem OrderService.resolveDateRange).
+
+    @Query("""
+        SELECT COALESCE(SUM(o.totalPrice), 0), COUNT(o)
+        FROM AppOrder o
+        WHERE o.orderType = com.datn.TheCasualWear.enums.OrderType.COUNTER
+          AND o.status = com.datn.TheCasualWear.enums.OrderStatus.COMPLETED
+          AND (:from IS NULL OR o.orderDate >= :from)
+          AND (:to   IS NULL OR o.orderDate <= :to)
+        """)
+    List<Object[]> sumPosRevenue(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    @Query("""
+        SELECT COALESCE(SUM(o.totalPrice), 0), COUNT(o)
+        FROM AppOrder o
+        WHERE o.orderType = com.datn.TheCasualWear.enums.OrderType.ONLINE
+          AND o.paymentMethod = 'VNPAY'
+          AND o.isPaid = true
+          AND o.status NOT IN (com.datn.TheCasualWear.enums.OrderStatus.CANCELLED,
+                                com.datn.TheCasualWear.enums.OrderStatus.RETURNED)
+          AND (:from IS NULL OR o.orderDate >= :from)
+          AND (:to   IS NULL OR o.orderDate <= :to)
+        """)
+    List<Object[]> sumOnlineVnpayRevenue(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    @Query("""
+        SELECT COALESCE(SUM(o.totalPrice), 0), COUNT(o)
+        FROM AppOrder o
+        WHERE o.orderType = com.datn.TheCasualWear.enums.OrderType.ONLINE
+          AND o.paymentMethod = 'COD'
+          AND o.status = com.datn.TheCasualWear.enums.OrderStatus.COMPLETED
+          AND (:from IS NULL OR o.orderDate >= :from)
+          AND (:to   IS NULL OR o.orderDate <= :to)
+        """)
+    List<Object[]> sumOnlineCodRevenue(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    // Giá vốn (costPrice) của các order_detail thuộc đúng tập đơn được tính
+    // doanh thu ở trên (3 nhánh POS / VNPay / COD giống hệt 3 query trên) —
+    // dùng để tính lợi nhuận = doanh thu - giá vốn.
+    @Query("""
+        SELECT COALESCE(SUM(od.variant.costPrice * od.quantity), 0)
+        FROM OrderDetail od
+        JOIN od.order o
+        WHERE (:from IS NULL OR o.orderDate >= :from)
+          AND (:to   IS NULL OR o.orderDate <= :to)
+          AND (
+               (o.orderType = com.datn.TheCasualWear.enums.OrderType.COUNTER
+                AND o.status = com.datn.TheCasualWear.enums.OrderStatus.COMPLETED)
+            OR (o.orderType = com.datn.TheCasualWear.enums.OrderType.ONLINE
+                AND o.paymentMethod = 'VNPAY'
+                AND o.isPaid = true
+                AND o.status NOT IN (com.datn.TheCasualWear.enums.OrderStatus.CANCELLED,
+                                      com.datn.TheCasualWear.enums.OrderStatus.RETURNED))
+            OR (o.orderType = com.datn.TheCasualWear.enums.OrderType.ONLINE
+                AND o.paymentMethod = 'COD'
+                AND o.status = com.datn.TheCasualWear.enums.OrderStatus.COMPLETED)
+          )
+        """)
+    BigDecimal sumCostForRevenueOrders(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
     boolean existsByShift_Counter_Id(Integer counterId);
 }

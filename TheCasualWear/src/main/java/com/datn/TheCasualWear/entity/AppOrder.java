@@ -41,6 +41,11 @@ public class AppOrder {
     @Column(name = "total_price", precision = 18, scale = 2)
     private BigDecimal totalPrice;
 
+    // Phí vận chuyển snapshot tại thời điểm đặt hàng — hiện là phí cố định
+    // (OrderService.SHIPPING_FEE), sẽ đổi thành giá trị GHN thực tế ở Giai đoạn 3.
+    @Column(name = "shipping_fee", precision = 18, scale = 2)
+    private BigDecimal shippingFee;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shipping_address_id")
     private Address shippingAddress;

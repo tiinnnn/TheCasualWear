@@ -1,23 +1,20 @@
 package com.datn.TheCasualWear.controller.Admin;
 
+import com.datn.TheCasualWear.dto.RevenueSummaryDTO;
 import com.datn.TheCasualWear.entity.AppOrder;
-import com.datn.TheCasualWear.entity.Product;
 import com.datn.TheCasualWear.entity.ProductVariant;
 import com.datn.TheCasualWear.enums.OrderStatus;
-import com.datn.TheCasualWear.repository.OrderDetailRepository;
 import com.datn.TheCasualWear.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
-import java.math.BigDecimal;
-import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 @Controller
 @RequestMapping("/admin")
@@ -28,94 +25,43 @@ public class AdminDashboardController {
     private final ProductService        productService;
     private final ProductVariantService variantService;
     private final AppUserService        appUserService;
-    private final OrderDetailRepository orderDetailRepository;
     private final ProductSaleService       productSaleService;    // MỚI: hiệu quả sale
     private final StockMovementLogService  stockMovementLogService; // MỚI: nhập/xuất kho
 
     @GetMapping({"", "/", "/dashboard"})
-    public String dashboard(Model model) {
+    public String dashboard(Model model,
+                            @RequestParam(required = false) String from,
+                            @RequestParam(required = false) String to) {
         List<AppOrder> allOrders = orderService.getAllOrders();
 
-        //  TỔNG QUAN
+        //  TỔNG QUAN (số liệu toàn thời gian — không phụ thuộc bộ lọc)
         model.addAttribute("totalProducts",
                 productService.getAdminProducts(null, 0).getTotalElements());
         model.addAttribute("totalUsers",
                 appUserService.getAllUsers(null, null, 0).getTotalElements());
-        model.addAttribute("totalOrders", allOrders.size());
 
-        // Doanh thu (COMPLETED)
-        double totalRevenue = allOrders.stream()
-                .filter(o -> o != null && o.getStatus() == OrderStatus.COMPLETED)
-                .mapToDouble(o -> o.getTotalPrice() != null
-                        ? o.getTotalPrice().doubleValue() : 0.0)
-                .sum();
-        model.addAttribute("totalRevenue", totalRevenue);
+        // Doanh thu/lợi nhuận theo khoảng thời gian tùy chọn (2.4/2.5):
+        // POS (COMPLETED) + Online VNPay đã thanh toán + Online COD đã hoàn tất.
+        // Không điền from/to → mặc định toàn bộ lịch sử.
+        LocalDateTime fromDateTime = (from == null || from.isBlank())
+                ? null : LocalDate.parse(from).atStartOfDay();
+        LocalDateTime toDateTime = (to == null || to.isBlank())
+                ? null : LocalDate.parse(to).atTime(23, 59, 59);
 
-        // Chi phí gốc từ variant.costPrice
-        double totalCost = orderDetailRepository.findAll().stream()
-                .filter(od -> od != null
-                        && od.getOrder() != null
-                        && od.getOrder().getStatus() == OrderStatus.COMPLETED
-                        && od.getVariant() != null
-                        && od.getVariant().getCostPrice() != null)
-                .mapToDouble(od -> od.getVariant().getCostPrice()
-                        .multiply(BigDecimal.valueOf(
-                                od.getQuantity() != null ? od.getQuantity() : 0))
-                        .doubleValue())
-                .sum();
+        RevenueSummaryDTO revenueSummary = orderService.getRevenueSummary(fromDateTime, toDateTime);
+        model.addAttribute("revenueSummary", revenueSummary);
+        model.addAttribute("totalRevenue", revenueSummary.totalRevenue());
+        model.addAttribute("totalProfit",  revenueSummary.totalProfit());
+        model.addAttribute("filterFrom", from);
+        model.addAttribute("filterTo",   to);
 
-        model.addAttribute("totalProfit", totalRevenue - totalCost);
-
-        LocalDateTime startOfWeek = LocalDateTime.now()
-                .with(DayOfWeek.MONDAY).toLocalDate().atStartOfDay();
-
-        List<AppOrder> weekOrders = allOrders.stream()
-                .filter(o -> o != null
-                        && o.getStatus() == OrderStatus.COMPLETED
-                        && o.getOrderDate() != null
-                        && o.getOrderDate().isAfter(startOfWeek))
-                .toList();
-
-        double weekRevenue = weekOrders.stream()
-                .mapToDouble(o -> o.getTotalPrice() != null
-                        ? o.getTotalPrice().doubleValue() : 0.0)
-                .sum();
-
-        // Chi phí tuần từ variant.costPrice
-        double weekCost = weekOrders.stream()
-                .flatMap(o -> orderDetailRepository.findByOrderId(o.getId()).stream())
-                .filter(od -> od != null
-                        && od.getVariant() != null
-                        && od.getVariant().getCostPrice() != null)
-                .mapToDouble(od -> od.getVariant().getCostPrice()
-                        .multiply(BigDecimal.valueOf(
-                                od.getQuantity() != null ? od.getQuantity() : 0))
-                        .doubleValue())
-                .sum();
-
-        model.addAttribute("weekRevenue", weekRevenue);
-        model.addAttribute("weekProfit",  weekRevenue - weekCost);
-        model.addAttribute("weekOrders",  weekOrders.size());
-
-        //SẢN PHẨM BÁN CHẠY
-        Map<Product, Integer> soldMap = new LinkedHashMap<>();
-        orderDetailRepository.findAll().stream()
-                .filter(od -> od != null
-                        && od.getOrder() != null
-                        && od.getOrder().getStatus() == OrderStatus.COMPLETED
-                        && od.getVariant() != null
-                        && od.getVariant().getProduct() != null)
-                .forEach(od -> soldMap.merge(
-                        od.getVariant().getProduct(),
-                        od.getQuantity() != null ? od.getQuantity() : 0,
-                        Integer::sum
-                ));
-
-        List<Map.Entry<Product, Integer>> topSelling = soldMap.entrySet().stream()
-                .sorted(Map.Entry.<Product, Integer>comparingByValue().reversed())
-                .limit(5)
-                .toList();
-        model.addAttribute("topSelling", topSelling);
+        // Đơn hàng theo đúng khoảng thời gian đang lọc (đồng bộ với revenueSummary ở trên).
+        // Trước đây dùng allOrders.size() nên luôn ra tổng toàn bộ lịch sử, không đổi theo filter.
+        long totalOrdersInRange = allOrders.stream()
+                .filter(o -> (fromDateTime == null || !o.getOrderDate().isBefore(fromDateTime))
+                        && (toDateTime   == null || !o.getOrderDate().isAfter(toDateTime)))
+                .count();
+        model.addAttribute("totalOrders", totalOrdersInRange);
 
         List<ProductVariant> lowStock   = variantService.getLowStockVariants();
         List<ProductVariant> outOfStock = variantService.getOutOfStockVariants();

@@ -18,11 +18,42 @@
 
         <!-- ───────────── CỘT PHẢI: GIỎ HÀNG + THANH TOÁN ───────────── -->
         <div class="col-md-5">
+            <!-- ── Tabs nhiều giỏ hàng cùng lúc (mỗi tab có nút x đóng riêng) ── -->
+            <div class="d-flex align-items-center mb-2 flex-nowrap" style="overflow-x:auto; gap:6px;">
+                <div th:each="tab : ${cartTabs}" class="d-inline-flex align-items-stretch rounded overflow-hidden border"
+                     th:classappend="${tab.cartId == activeCartId} ? 'border-primary' : ''">
+                    <form th:action="@{/cashier/cart/switch}" method="post" class="d-inline-block m-0">
+                        <input type="hidden" name="cartId" th:value="${tab.cartId}">
+                        <button type="submit" class="btn btn-sm border-0 rounded-0 d-flex align-items-center gap-1"
+                                th:classappend="${tab.cartId == activeCartId} ? 'btn-primary' : 'btn-light'">
+                            <span th:text="${tab.label}"></span>
+                            <span th:if="${tab.itemCount > 0}" class="badge bg-light text-dark" th:text="${tab.itemCount}"></span>
+                        </button>
+                    </form>
+                    <form th:if="${#lists.size(cartTabs) > 1}" th:action="@{/cashier/cart/close}" method="post"
+                          class="d-inline-block m-0"
+                          onsubmit="return confirm('Đóng giỏ này? Sản phẩm còn trong giỏ sẽ được hoàn lại kho.')">
+                        <input type="hidden" name="cartId" th:value="${tab.cartId}">
+                        <button type="submit" class="btn btn-sm border-0 rounded-0 px-2"
+                                th:classappend="${tab.cartId == activeCartId} ? 'btn-primary' : 'btn-light'"
+                                title="Đóng giỏ này">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </form>
+                </div>
+                <form th:action="@{/cashier/cart/new}" method="post" class="d-inline-block">
+                    <button type="submit" class="btn btn-sm btn-outline-primary" title="Giỏ mới">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </form>
+            </div>
+
             <div class="card shadow-sm">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <strong><i class="bi bi-cart3"></i> Giỏ hàng</strong>
                     <form th:action="@{/cashier/cart/clear}" method="post"
                           onsubmit="return confirm('Xóa toàn bộ giỏ hàng?')">
+                        <input type="hidden" name="cartId" th:value="${activeCartId}">
                         <button type="submit" class="btn btn-sm btn-outline-secondary"
                                 th:if="${!#lists.isEmpty(cartItems)}">
                             Xóa hết
@@ -63,6 +94,7 @@
                                 <form th:action="@{/cashier/cart/update}" method="post"
                                       class="d-flex align-items-center justify-content-center gap-1 qty-form">
                                     <input type="hidden" name="variantId" th:value="${item.variantId}">
+                                    <input type="hidden" name="cartId" th:value="${activeCartId}">
                                     <button type="button" class="btn btn-sm btn-outline-secondary px-2 py-0"
                                             onclick="stepQuantity(this, -1)">−</button>
                                     <input type="number" name="quantity" th:value="${item.quantity}"
@@ -82,6 +114,7 @@
                             <td>
                                 <form th:action="@{/cashier/cart/remove}" method="post">
                                     <input type="hidden" name="variantId" th:value="${item.variantId}">
+                                    <input type="hidden" name="cartId" th:value="${activeCartId}">
                                     <button type="submit" class="btn btn-sm btn-link text-danger p-0">
                                         <i class="bi bi-x-circle"></i>
                                     </button>
@@ -120,7 +153,9 @@
 
                     <!-- Form thanh toán -->
                     <form th:action="@{/cashier/checkout}" method="post" id="checkoutForm"
-                          onsubmit="return validateCheckoutForm()">
+                          onsubmit="return openCheckoutConfirm()">
+
+                        <input type="hidden" name="cartId" th:value="${activeCartId}">
 
                         <!-- ── Chọn loại khách ── -->
                         <div class="mb-2">
@@ -235,15 +270,46 @@
         </div>
     </div>
 
+    <!-- Modal xác nhận thanh toán -->
+    <div class="modal fade" id="checkoutConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Xác nhận thanh toán</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Phương thức:</span>
+                        <span id="confirmPaymentMethod" class="fw-semibold"></span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Tổng thanh toán:</span>
+                        <span id="confirmFinalTotal" class="fw-semibold fs-5 text-danger"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-success" id="checkoutConfirmBtn" onclick="confirmCheckout()">
+                        <i class="bi bi-check-circle"></i> Xác nhận
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Form ẩn dùng để thêm vào giỏ khi bấm vào kết quả tìm kiếm -->
     <form id="addToCartForm" th:action="@{/cashier/cart/add}" method="post" style="display:none">
         <input type="hidden" name="variantId" id="addVariantId">
         <input type="hidden" name="quantity" id="addQuantity" value="1">
+        <input type="hidden" name="cartId" th:value="${activeCartId}">
     </form>
 
     <script th:inline="javascript">
         // Tổng tiền hàng gốc từ server (BigDecimal → number)
         const GRAND_TOTAL = /*[[${grandTotal}]]*/ 0;
+        // Giỏ đang active — dùng cho gọi fetch (VNPay init) không đi qua <form>
+        const ACTIVE_CART_ID = /*[[${activeCartId}]]*/ '';
 
         // ───────────── TÌM SẢN PHẨM ─────────────
         const searchInput   = document.getElementById('searchInput');
@@ -253,9 +319,15 @@
         searchInput.addEventListener('input', function () {
             clearTimeout(debounceTimer);
             const keyword = this.value.trim();
-            if (keyword.length < 2) { searchResults.innerHTML = ''; return; }
+            // Chỉ chặn khi gõ đúng 1 ký tự (chưa đủ để search có nghĩa).
+            // Keyword rỗng (đã xóa hết) vẫn cho search để hiển thị lại toàn bộ sản phẩm.
+            if (keyword.length === 1) { searchResults.innerHTML = ''; return; }
             debounceTimer = setTimeout(() => doSearch(keyword), 300);
         });
+
+        // Hiển thị sẵn danh sách sản phẩm (trang đầu) ngay khi vào POS,
+        // thay vì để trống cho tới khi cashier gõ tìm kiếm.
+        doSearch('');
 
         function doSearch(keyword) {
             fetch('/cashier/search-variants?keyword=' + encodeURIComponent(keyword))
@@ -465,8 +537,20 @@
             msgEl.style.display = 'none';
         }
 
-        // ───────────── VALIDATE TRƯỚC KHI SUBMIT ─────────────
-        function validateCheckoutForm() {
+        // ───────────── XÁC NHẬN THANH TOÁN (modal) ─────────────
+        const paymentMethodLabels = {
+            CASH: 'Tiền mặt',
+            TRANSFER: 'Chuyển khoản (thủ công)',
+            VNPAY: 'Chuyển khoản QR (VNPay)'
+        };
+
+        // checkoutSubmitting: cờ chặn double-submit — bấm "Xác nhận" nhiều lần
+        // (double-click, hoặc bấm lại trong lúc đang chờ phản hồi VNPay) sẽ bị bỏ qua.
+        let checkoutSubmitting = false;
+
+        // Validate nhanh rồi mở modal xác nhận — KHÔNG submit form ở bước này.
+        // Form chỉ thực sự được gửi đi khi người dùng bấm "Xác nhận" trong modal.
+        function openCheckoutConfirm() {
             const type       = document.getElementById('customerType').value;
             const customerId = document.getElementById('customerIdInput').value;
             if (type === 'account' && !customerId) {
@@ -474,15 +558,41 @@
                 return false;
             }
 
-            // Nếu chọn VNPay (QR) thì không submit form theo cách thông thường —
-            // gọi API init để lấy payUrl rồi điều hướng sang trang VNPay.
             const paymentMethod = document.getElementById('paymentMethodSelect').value;
-            if (paymentMethod === 'VNPAY') {
-                startVnpayCheckout(customerId);
-                return false; // chặn submit mặc định
-            }
+            document.getElementById('confirmPaymentMethod').textContent =
+                paymentMethodLabels[paymentMethod] || paymentMethod;
+            document.getElementById('confirmFinalTotal').textContent =
+                document.getElementById('finalTotalDisplay').textContent;
 
-            return true;
+            // Reset trạng thái nút xác nhận phòng khi modal từng bị hủy giữa chừng
+            checkoutSubmitting = false;
+            document.getElementById('checkoutConfirmBtn').disabled = false;
+
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('checkoutConfirmModal')).show();
+            return false; // luôn chặn submit mặc định của <form>
+        }
+
+        function confirmCheckout() {
+            if (checkoutSubmitting) return; // đã bấm rồi — bỏ qua các lần bấm tiếp theo
+            checkoutSubmitting = true;
+
+            document.getElementById('checkoutConfirmBtn').disabled = true;
+            document.getElementById('checkoutSubmitBtn').disabled = true;
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('checkoutConfirmModal')).hide();
+
+            const paymentMethod = document.getElementById('paymentMethodSelect').value;
+            const customerId    = document.getElementById('customerIdInput').value;
+
+            if (paymentMethod === 'VNPAY') {
+                // Không rời trang ngay (còn chờ payUrl) — cho phép thử lại nếu lỗi,
+                // startVnpayCheckout() tự bật lại nút khi thất bại.
+                checkoutSubmitting = false;
+                startVnpayCheckout(customerId);
+            } else {
+                // form.submit() không kích hoạt lại sự kiện "submit" (và onCheckoutConfirm),
+                // nên không lo mở lại modal — trang sẽ điều hướng đi ngay sau đó.
+                document.getElementById('checkoutForm').submit();
+            }
         }
 
         function togglePaymentMethod() {
@@ -504,6 +614,7 @@
             btn.disabled = true;
 
             const params = new URLSearchParams();
+            params.set('cartId', ACTIVE_CART_ID);
             if (customerId) params.set('customerId', customerId);
             const voucherCode = document.getElementById('voucherCodeInput').value;
             if (voucherCode) params.set('voucherCode', voucherCode);
@@ -516,6 +627,7 @@
                     if (!ok || data.error) {
                         statusEl.style.display = 'none';
                         btn.disabled = false;
+                        document.getElementById('checkoutConfirmBtn').disabled = false;
                         alert(data.error || 'Không thể tạo giao dịch VNPay, vui lòng thử lại.');
                         return;
                     }
@@ -527,6 +639,7 @@
                 .catch(() => {
                     statusEl.style.display = 'none';
                     btn.disabled = false;
+                    document.getElementById('checkoutConfirmBtn').disabled = false;
                     alert('Lỗi kết nối tới máy chủ, vui lòng thử lại.');
                 });
         }

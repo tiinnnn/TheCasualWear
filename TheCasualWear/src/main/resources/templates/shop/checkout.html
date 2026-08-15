@@ -125,6 +125,13 @@
                             th:text="${#numbers.formatInteger(totalPrice, 0, 'COMMA') + ' đ'}"></td>
                     </tr>
 
+                    <!-- Phí vận chuyển — cố định (fallback), tính GHN thực tế để sau -->
+                    <tr>
+                        <td><i class="bi bi-truck me-1"></i>Phí vận chuyển</td>
+                        <td class="text-end fw-semibold" id="shipping-fee"
+                            th:text="${#numbers.formatInteger(shippingFee, 0, 'COMMA') + ' đ'}"></td>
+                    </tr>
+
                     <!-- Giảm giá — ẩn cho đến khi apply voucher -->
                     <tr id="discount-row" class="text-success d-none">
                         <td>
@@ -134,11 +141,11 @@
                         <td class="text-end fw-semibold" id="discount-amount"></td>
                     </tr>
 
-                    <!-- Tổng cộng -->
+                    <!-- Tổng cộng — đã gồm phí ship -->
                     <tr class="table-light">
                         <td class="fw-bold fs-5">Tổng</td>
                         <td class="text-end fw-bold fs-5 text-danger" id="final-price"
-                            th:text="${#numbers.formatInteger(totalPrice, 0, 'COMMA') + ' đ'}"></td>
+                            th:text="${#numbers.formatInteger(grandTotal, 0, 'COMMA') + ' đ'}"></td>
                     </tr>
                     </tbody>
                 </table>
@@ -234,6 +241,7 @@
 
 <script th:inline="javascript">
     const originalTotal = /*[[${totalPrice}]]*/ 0;
+    const shippingFee   = /*[[${shippingFee}]]*/ 0;
     const LIMIT = 1000000;
 
     function openConfirmModal() {
@@ -300,9 +308,9 @@
                     document.getElementById('discount-amount').textContent =
                         '- ' + data.discountAmount + ' đ';
 
-                    // ✅ Tổng sau giảm
+                    // ✅ Tổng sau giảm (đã cộng phí ship)
                     document.getElementById('final-price').textContent =
-                        data.finalPrice + ' đ';
+                        (parseFloat(data.finalPriceRaw) + shippingFee).toLocaleString('vi-VN') + ' đ';
 
                     updatePaymentMethod(parseFloat(data.finalPriceRaw));
                 } else {
@@ -311,10 +319,10 @@
                         '<i class="bi bi-x-circle me-1"></i>' +
                         data.message + '</span>';
 
-                    // Reset về giá gốc
+                    // Reset về giá gốc (đã cộng phí ship)
                     document.getElementById('discount-row').classList.add('d-none');
                     document.getElementById('final-price').textContent =
-                        originalTotal.toLocaleString('vi-VN') + ' đ';
+                        (originalTotal + shippingFee).toLocaleString('vi-VN') + ' đ';
 
                     updatePaymentMethod(originalTotal);
                 }
