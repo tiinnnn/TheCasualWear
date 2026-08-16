@@ -308,34 +308,50 @@
                           style="font-size:0.6rem;"
                           th:text="${cartCount > 9} ? '9+' : ${cartCount}"></span>
                 </a>
-                <a th:href="@{/auth/login}" sec:authorize="!isAuthenticated()"><i class="bi bi-cart3 fs-5"></i></a>
+                <!-- MỚI: guest giờ có giỏ hàng riêng (/cart-guest) — trước đây icon này
+                     cố tình trỏ /auth/login vì guest chưa có giỏ hàng nào cả, giờ không
+                     còn đúng nữa sau khi thêm GuestCartService/cart-guest.html. -->
+                <a th:href="@{/cart-guest}" sec:authorize="!isAuthenticated()"><i class="bi bi-cart3 fs-5"></i></a>
+
+                <!-- MỚI (4.2): tra cứu đơn hàng cho khách vãng lai — không có
+                     dropdown "Đơn hàng" như user đã login nên cần 1 icon riêng. -->
+                <a th:href="@{/order/lookup-guest}" sec:authorize="!isAuthenticated()" title="Tra cứu đơn hàng">
+                    <i class="bi bi-receipt fs-5"></i>
+                </a>
 
                 <div class="dropdown" sec:authorize="isAuthenticated()">
-                    <a href="#" class="position-relative dropdown-toggle" data-bs-toggle="dropdown" style="text-decoration:none">
+                    <a href="#" id="notifBellBtn" class="position-relative dropdown-toggle" data-bs-toggle="dropdown" style="text-decoration:none">
                         <i class="bi bi-bell fs-5"></i>
-                        <span th:if="${unreadCount > 0}"
+                        <span id="notifBadge"
+                              th:if="${unreadCount > 0}"
                               class="position-absolute top-0 start-100 translate-middle badge rounded-pill"
                               style="font-size:0.6rem;"
                               th:text="${unreadCount}"></span>
                     </a>
-                    <ul class="dropdown-menu dropdown-menu-end"
+                    <ul class="dropdown-menu dropdown-menu-end" id="notifDropdownMenu"
                         style="width:90vw;max-width:320px;max-height:400px;overflow-y:auto;border-radius:14px;border-color:var(--line)">
                         <li class="px-3 py-2 d-flex justify-content-between align-items-center border-bottom">
                             <strong class="small">Thông báo</strong>
-                            <a th:if="${unreadCount > 0}" th:href="@{/notifications/read-all}" class="text-muted small">Đánh dấu đã đọc</a>
+                            <a href="#" id="notifMarkAllRead"
+                               th:if="${unreadCount > 0}"
+                               class="text-muted small">Đánh dấu đã đọc</a>
                         </li>
-                        <li th:each="n : ${userNotifications}" th:classappend="${!n.isRead} ? 'bg-light'">
-                            <a th:href="@{/notifications/read/{id}(id=${n.id})}" class="dropdown-item py-2 text-wrap" style="white-space:normal">
-                                <div class="d-flex gap-2 align-items-start">
-                                    <i th:classappend="${!n.isRead} ? 'text-danger' : 'text-muted'" class="bi bi-bell mt-1 flex-shrink-0"></i>
-                                    <div>
-                                        <p class="mb-0 small" th:text="${n.message}"></p>
-                                        <small class="text-muted" th:text="${#temporals.format(n.createdAt,'HH:mm dd/MM/yyyy')}"></small>
+                        <li id="notifListBody">
+                            <div th:each="n : ${userNotifications}" th:classappend="${!n.isRead} ? 'bg-light'">
+                                <a th:href="@{/notifications/read/{id}(id=${n.id})}"
+                                   th:attr="data-id=${n.id}"
+                                   class="dropdown-item py-2 text-wrap notif-item" style="white-space:normal">
+                                    <div class="d-flex gap-2 align-items-start">
+                                        <i th:classappend="${!n.isRead} ? 'text-danger' : 'text-muted'" class="bi bi-bell mt-1 flex-shrink-0"></i>
+                                        <div>
+                                            <p class="mb-0 small" th:text="${n.message}"></p>
+                                            <small class="text-muted" th:text="${#temporals.format(n.createdAt,'HH:mm dd/MM/yyyy')}"></small>
+                                        </div>
                                     </div>
-                                </div>
-                            </a>
+                                </a>
+                            </div>
+                            <div th:if="${#lists.isEmpty(userNotifications)}" class="text-center text-muted py-3 small">Không có thông báo nào</div>
                         </li>
-                        <li th:if="${#lists.isEmpty(userNotifications)}" class="text-center text-muted py-3 small">Không có thông báo nào</li>
                     </ul>
                 </div>
             </div>
@@ -421,5 +437,6 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/notifications.js"></script>
 </body>
 </html>

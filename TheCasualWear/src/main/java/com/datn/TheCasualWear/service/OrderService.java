@@ -3,6 +3,8 @@ package com.datn.TheCasualWear.service;
 import com.datn.TheCasualWear.config.ResourceNotFoundException;
 import com.datn.TheCasualWear.dto.CancelReasonStatDTO;
 import com.datn.TheCasualWear.dto.FrequentCancellerDTO;
+import com.datn.TheCasualWear.dto.GuestCartItem;
+import com.datn.TheCasualWear.dto.GuestCheckoutFormDTO;
 import com.datn.TheCasualWear.dto.OrderListDTO;
 import com.datn.TheCasualWear.dto.RevenueByChannelDTO;
 import com.datn.TheCasualWear.dto.RevenueSummaryDTO;
@@ -40,7 +42,13 @@ public class OrderService {
     private final NotificationService       notificationService;
     private final StockMovementLogService   stockMovementLogService;
     private final AppUserRepository         appUserRepository;
-    private final ProductSaleService        productSaleService; // MỚI: snapshot giá đã áp sale vào order_detail
+    private final ProductSaleService        productSaleService;
+    // MỚI (4.1): checkout khách vãng lai — tạo Address mới (không chọn từ danh
+    // sách có sẵn) và tra variant trực tiếp từ GuestCartItem.variantId.
+    // ⚠️ GIẢ ĐỊNH: AddressRepository là interface Spring Data JPA chuẩn
+    // (extends JpaRepository<Address, Integer>) — nếu tên khác, đổi lại.
+    private final AddressRepository         addressRepository;
+    private final ProductVariantRepository  productVariantRepository;
 
     // Lấy admin/owner đang đăng nhập cho các thao tác phía admin (cancelOrderByAdmin,
     // returnOrder). Trả null nếu không xác định được thay vì throw, vì các method
@@ -101,6 +109,36 @@ public class OrderService {
                         "Không tìm thấy đơn hàng với id: " + id));
     }
 
+    /**
+     * Lấy đơn hàng ĐÃ LOAD SẴN mọi field cần cho email xác nhận (4.3) —
+     * customer, shippingAddress, orderDetails + variant/product/size/color.
+     *
+     * BẮT BUỘC dùng method riêng này (không dùng getOrderById() thường) khi
+     * chuẩn bị dữ liệu cho OrderEmailService.sendOrderConfirmationAsync():
+     * method đó chạy trên thread khác (mailTaskExecutor, @Async) — không còn
+     * nằm trong Hibernate session của request gốc nữa. Nếu truyền vào 1
+     * AppOrder có field LAZY chưa load, thread mail sẽ ăn
+     * LazyInitializationException ngay khi cố đọc field đó (order.customer,
+     * order.shippingAddress, order.orderDetails, variant.product...).
+     * ⚠️ CẦN THÊM vào AppOrderRepository nếu chưa có:
+     *   @Query("SELECT o FROM AppOrder o " +
+     *          "LEFT JOIN FETCH o.customer " +
+     *          "LEFT JOIN FETCH o.shippingAddress " +
+     *          "LEFT JOIN FETCH o.orderDetails od " +
+     *          "LEFT JOIN FETCH od.variant v " +
+     *          "LEFT JOIN FETCH v.product " +
+     *          "LEFT JOIN FETCH v.size " +
+     *          "LEFT JOIN FETCH v.color " +
+     *          "WHERE o.id = :id")
+     *   Optional<AppOrder> findByIdWithDetailsForEmail(@Param("id") Integer id);
+     */
+    @Transactional(readOnly = true)
+    public AppOrder getOrderForEmail(Integer id) {
+        return orderRepository.findByIdWithDetailsForEmail(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy đơn hàng với id: " + id));
+    }
+
     public AppOrder getOrderByIdAndUser(Integer id, AppUser user) {
         AppOrder order = getOrderById(id);
         if (!order.getCustomer().getId().equals(user.getId())) {
@@ -141,6 +179,9 @@ public class OrderService {
         BigDecimal grandTotal = totalPrice.add(SHIPPING_FEE);
 
         AppOrder order = new AppOrder();
+        // MỚI (6.6): order_code giờ NOT NULL — bắt buộc set ở mọi nơi tạo AppOrder,
+        // kể cả luồng user đã login, không chỉ luồng guest.
+        order.setOrderCode(generateUniqueOrderCode());
         order.setCustomer(user);
         order.setShippingAddress(shippingAddress);
         order.setBillingAddress(billingAddress);
@@ -238,15 +279,136 @@ public class OrderService {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // ADMIN
+    // CUSTOMER — KHÁCH VÃNG LAI (4.1)
     // ─────────────────────────────────────────────────────────────
 
     /**
-     * Admin xác nhận đơn PENDING → CONFIRMED. Đây là thời điểm duy nhất đơn
-     * online thực sự trừ kho (không trừ lúc đặt hàng nữa) — vì vậy phải
-     * validate lại tồn kho ở đây: kho có thể đã đổi kể từ lúc khách đặt
-     * (đơn khác được confirm trước, hoặc admin điều chỉnh tay).
+     * Đặt hàng cho khách vãng lai (chưa đăng nhập). Song song với placeOrder()
+     * ở trên — không tái sử dụng chung vì luồng guest không có AppUser, không
+     * có giỏ hàng DB (CartItem), và địa chỉ luôn là mới (không chọn từ danh
+     * sách có sẵn). cartItems truyền vào lấy từ GuestCartService (session),
+     * đã có sẵn unitPrice/originalPrice/discountPercent snapshot lúc add-to-cart.
+     *
+     * Hiện chỉ hỗ trợ COD (VNPAY cho guest chưa làm — xem TODO ở OrderController).
      */
+    @Transactional
+    public AppOrder placeOrderGuest(GuestCheckoutFormDTO form, List<GuestCartItem> cartItems) {
+        if (cartItems.isEmpty()) {
+            throw new IllegalStateException("Giỏ hàng trống!");
+        }
+
+        // Guest luôn tạo Address mới (user = null) — không có địa chỉ đã lưu để chọn,
+        // khác addressService.getAddressById(id, user) ở luồng user đã login.
+        Address shippingAddress = new Address();
+        shippingAddress.setUser(null);
+        shippingAddress.setFullName(form.getFullName());
+        shippingAddress.setPhone(form.getPhone());
+        shippingAddress.setStreet(form.getStreet());
+        shippingAddress.setCity(form.getCity());
+        shippingAddress.setDistrict(form.getDistrict());
+        shippingAddress.setIsDefault(false);
+        addressRepository.save(shippingAddress);
+
+        BigDecimal totalPrice = cartItems.stream()
+                .map(GuestCartItem::getLineTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        Voucher voucher = null;
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        if (form.getVoucherCode() != null && !form.getVoucherCode().isBlank()) {
+            // Guest không có AppUser -> truyền null. ⚠️ Nếu voucherService.applyVoucher
+            // có logic giới hạn "1 lần/khách" dựa vào user, guest sẽ không bị chặn bởi
+            // điều kiện đó (chưa có cách định danh guest để áp dụng giới hạn này).
+            voucher = voucherService.applyVoucher(form.getVoucherCode(), totalPrice, null);
+            BigDecimal discounted = voucherService.calcDiscountedPrice(totalPrice, voucher);
+            discountAmount = totalPrice.subtract(discounted);
+            totalPrice = discounted;
+        }
+
+        BigDecimal grandTotal = totalPrice.add(SHIPPING_FEE);
+
+        AppOrder order = new AppOrder();
+        order.setOrderCode(generateUniqueOrderCode());
+        order.setCustomer(null); // guest — không gắn AppUser
+        order.setGuestEmail(form.getEmail());
+        order.setShippingAddress(shippingAddress);
+        order.setBillingAddress(shippingAddress); // guest không tách địa chỉ thanh toán riêng
+        order.setShippingFee(SHIPPING_FEE);
+        order.setTotalPrice(grandTotal);
+        order.setStatus(OrderStatus.PENDING);
+        order.setPaymentMethod(form.getPaymentMethod());
+        order.setIsPaid(false); // guest hiện chỉ hỗ trợ COD
+        orderRepository.save(order);
+
+        for (GuestCartItem item : cartItems) {
+            ProductVariant variant = productVariantRepository.findById(item.getVariantId())
+                    .orElseThrow(() -> new IllegalArgumentException("Sản phẩm không tồn tại"));
+
+            if (variant.getStock() < item.getQuantity()) {
+                throw new IllegalStateException(
+                        "Sản phẩm '" + item.getProductName() + "' chỉ còn "
+                                + variant.getStock() + " trong kho!");
+            }
+
+            OrderDetail detail = new OrderDetail();
+            detail.setOrder(order);
+            detail.setVariant(variant);
+            detail.setQuantity(item.getQuantity());
+            detail.setPrice(item.getUnitPrice());
+            detail.setOriginalPrice(item.getOriginalPrice() != null
+                    ? item.getOriginalPrice() : item.getUnitPrice());
+            orderDetailRepository.save(detail);
+
+            // Giống placeOrder(): KHÔNG trừ kho ở đây, chỉ trừ khi admin confirmOrder().
+        }
+
+        if (voucher != null) {
+            OrderVoucher orderVoucher = new OrderVoucher();
+            orderVoucher.setOrder(order);
+            orderVoucher.setVoucher(voucher);
+            orderVoucher.setCustomer(null); // guest
+            orderVoucher.setDiscountAmount(discountAmount);
+            orderVoucherRepository.save(orderVoucher);
+        }
+
+        notificationService.createNotificationForAdmins(
+                "Đơn hàng mới #" + order.getOrderCode() + " từ khách vãng lai ("
+                        + form.getPhone() + ") đang chờ xác nhận!",
+                "/admin/orders/" + order.getId()
+        );
+        return order;
+    }
+
+    /** Tra đơn theo order_code — dùng cho trang thành công của guest (4.1) và tra cứu đơn (4.2/6.6). */
+    public AppOrder getOrderByCode(String orderCode) {
+        return orderRepository.findByOrderCode(orderCode)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy đơn hàng với mã: " + orderCode));
+    }
+
+    public java.util.Optional<AppOrder> lookupGuestOrder(String orderCode, String contact) {
+        if (orderCode == null || orderCode.isBlank() || contact == null || contact.isBlank()) {
+            return java.util.Optional.empty();
+        }
+        return orderRepository.findByOrderCodeAndContact(
+                orderCode.trim().toUpperCase(), contact.trim());
+    }
+
+    private String generateUniqueOrderCode() {
+        String code;
+        do {
+            code = java.util.UUID.randomUUID().toString()
+                    .replace("-", "")
+                    .substring(0, 8)
+                    .toUpperCase();
+        } while (orderRepository.existsByOrderCode(code));
+        return code;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // ADMIN
+    // ─────────────────────────────────────────────────────────────
+
     @Transactional
     public void confirmOrder(Integer orderId) {
         AppOrder order = getOrderById(orderId);
@@ -320,13 +482,6 @@ public class OrderService {
         );
     }
 
-    /**
-     * Admin tự kiểm tra trạng thái trên GHN (hoặc khách phản hồi qua kênh khác)
-     * rồi đánh dấu đơn hoàn thành. Chuyển thẳng SHIPPING → COMPLETED, không còn
-     * bước DELIVERED trung gian / không chờ khách xác nhận.
-     * COD → đánh dấu đã thu tiền. Doanh thu trên dashboard chỉ tính khi admin
-     * chủ động đánh dấu bước này.
-     */
     @Transactional
     public void completeOrderByAdmin(Integer orderId) {
         AppOrder order = getOrderById(orderId);

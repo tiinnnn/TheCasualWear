@@ -283,8 +283,39 @@
                 <span id="stockBadge" class="pdp-stock">Chọn size và màu</span>
             </div>
 
-            <!-- Form thêm vào giỏ — chỉ cần variantId -->
-            <form th:action="@{/cart/add}" method="post" id="addToCartForm" class="mt-3">
+            <!-- Form thêm vào giỏ — chỉ cần variantId. Tách 2 bản theo trạng thái
+                 đăng nhập (giống cách nút yêu thích ở trên đã làm với
+                 sec:authorize), vì user dùng CartService (DB, /cart/add), còn
+                 guest dùng GuestCartService (session, /cart-guest/add). JS bên
+                 dưới (changeQty, chọn size/màu...) dùng id addToCartForm/
+                 addToCartBtn/selectedVariantId/qtyInput — chỉ 1 trong 2 form
+                 được render nên không bị trùng id trên DOM thật. -->
+            <form sec:authorize="isAuthenticated()"
+                  th:action="@{/cart/add}" method="post" id="addToCartForm" class="mt-3">
+                <input type="hidden" name="variantId" id="selectedVariantId" value=""/>
+
+                <div class="d-flex gap-3 align-items-center mb-3">
+                    <span class="pdp-label mb-0">Số lượng</span>
+                    <div class="input-group pdp-qty" style="width:130px">
+                        <button type="button" class="btn btn-outline-secondary"
+                                onclick="changeQty(-1)">-</button>
+                        <input type="number" id="qtyInput" name="quantity"
+                               value="1" min="1" max="1"
+                               class="form-control text-center"/>
+                        <button type="button" class="btn btn-outline-secondary"
+                                onclick="changeQty(1)">+</button>
+                    </div>
+                </div>
+
+                <button type="submit" id="addToCartBtn"
+                        class="pdp-add-btn" disabled>
+                    <span>Chọn size và màu trước</span>
+                    <i class="bi bi-bag"></i>
+                </button>
+            </form>
+
+            <form sec:authorize="!isAuthenticated()"
+                  th:action="@{/cart-guest/add}" method="post" id="addToCartForm" class="mt-3">
                 <input type="hidden" name="variantId" id="selectedVariantId" value=""/>
 
                 <div class="d-flex gap-3 align-items-center mb-3">

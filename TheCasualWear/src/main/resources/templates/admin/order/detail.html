@@ -151,7 +151,12 @@
     </style>
 
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="fw-bold">Đơn hàng #<span th:text="${order.id}"></span></h4>
+        <div>
+            <h4 class="fw-bold mb-0">Đơn hàng #<span th:text="${order.id}"></span></h4>
+            <small class="text-muted">
+                Mã công khai (khách dùng để tra cứu): <strong th:text="${order.orderCode}"></strong>
+            </small>
+        </div>
         <a th:href="@{/admin/orders}" class="btn btn-outline-secondary btn-sm">← Quay lại</a>
     </div>
 
@@ -254,7 +259,18 @@
                     <p class="mb-1">
                         <strong>Khách hàng:</strong>
                         <span th:if="${order.customer != null}" th:text="${order.customer.username}"></span>
-                        <span th:if="${order.customer == null}">Khách lẻ</span>
+                        <!-- MỚI: đơn khách vãng lai đặt online (order_type ONLINE, customer null,
+                             guestEmail có giá trị) — trước đây hiển thị giống hệt "Khách lẻ" tại
+                             quầy (POS, cũng customer null) nên không phân biệt được. -->
+                        <span th:if="${order.customer == null and order.guestEmail != null}">
+                            Khách vãng lai
+                            <span class="badge bg-info text-dark ms-1">Online</span>
+                        </span>
+                        <span th:if="${order.customer == null and order.guestEmail == null}">Khách lẻ</span>
+                    </p>
+                    <p class="mb-1" th:if="${order.customer == null and order.guestEmail != null}">
+                        <strong>Email liên hệ:</strong>
+                        <span th:text="${order.guestEmail}"></span>
                     </p>
                     <p class="mb-1" th:if="${order.orderType != null and order.orderType.name() == 'COUNTER'}">
                         <strong>Loại đơn:</strong>

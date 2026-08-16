@@ -24,9 +24,24 @@ public class AppOrder {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    // ── MỚI: mã tra cứu công khai cho khách vãng lai (4.2, 6.6) ───────────
+    // Sinh ngẫu nhiên lúc tạo đơn (xem OrderCodeGenerator), KHÔNG dùng id
+    // tự tăng để tránh enumeration attack. Dùng để tra cứu + hiển thị trên
+    // email xác nhận, không thay thế id nội bộ (POS/admin/GHN vẫn dùng id).
+    @Column(name = "order_code", length = 12, unique = true, nullable = false)
+    private String orderCode;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id")
-    private AppUser customer;
+    private AppUser customer; // null nếu là đơn khách vãng lai
+
+    // ── MỚI: email khách vãng lai (4.1) ────────────────────────────────────
+    // SĐT khách vãng lai tái dùng shippingAddress.phone (đã có sẵn, not null).
+    // Email không có chỗ lưu tự nhiên trên Address nên thêm riêng ở đây,
+    // đồng thời đóng vai trò snapshot cho việc tra cứu đơn (4.2/6.6) dù
+    // địa chỉ giao hàng có bị sửa sau này. Null nếu là đơn của user đã đăng nhập.
+    @Column(name = "guest_email", length = 100)
+    private String guestEmail;
 
     @Column(name = "order_date", updatable = false)
     private LocalDateTime orderDate = LocalDateTime.now();
@@ -41,8 +56,6 @@ public class AppOrder {
     @Column(name = "total_price", precision = 18, scale = 2)
     private BigDecimal totalPrice;
 
-    // Phí vận chuyển snapshot tại thời điểm đặt hàng — hiện là phí cố định
-    // (OrderService.SHIPPING_FEE), sẽ đổi thành giá trị GHN thực tế ở Giai đoạn 3.
     @Column(name = "shipping_fee", precision = 18, scale = 2)
     private BigDecimal shippingFee;
 

@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
 
@@ -162,4 +163,23 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
           )
         """)
     BigDecimal sumCostForRevenueOrders(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    boolean existsByOrderCode(String orderCode);
+    Optional<AppOrder> findByOrderCode(String orderCode);
+
+    @Query("SELECT o FROM AppOrder o LEFT JOIN o.shippingAddress a " +
+            "WHERE o.orderCode = :orderCode AND (a.phone = :contact OR o.guestEmail = :contact)")
+    Optional<AppOrder> findByOrderCodeAndContact(@Param("orderCode") String orderCode,
+                                                 @Param("contact") String contact);
+
+    @Query("SELECT o FROM AppOrder o " +
+            "LEFT JOIN FETCH o.customer " +
+            "LEFT JOIN FETCH o.shippingAddress " +
+            "LEFT JOIN FETCH o.orderDetails od " +
+            "LEFT JOIN FETCH od.variant v " +
+            "LEFT JOIN FETCH v.product " +
+            "LEFT JOIN FETCH v.size " +
+            "LEFT JOIN FETCH v.color " +
+            "WHERE o.id = :id")
+    Optional<AppOrder> findByIdWithDetailsForEmail(@Param("id") Integer id);
 }

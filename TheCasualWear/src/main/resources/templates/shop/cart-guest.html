@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Giỏ hàng</title></head>
+<body>
+<div class="container">
+    <div th:if="${#lists.isEmpty(cartItems)}" class="text-center py-5">
+        <i class="bi bi-cart-x fs-1 text-muted"></i>
+        <p class="text-muted mt-3">Giỏ hàng trống!</p>
+        <a th:href="@{/shop}" class="btn btn-dark">Tiếp tục mua sắm</a>
+    </div>
+
+    <div th:unless="${#lists.isEmpty(cartItems)}">
+        <h3 class="mb-4">Giỏ hàng</h3>
+        <div class="row">
+            <!-- Danh sách sản phẩm -->
+            <div class="col-md-8">
+                <table class="table align-middle">
+                    <thead class="table-dark">
+                    <tr>
+                        <th>Sản phẩm</th>
+                        <th>Đơn giá</th>
+                        <th>Số lượng</th>
+                        <th>Thành tiền</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="item : ${cartItems}">
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                <img th:if="${item.imageUrl != null}"
+                                     th:src="${item.imageUrl}"
+                                     style="width:70px;height:70px;object-fit:cover" class="rounded"/>
+                                <img th:unless="${item.imageUrl != null}"
+                                     src="/images/no-image.png"
+                                     style="width:70px;height:70px;object-fit:cover" class="rounded"/>
+                                <div>
+                                    <p class="mb-1 fw-bold" th:text="${item.productName}"></p>
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        <span th:if="${item.sizeName != null}"
+                                              class="badge bg-secondary"
+                                              th:text="'Size: ' + ${item.sizeName}"></span>
+                                        <span th:if="${item.colorName != null}"
+                                              class="badge bg-secondary"
+                                              th:text="'Màu: ' + ${item.colorName}"></span>
+                                        <span th:if="${item.onSale}"
+                                              class="badge bg-danger"
+                                              th:text="'-' + ${#numbers.formatDecimal(item.discountPercent,1,0)} + '%'"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <!-- Đơn giá — đã áp sale nếu đang có sale chạy -->
+                        <td>
+                            <span th:if="${item.onSale}" class="text-muted text-decoration-line-through small d-block"
+                                  th:text="${#numbers.formatInteger(item.originalPrice, 0, 'COMMA') + ' đ'}"></span>
+                            <span th:text="${#numbers.formatInteger(item.unitPrice, 0, 'COMMA') + ' đ'}"></span>
+                        </td>
+                        <!-- Số lượng — cập nhật theo variantId, không phải cartItemId -->
+                        <td>
+                            <form th:action="@{/cart-guest/update}" method="post"
+                                  class="d-flex align-items-center gap-1">
+                                <input type="hidden" name="variantId" th:value="${item.variantId}"/>
+                                <input type="number" name="quantity" th:value="${item.quantity}"
+                                       min="1"
+                                       class="form-control form-control-sm" style="width:70px"
+                                       onchange="this.form.submit()"/>
+                            </form>
+                        </td>
+                        <td class="text-danger fw-bold"
+                            th:text="${#numbers.formatInteger(item.lineTotal, 0, 'COMMA') + ' đ'}">
+                        </td>
+                        <td>
+                            <a th:href="@{'/cart-guest/remove/' + ${item.variantId}}"
+                               class="btn btn-sm btn-outline-danger"
+                               onclick="return confirm('Xóa sản phẩm này?')">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+
+                <div class="d-flex justify-content-between">
+                    <a th:href="@{/shop}" class="btn btn-outline-dark">← Tiếp tục mua sắm</a>
+                    <a th:href="@{/cart-guest/clear}" class="btn btn-outline-danger"
+                       onclick="return confirm('Xóa toàn bộ giỏ hàng?')">Xóa tất cả</a>
+                </div>
+            </div>
+
+            <!-- Tổng tiền -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Tổng đơn hàng</h5>
+                        <hr/>
+                        <div class="d-flex justify-content-between mb-3">
+                            <span>Tạm tính:</span>
+                            <span class="fw-bold text-danger"
+                                  th:text="${#numbers.formatInteger(totalPrice, 0, 'COMMA') + ' đ'}"></span>
+                        </div>
+                        <a th:href="@{/order/checkout-guest}" class="btn btn-dark w-100">
+                            Tiến hành đặt hàng
+                        </a>
+                        <p class="text-muted small text-center mt-2 mb-0">
+                            Đã có tài khoản? <a th:href="@{/auth/login}">Đăng nhập</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -2,6 +2,7 @@ package com.datn.TheCasualWear.config;
 
 import com.datn.TheCasualWear.repository.AppUserRepository;
 import com.datn.TheCasualWear.util.HomeRedirectResolver;
+import jakarta.servlet.http.Cookie;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -13,6 +14,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.session.HttpSessionEventPublisher;
 
 @Configuration
 @EnableWebSecurity
@@ -49,6 +51,15 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
+    // BẮT BUỘC khi dùng maximumSessions(): giúp Spring Security nhận biết
+    // khi nào 1 HttpSession thực sự bị hủy (logout, timeout, invalidate)
+    // để cập nhật đúng SessionRegistry. Thiếu bean này, registry sẽ bị "rác"
+    // và có thể chặn nhầm login hợp lệ sau một thời gian sử dụng.
+    @Bean
+    public HttpSessionEventPublisher httpSessionEventPublisher() {
+        return new HttpSessionEventPublisher();
+    }
+
     // MỚI: thay cho defaultSuccessUrl("/", true) — trước đây mọi role đăng
     // nhập xong đều bị ép về "/" bất kể quyền hạn. Handler này gọi
     // HomeRedirectResolver để bắn ADMIN/OWNER -> /admin, CASHIER -> /cashier,
@@ -58,6 +69,23 @@ public class SecurityConfig {
     @Bean
     public AuthenticationSuccessHandler authenticationSuccessHandler() {
         return (request, response, authentication) -> {
+            // Tài khoản quyền cao (ADMIN/OWNER/CASHIER) không được phép dùng
+            // remember-me: nếu lỡ tick chọn, cookie sẽ bị xóa ngay sau khi
+            // xác thực thành công, buộc phải đăng nhập lại bằng mật khẩu
+            // mỗi khi session hết hạn. Bảo mật ưu tiên hơn tiện lợi với các
+            // role này; CUSTOMER vẫn được giữ remember-me bình thường.
+            boolean isPrivileged = authentication.getAuthorities().stream()
+                    .map(a -> a.getAuthority())
+                    .anyMatch(r -> r.equals("ROLE_ADMIN") || r.equals("ROLE_OWNER") || r.equals("ROLE_CASHIER"));
+
+            if (isPrivileged) {
+                Cookie cookie = new Cookie("remember-me", null);
+                cookie.setPath(request.getContextPath().isEmpty() ? "/" : request.getContextPath());
+                cookie.setHttpOnly(true);
+                cookie.setMaxAge(0);
+                response.addCookie(cookie);
+            }
+
             String redirect = HomeRedirectResolver.resolveHomeRedirect(authentication);
             // resolveHomeRedirect trả về dạng "redirect:/xxx", bỏ prefix để dùng với sendRedirect
             String targetUrl = redirect.startsWith("redirect:")
@@ -81,7 +109,32 @@ public class SecurityConfig {
                                 "/forgot-password",
                                 "/forgot-password/reset",
                                 "/css/**", "/js/**", "/images/**",
-                                "/webjars/**", "/collections/**"
+                                "/webjars/**", "/collections/**",
+
+                                // Trang xem clearance sale — khách vãng lai (chưa đăng nhập)
+                                // cũng cần xem được, chỉ hành động mua/checkout mới cần qua
+                                // luồng guest riêng (/cart-guest, /order/checkout-guest...).
+                                "/clearance",
+
+                                // MỚI (4.1): checkout khách vãng lai — không yêu cầu đăng nhập.
+                                // Đặt TRƯỚC .requestMatchers("/order/**").hasAnyRole(...) và
+                                // "/cart/**".hasAnyRole(...) bên dưới; Spring Security xét theo
+                                // thứ tự khai báo nên rule permitAll cụ thể hơn này phải đứng
+                                // trước rule chung mới có hiệu lực.
+                                "/cart-guest/**",
+                                "/order/checkout-guest",
+                                "/order/success-guest/**",
+                                "/order/apply-voucher-guest",
+                                "/order/lookup-guest",
+
+                                // MỚI: callback VNPay cho khách vãng lai — VNPay redirect thẳng
+                                // về đây sau khi thanh toán, không mang theo Authentication nào
+                                // cả (guest vốn chưa đăng nhập), nên bắt buộc phải permitAll
+                                // giống các route guest khác ở trên. Thiếu dòng này, request bị
+                                // rơi vào rule "/order/**".hasAnyRole(...) bên dưới -> bị chặn
+                                // redirect về /auth/login, và đơn hàng sẽ KHÔNG được tạo dù
+                                // khách đã thanh toán thành công.
+                                "/order/vnpay-return-guest"
                         ).permitAll()
 
                         // Chỉ ADMIN / OWNER
@@ -108,6 +161,15 @@ public class SecurityConfig {
                 .rememberMe(remember -> remember
                         .key("casualwear-secret-key")
                         .tokenValiditySeconds(3 * 24 * 60 * 60)
+                )
+
+                // Giới hạn 1 session/tài khoản tại 1 thời điểm. Khi đăng nhập
+                // ở nơi mới, session cũ (nếu còn) sẽ bị đá ra thay vì chặn
+                // login mới (maxSessionsPreventsLogin mặc định là false) —
+                // phù hợp với cashier/admin đổi máy mà quên đăng xuất.
+                .sessionManagement(session -> session
+                        .maximumSessions(1)
+                        .expiredUrl("/auth/login?expired=true")
                 )
 
                 .csrf(csrf -> csrf.disable())

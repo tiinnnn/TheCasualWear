@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Thanh toán</title></head>
+<body>
+<div class="container py-4" style="max-width:900px;">
+    <h3 class="mb-4 fw-bold">Thanh toán (khách vãng lai)</h3>
+
+    <form th:action="@{/order/checkout-guest}" th:object="${guestCheckoutForm}" method="post" id="checkout-form">
+
+        <!-- Banner mã ưu đãi -->
+        <div class="alert alert-primary bg-primary-subtle border-0 d-flex align-items-center gap-2 mb-2"
+             style="cursor:pointer" data-bs-toggle="collapse" data-bs-target="#voucherPanel" role="button">
+            <i class="bi bi-info-circle-fill"></i>
+            <span>Bạn có mã ưu đãi? Ấn vào đây để nhập mã</span>
+        </div>
+
+        <div class="collapse mb-4" id="voucherPanel">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="input-group mb-3">
+                        <span class="input-group-text bg-white"><i class="bi bi-ticket-perforated"></i></span>
+                        <input type="text" th:field="*{voucherCode}" id="voucherCode"
+                               class="form-control" placeholder="Nhập mã giảm giá..."/>
+                        <button type="button" class="btn btn-dark" onclick="applyVoucher()">Áp dụng</button>
+                    </div>
+                    <div id="voucher-result" class="mb-3"></div>
+
+                    <div th:if="${!#lists.isEmpty(activeVouchers)}">
+                        <h6 class="fw-bold text-uppercase small mb-2">Mã giảm giá dành cho bạn</h6>
+                        <div th:each="v : ${activeVouchers}"
+                             class="d-flex align-items-center justify-content-between border rounded-3 p-3 mb-2 voucher-item"
+                             th:attr="data-code=${v.code}">
+                            <div>
+                                <div class="fw-bold" th:text="${v.code}"></div>
+                                <small class="text-muted"
+                                       th:text="'Giảm ' + ${v.discountPercent} + '%' + (${v.maxDiscount != null} ? ', tối đa ' + ${#numbers.formatInteger(v.maxDiscount, 0, 'COMMA')} + ' đ' : '')"></small>
+                            </div>
+                            <button type="button" class="btn btn-outline-dark btn-sm rounded-pill px-3"
+                                    onclick="selectVoucher(this)">Áp dụng</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Thông tin liên hệ + địa chỉ giao hàng (Tỉnh/Phường-Xã chọn qua dropdown) -->
+        <div class="mb-4">
+            <h5 class="fw-bold mb-3">Thông tin nhận hàng</h5>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Họ tên</label>
+                    <input type="text" th:field="*{fullName}" class="form-control"/>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Số điện thoại</label>
+                    <input type="text" th:field="*{phone}" class="form-control"/>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Email</label>
+                    <input type="email" th:field="*{email}" class="form-control"/>
+                    <small class="text-muted">Dùng để nhận email xác nhận đơn và để tra cứu đơn hàng sau này.</small>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Thành phố/Tỉnh</label>
+                    <select th:field="*{city}" th:attr="data-current=*{city}"
+                            id="citySelect" class="form-select">
+                        <option value="">-- Chọn Tỉnh/Thành phố --</option>
+                    </select>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('city')}" th:errors="*{city}"></div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Phường/Xã</label>
+                    <select th:field="*{district}" th:attr="data-current=*{district}"
+                            id="districtSelect" class="form-select" disabled>
+                        <option value="">-- Chọn Tỉnh/Thành phố trước --</option>
+                    </select>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('district')}" th:errors="*{district}"></div>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">Địa chỉ cụ thể</label>
+                    <input type="text" th:field="*{street}" class="form-control" placeholder="Số nhà, tên đường..."/>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('street')}" th:errors="*{street}"></div>
+                </div>
+            </div>
+
+            <p class="text-muted small mt-2">
+                Đã có tài khoản? <a th:href="@{/auth/login}">Đăng nhập</a> để dùng địa chỉ đã lưu và theo dõi đơn hàng dễ dàng hơn.
+            </p>
+        </div>
+
+        <!-- Đơn hàng của bạn -->
+        <div class="mb-4">
+            <h5 class="fw-bold mb-3">Đơn hàng của bạn</h5>
+            <div class="table-responsive border rounded-3">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Sản phẩm</th>
+                        <th class="text-end">Tạm tính</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="item : ${cartItems}">
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <img th:if="${item.imageUrl != null}"
+                                     th:src="${item.imageUrl}"
+                                     style="width:44px;height:44px;object-fit:cover;border-radius:8px"
+                                     class="border flex-shrink-0"/>
+                                <img th:unless="${item.imageUrl != null}"
+                                     src="/images/no-image.png"
+                                     style="width:44px;height:44px;object-fit:cover;border-radius:8px"
+                                     class="border flex-shrink-0"/>
+                                <div>
+                                    <span th:text="${item.productName}"></span>
+                                    <span class="text-muted"
+                                          th:text="' (' + (${item.sizeName != null} ? ${item.sizeName} : '') +
+                                                   (${item.colorName != null} ? ' / ' + ${item.colorName} : '') + ')'"></span>
+                                    <span class="text-muted" th:text="' × ' + ${item.quantity}"></span>
+                                    <span th:if="${item.onSale}" class="badge rounded-pill bg-danger ms-1"
+                                          th:text="'-' + ${#numbers.formatDecimal(item.discountPercent,1,0)} + '%'"></span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-end fw-semibold text-nowrap"
+                            th:text="${#numbers.formatInteger(item.lineTotal, 0, 'COMMA') + ' đ'}">
+                        </td>
+                    </tr>
+
+                    <tr class="table-light">
+                        <td class="fw-bold">Tạm tính</td>
+                        <td class="text-end fw-bold" id="original-price"
+                            th:text="${#numbers.formatInteger(totalPrice, 0, 'COMMA') + ' đ'}"></td>
+                    </tr>
+
+                    <tr>
+                        <td><i class="bi bi-truck me-1"></i>Phí vận chuyển</td>
+                        <td class="text-end fw-semibold" id="shipping-fee"
+                            th:text="${#numbers.formatInteger(shippingFee, 0, 'COMMA') + ' đ'}"></td>
+                    </tr>
+
+                    <tr id="discount-row" class="text-success d-none">
+                        <td>
+                            <i class="bi bi-tag-fill me-1"></i>Giảm giá
+                            <span id="discount-label" class="small"></span>
+                        </td>
+                        <td class="text-end fw-semibold" id="discount-amount"></td>
+                    </tr>
+
+                    <tr class="table-light">
+                        <td class="fw-bold fs-5">Tổng</td>
+                        <td class="text-end fw-bold fs-5 text-danger" id="final-price"
+                            th:text="${#numbers.formatInteger(grandTotal, 0, 'COMMA') + ' đ'}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Phương thức thanh toán -->
+        <div class="mb-4">
+            <h5 class="fw-bold mb-3">Phương thức thanh toán</h5>
+
+            <div class="border rounded-3 overflow-hidden">
+                <label class="d-block p-3 border-bottom" style="cursor:pointer">
+                    <input class="form-check-input me-2" type="radio"
+                           th:field="*{paymentMethod}" value="COD" id="codOption" checked/>
+                    Thanh toán khi nhận hàng
+                    <div class="mt-2 ps-4 text-muted small payment-desc" data-for="codOption">
+                        Trả tiền mặt khi giao hàng.
+                    </div>
+                </label>
+                <label class="d-block p-3" style="cursor:pointer">
+                    <input class="form-check-input me-2" type="radio"
+                           th:field="*{paymentMethod}" value="VNPAY" id="vnpayOption"/>
+                    Chuyển khoản ngân hàng / VNPay
+                    <div class="mt-2 ps-4 text-muted small payment-desc d-none" data-for="vnpayOption">
+                        Thanh toán an toàn qua cổng VNPay (thẻ ATM/Visa/Mastercard, ví điện tử...).
+                    </div>
+                </label>
+            </div>
+
+            <div id="codWarning" class="alert alert-warning mt-2 d-none">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Đơn hàng trên <strong>1.000.000 đ</strong> bắt buộc thanh toán qua ngân hàng!
+            </div>
+        </div>
+
+        <p class="text-muted small">
+            Dữ liệu cá nhân bạn cung cấp sẽ được bảo mật tuyệt đối.
+        </p>
+
+        <div class="text-end">
+            <button type="submit" class="btn btn-dark rounded-pill px-5 py-2" id="btn-submit-order">
+                <i class="bi bi-bag-check me-2"></i>Đặt hàng
+            </button>
+        </div>
+    </form>
+</div>
+
+<script th:src="@{/js/address-cascade.js}"></script>
+<script th:inline="javascript">
+    const originalTotal = /*[[${totalPrice}]]*/ 0;
+    const shippingFee   = /*[[${shippingFee}]]*/ 0;
+    const LIMIT = 1000000;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        initAddressCascade('citySelect', 'districtSelect');
+    });
+
+    // SỬA LỖI: trước đây lắng nghe 'click' trên chính nút submit rồi disable
+    // ngay lập tức — ở một số trình duyệt, disable nút submit ĐỒNG BỘ trong
+    // sự kiện click của chính nó sẽ HUỶ LUÔN hành động submit mặc định, nút
+    // kẹt ở "Đang xử lý..." mãi mà request không bao giờ được gửi đi. Chuyển
+    // sang lắng nghe 'submit' của FORM — lúc này trình duyệt đã cam kết gửi
+    // request nên disable nút không còn huỷ được submit nữa.
+    document.getElementById('checkout-form').addEventListener('submit', function () {
+        const btn = document.getElementById('btn-submit-order');
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
+        setTimeout(() => { btn.disabled = true; }, 0);
+    });
+
+    function selectVoucher(btn) {
+        const code = btn.closest('.voucher-item').dataset.code;
+        document.getElementById('voucherCode').value = code;
+        applyVoucher();
+    }
+
+    function applyVoucher() {
+        const code      = document.getElementById('voucherCode').value.trim();
+        const resultDiv = document.getElementById('voucher-result');
+
+        if (!code) {
+            resultDiv.innerHTML = '<span class="text-danger">Vui lòng nhập mã giảm giá!</span>';
+            return;
+        }
+
+        // Endpoint riêng cho guest — không cần Authentication
+        fetch('/order/apply-voucher-guest?code=' + encodeURIComponent(code) + '&total=' + originalTotal)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    let label = '(' + data.discountPercent + '%';
+                    if (data.maxDiscount) label += ', tối đa ' + data.maxDiscount + ' đ';
+                    label += ')';
+
+                    resultDiv.innerHTML =
+                        '<span class="text-success">' +
+                        '<i class="bi bi-check-circle me-1"></i>' +
+                        'Áp dụng thành công!</span>';
+
+                    document.getElementById('discount-row').classList.remove('d-none');
+                    document.getElementById('discount-label').textContent = label;
+                    document.getElementById('discount-amount').textContent =
+                        '- ' + data.discountAmount + ' đ';
+
+                    document.getElementById('final-price').textContent =
+                        (parseFloat(data.finalPriceRaw) + shippingFee).toLocaleString('vi-VN') + ' đ';
+
+                    updatePaymentMethod(parseFloat(data.finalPriceRaw));
+                } else {
+                    resultDiv.innerHTML =
+                        '<span class="text-danger">' +
+                        '<i class="bi bi-x-circle me-1"></i>' +
+                        data.message + '</span>';
+
+                    document.getElementById('discount-row').classList.add('d-none');
+                    document.getElementById('final-price').textContent =
+                        (originalTotal + shippingFee).toLocaleString('vi-VN') + ' đ';
+
+                    updatePaymentMethod(originalTotal);
+                }
+            })
+            .catch(() => {
+                resultDiv.innerHTML =
+                    '<span class="text-danger">Có lỗi xảy ra, vui lòng thử lại!</span>';
+            });
+    }
+
+    function updatePaymentMethod(price) {
+        const codOption   = document.getElementById('codOption');
+        const vnpayOption = document.getElementById('vnpayOption');
+        const codWarning  = document.getElementById('codWarning');
+
+        if (price > LIMIT) {
+            codOption.disabled  = true;
+            codOption.checked   = false;
+            vnpayOption.checked = true;
+            codWarning.classList.remove('d-none');
+            togglePaymentDesc();
+        } else {
+            codOption.disabled = false;
+            codWarning.classList.add('d-none');
+        }
+    }
+
+    function togglePaymentDesc() {
+        document.querySelectorAll('.payment-desc').forEach(function (el) {
+            const input = document.getElementById(el.dataset.for);
+            el.classList.toggle('d-none', !input.checked);
+        });
+    }
+    document.querySelectorAll('input[name="paymentMethod"]').forEach(function (input) {
+        input.addEventListener('change', togglePaymentDesc);
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        updatePaymentMethod(originalTotal);
+        togglePaymentDesc();
+    });
+</script>
+</body>
+</html>

@@ -82,7 +82,12 @@
              class="alert app-alert alert-success alert-dismissible fade show" role="alert">
             <i class="bi bi-check-circle-fill me-2"></i>
             <span th:text="${successMessage}"></span>
-            <a href="/cart" class="alert-link ms-1">Xem giỏ hàng →</a>
+            <!-- MỚI: tách link theo trạng thái đăng nhập — /cart bị khoá
+                 login-only (SecurityConfig), guest bấm vào sẽ bị đá về trang
+                 login. Dùng sec:authorize giống pattern đã có ở
+                 product-detail.html cho nút thêm-vào-giỏ. -->
+            <a sec:authorize="isAuthenticated()" href="/cart" class="alert-link ms-1">Xem giỏ hàng →</a>
+            <a sec:authorize="!isAuthenticated()" href="/cart-guest" class="alert-link ms-1">Xem giỏ hàng →</a>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
 

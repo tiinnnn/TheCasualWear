@@ -5,6 +5,7 @@ import com.datn.TheCasualWear.entity.AppOrder;
 import com.datn.TheCasualWear.enums.CancelReason;
 import com.datn.TheCasualWear.enums.OrderStatus;
 import com.datn.TheCasualWear.repository.AppUserRepository;
+import com.datn.TheCasualWear.service.OrderEmailService;
 import com.datn.TheCasualWear.service.OrderService;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
@@ -18,11 +19,14 @@ public class AdminOrderController {
 
     private final OrderService      orderService;
     private final AppUserRepository appUserRepository;
+    private final OrderEmailService orderEmailService; // MỚI (4.3): gửi email xác nhận đơn
 
     public AdminOrderController(OrderService orderService,
-                                AppUserRepository appUserRepository) {
+                                AppUserRepository appUserRepository,
+                                OrderEmailService orderEmailService) {
         this.orderService      = orderService;
         this.appUserRepository = appUserRepository;
+        this.orderEmailService = orderEmailService;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -71,6 +75,21 @@ public class AdminOrderController {
     @GetMapping("/{id}/confirm")
     public String confirmOrder(@PathVariable Integer id, RedirectAttributes ra) {
         orderService.confirmOrder(id);
+
+        // MỚI (4.3): gửi email xác nhận đơn — bất đồng bộ (mailTaskExecutor,
+        // xem MailAsyncConfig), không chờ gửi xong mới trả response. Đơn đã
+        // CONFIRMED thành công ở dòng trên rồi nên lỗi gửi mail (SMTP down...)
+        // không ảnh hưởng tới việc xác nhận đơn — chỉ log lại bên trong
+        // OrderEmailService.
+        //
+        // Dùng getOrderForEmail() (không phải getOrderById()) — method gửi
+        // mail chạy trên thread khác (async), không còn Hibernate session của
+        // request này nữa, nên mọi field LAZY (customer, shippingAddress,
+        // orderDetails, variant...) phải được load sẵn trước khi băng qua
+        // thread khác, nếu không sẽ lỗi LazyInitializationException lúc gửi.
+        AppOrder order = orderService.getOrderForEmail(id);
+        orderEmailService.sendOrderConfirmationAsync(order);
+
         ra.addFlashAttribute("successMessage", "Đã xác nhận đơn hàng!");
         return "redirect:/admin/orders/" + id;
     }

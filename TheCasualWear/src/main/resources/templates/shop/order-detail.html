@@ -8,7 +8,7 @@
 
     <div class="ord-detail-head">
         <a th:href="@{/account/orders}" class="ord-back">← Quay lại</a>
-        <h1 class="ord-page-title mb-0">Đơn hàng <strong th:text="'#' + ${order.id}"></strong></h1>
+        <h1 class="ord-page-title mb-0">Đơn hàng <strong th:text="'#' + ${order.orderCode}"></strong></h1>
     </div>
     <div class="ord-page-line"></div>
 
@@ -194,8 +194,7 @@
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="ord-btn ord-btn--outline ord-btn--sm" data-bs-dismiss="modal">Đóng</button>
-                    <button type="submit" class="ord-btn ord-btn--danger ord-btn--sm"
-                            onclick="return confirm('Bạn có chắc muốn hủy đơn hàng này?')">
+                    <button type="submit" class="ord-btn ord-btn--danger ord-btn--sm">
                         Xác nhận hủy
                     </button>
                 </div>

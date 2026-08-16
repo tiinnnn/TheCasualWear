@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Đặt hàng thành công</title></head>
+<body>
+<div class="container py-5" style="max-width:700px;">
+    <div class="text-center mb-4">
+        <i class="bi bi-check-circle-fill text-success" style="font-size:3rem"></i>
+        <h3 class="fw-bold mt-3 mb-1">Đặt hàng thành công!</h3>
+        <p class="text-muted mb-0">
+            Mã đơn hàng: <strong class="text-dark" th:text="'#' + ${order.orderCode}"></strong>
+        </p>
+    </div>
+
+    <!-- MỚI: làm nổi bật hướng dẫn tra cứu đơn — trước đây chỉ là 1 dòng chữ
+         nhỏ màu xám, dễ bị bỏ qua. Guest không có tài khoản/lịch sử đơn hàng
+         nên đây là thông tin QUAN TRỌNG nhất trên trang này, cần đặt ngay
+         đầu, có màu nền riêng để không lẫn với phần chi tiết đơn bên dưới. -->
+    <div class="mb-4" style="background:#FFF8E7;border:1px solid #F5C247;border-radius:12px;padding:20px 24px;">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="bi bi-bookmark-star-fill" style="color:#E2AC1F;font-size:1.1rem;"></i>
+            <strong style="font-size:1rem;">Lưu lại để tra cứu đơn hàng sau này</strong>
+        </div>
+        <ol class="mb-3 ps-3" style="font-size:.92rem;line-height:1.7;">
+            <li>Ghi lại mã đơn hàng <strong th:text="'#' + ${order.orderCode}"></strong> ở trên (chụp màn hình trang này là dễ nhất).</li>
+            <li>Vào lại website, bấm nút <strong>"Tra cứu đơn"</strong> trên thanh menu.</li>
+            <li>Nhập mã đơn hàng + số điện thoại hoặc email bạn vừa dùng để đặt hàng.</li>
+        </ol>
+        <a th:href="@{/order/lookup-guest}" class="btn btn-dark rounded-pill px-4 py-2 fw-semibold">
+            <i class="bi bi-receipt me-1"></i> Tra cứu đơn hàng ngay
+        </a>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-sm-6 mb-2">
+                    <div class="text-muted small">Trạng thái</div>
+                    <div class="fw-semibold" th:text="${order.status}"></div>
+                </div>
+                <div class="col-sm-6 mb-2">
+                    <div class="text-muted small">Ngày đặt</div>
+                    <div class="fw-semibold"
+                         th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy HH:mm')}"></div>
+                </div>
+                <div class="col-sm-6 mb-2">
+                    <div class="text-muted small">Người nhận</div>
+                    <div class="fw-semibold" th:text="${order.shippingAddress.fullName}"></div>
+                </div>
+                <div class="col-sm-6 mb-2">
+                    <!-- Mask giống trang tra cứu (order-lookup-result.html) — dù đây là
+                         đơn của chính người xem, vẫn che để tránh lộ khi dùng máy chung/công cộng -->
+                    <div class="text-muted small">Liên hệ</div>
+                    <div class="fw-semibold">
+                        <span th:text="${maskedPhone}"></span>
+                        <span th:if="${maskedEmail != null}"> · </span>
+                        <span th:if="${maskedEmail != null}" th:text="${maskedEmail}"></span>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="text-muted small">Địa chỉ giao hàng</div>
+                    <div class="fw-semibold"
+                         th:text="${order.shippingAddress.street} + ', ' +
+                                  (${order.shippingAddress.district} != null ? ${order.shippingAddress.district} + ', ' : '') +
+                                  ${order.shippingAddress.city}"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h6 class="fw-bold mb-3">Sản phẩm</h6>
+            <table class="table align-middle mb-0">
+                <tbody>
+                <tr th:each="item : ${order.orderDetails}">
+                    <td>
+                        <span th:text="${item.variant.product.name}"></span>
+                        <span class="text-muted"
+                              th:text="' (' + (${item.variant.size != null} ? ${item.variant.size.name} : '') +
+                                       (${item.variant.color != null} ? ' / ' + ${item.variant.color.name} : '') + ')'"></span>
+                        <span class="text-muted" th:text="' × ' + ${item.quantity}"></span>
+                    </td>
+                    <td class="text-end fw-semibold text-nowrap"
+                        th:text="${#numbers.formatInteger(item.price.doubleValue() * item.quantity, 0, 'COMMA') + ' đ'}"></td>
+                </tr>
+                <tr class="table-light">
+                    <td class="fw-bold">Phí vận chuyển</td>
+                    <td class="text-end fw-bold"
+                        th:text="${#numbers.formatInteger(order.shippingFee, 0, 'COMMA') + ' đ'}"></td>
+                </tr>
+                <tr class="table-light">
+                    <td class="fw-bold fs-5">Tổng cộng</td>
+                    <td class="text-end fw-bold fs-5 text-danger"
+                        th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Nút "Tra cứu đơn hàng" đã chuyển lên ô hướng dẫn nổi bật phía trên,
+         không lặp lại ở đây nữa. -->
+    <div class="d-flex justify-content-center">
+        <a th:href="@{/shop}" class="btn btn-outline-dark rounded-pill px-4">Tiếp tục mua sắm</a>
+    </div>
+
+    <p class="text-muted small text-center mt-4">
+        Đã có tài khoản? <a th:href="@{/auth/login}">Đăng nhập</a> để lưu lại lịch sử đơn hàng đầy đủ.
+    </p>
+</div>
+</body>
+</html>

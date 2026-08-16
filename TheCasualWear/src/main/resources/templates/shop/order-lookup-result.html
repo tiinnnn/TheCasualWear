@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Chi tiết đơn hàng</title></head>
+<body>
+<div class="container py-4" style="max-width:800px;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold mb-0">Đơn hàng #<span th:text="${order.orderCode}"></span></h3>
+        <a th:href="@{/order/lookup-guest}" class="btn btn-outline-secondary btn-sm">← Tra cứu đơn khác</a>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-sm-6 mb-2">
+                    <div class="text-muted small">Trạng thái</div>
+                    <div class="fw-semibold" th:text="${order.status}"></div>
+                </div>
+                <div class="col-sm-6 mb-2">
+                    <div class="text-muted small">Ngày đặt</div>
+                    <div class="fw-semibold"
+                         th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy HH:mm')}"></div>
+                </div>
+                <div class="col-sm-6 mb-2">
+                    <div class="text-muted small">Người nhận</div>
+                    <div class="fw-semibold" th:text="${order.shippingAddress.fullName}"></div>
+                </div>
+                <div class="col-sm-6 mb-2">
+                    <!-- MỚI (6.6): hiển thị SĐT/email đã che, KHÔNG in trực tiếp
+                         order.shippingAddress.phone / order.guestEmail -->
+                    <div class="text-muted small">Liên hệ</div>
+                    <div class="fw-semibold">
+                        <span th:text="${maskedPhone}"></span>
+                        <span th:if="${maskedEmail != null}"> · </span>
+                        <span th:if="${maskedEmail != null}" th:text="${maskedEmail}"></span>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="text-muted small">Địa chỉ giao hàng</div>
+                    <div class="fw-semibold"
+                         th:text="${order.shippingAddress.street} + ', ' +
+                                  (${order.shippingAddress.district} != null ? ${order.shippingAddress.district} + ', ' : '') +
+                                  ${order.shippingAddress.city}"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h6 class="fw-bold mb-3">Sản phẩm</h6>
+            <table class="table align-middle mb-0">
+                <tbody>
+                <tr th:each="item : ${order.orderDetails}">
+                    <td>
+                        <span th:text="${item.variant.product.name}"></span>
+                        <span class="text-muted"
+                              th:text="' (' + (${item.variant.size != null} ? ${item.variant.size.name} : '') +
+                                       (${item.variant.color != null} ? ' / ' + ${item.variant.color.name} : '') + ')'"></span>
+                        <span class="text-muted" th:text="' × ' + ${item.quantity}"></span>
+                    </td>
+                    <td class="text-end fw-semibold text-nowrap"
+                        th:text="${#numbers.formatInteger(item.price.doubleValue() * item.quantity, 0, 'COMMA') + ' đ'}"></td>
+                </tr>
+                <tr class="table-light">
+                    <td class="fw-bold">Phí vận chuyển</td>
+                    <td class="text-end fw-bold"
+                        th:text="${#numbers.formatInteger(order.shippingFee, 0, 'COMMA') + ' đ'}"></td>
+                </tr>
+                <tr class="table-light">
+                    <td class="fw-bold fs-5">Tổng cộng</td>
+                    <td class="text-end fw-bold fs-5 text-danger"
+                        th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA') + ' đ'}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <p class="text-muted small">Phương thức thanh toán: <span th:text="${order.paymentMethod}"></span></p>
+</div>
+</body>
+</html>
