@@ -93,22 +93,12 @@
             });
     }
 
-    // Click vào 1 thông báo: đánh dấu đã đọc qua AJAX rồi làm mới danh sách,
-    // không điều hướng cả trang.
-    listBody.addEventListener('click', function (e) {
-        var item = e.target.closest('.notif-item');
-        if (!item) return;
-        e.preventDefault();
-
-        var id = item.getAttribute('data-id');
-        fetch('/notifications/read/' + encodeURIComponent(id), {
-            method: 'GET', // đổi thành POST nếu bạn chuyển endpoint sang POST (khuyến nghị)
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            credentials: 'same-origin'
-        })
-            .then(fetchNotifications)
-            .catch(function () {});
-    });
+    // Click vào 1 thông báo: KHÔNG chặn hành vi mặc định của thẻ <a>.
+    // Endpoint /notifications/read/{id} ở server đã tự đánh dấu đã đọc
+    // rồi redirect sang link đích (n.link) — nếu preventDefault() + fetch()
+    // ở đây thì fetch sẽ tự âm thầm theo redirect và vứt kết quả đi,
+    // trình duyệt không được điều hướng => bấm vào không chuyển trang.
+    // Nên cứ để trình duyệt tự nhiên đi theo href là đủ, không cần xử lý gì thêm.
 
     if (markAllBtn) {
         markAllBtn.addEventListener('click', function (e) {
