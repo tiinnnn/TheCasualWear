@@ -25,7 +25,7 @@
                             Xin chào <span th:text="${recipientName}">Quý khách</span>,
                         </h2>
                         <p style="margin:0 0 20px;color:#555;line-height:1.5;">
-                            Đơn hàng của bạn đã được xác nhận và đang được chuẩn bị. Dưới đây là thông tin chi tiết:
+                            Shop đã tiếp nhận đơn hàng của bạn và sẽ sớm liên hệ xác nhận. Dưới đây là thông tin chi tiết:
                         </p>
 
                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
@@ -38,6 +38,16 @@
                             <tr>
                                 <td style="padding:14px 18px;border-bottom:1px solid #ECE3D2;">
                                     <strong>Người nhận:</strong> <span th:text="${order.shippingAddress.fullName}"></span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:14px 18px;border-bottom:1px solid #ECE3D2;">
+                                    <strong>Số điện thoại:</strong> <span th:text="${order.shippingAddress.phone}"></span>
+                                </td>
+                            </tr>
+                            <tr th:if="${recipientEmail != null and !recipientEmail.isBlank()}">
+                                <td style="padding:14px 18px;border-bottom:1px solid #ECE3D2;">
+                                    <strong>Email:</strong> <span th:text="${recipientEmail}"></span>
                                 </td>
                             </tr>
                             <tr>
@@ -79,10 +89,21 @@
                             </tr>
                         </table>
 
-                        <p th:if="${isGuest}" style="margin:20px 0 0;font-size:13px;color:#7a7368;line-height:1.5;">
-                            Bạn đặt hàng với tư cách khách vãng lai — dùng mã đơn hàng ở trên cùng số điện thoại
-                            hoặc email đã nhập để tra cứu đơn hàng trên website bất cứ lúc nào.
-                        </p>
+                        <table th:if="${isGuest}" role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                               style="margin-top:20px;background:#FBF6EC;border-radius:8px;">
+                            <tr>
+                                <td style="padding:16px 18px;font-size:13px;color:#7a7368;line-height:1.5;">
+                                    Bạn đặt hàng với tư cách khách vãng lai — dùng mã đơn hàng ở trên cùng số điện thoại
+                                    hoặc email đã nhập để tra cứu tình trạng đơn hàng bất cứ lúc nào.
+                                    <br/><br/>
+                                    <a th:href="${guestLookupUrl}"
+                                       style="display:inline-block;background:#1a1a1a;color:#F5C247;text-decoration:none;
+                                              padding:10px 18px;border-radius:6px;font-size:13px;font-weight:bold;">
+                                        Tra cứu đơn hàng
+                                    </a>
+                                </td>
+                            </tr>
+                        </table>
                     </td>
                 </tr>
 

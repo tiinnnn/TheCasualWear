@@ -269,6 +269,12 @@
                 <li class="nav-item">
                     <a class="nav-link nav-main-link" th:href="@{/chinh-sach-doi-tra}">Chính sách đổi trả</a>
                 </li>
+                <!-- MỚI (4.2): tra cứu đơn hàng — chuyển từ icon trong khu icons
+                     sang link chữ cạnh "Chính sách đổi trả" theo yêu cầu; vẫn
+                     luôn hiện kể cả khi đã đăng nhập. -->
+                <li class="nav-item">
+                    <a class="nav-link nav-main-link" th:href="@{/order/lookup-guest}">Tra cứu đơn hàng</a>
+                </li>
                 <li class="nav-item">
                     <a class="nav-link nav-main-link" th:href="@{/lien-he}">Liên hệ</a>
                 </li>
@@ -311,16 +317,12 @@
                 <!-- MỚI: guest giờ có giỏ hàng riêng (/cart-guest) — trước đây icon này
                      cố tình trỏ /auth/login vì guest chưa có giỏ hàng nào cả, giờ không
                      còn đúng nữa sau khi thêm GuestCartService/cart-guest.html. -->
-                <a th:href="@{/cart-guest}" sec:authorize="!isAuthenticated()"><i class="bi bi-cart3 fs-5"></i></a>
-
-                <!-- MỚI (4.2): tra cứu đơn hàng cho khách vãng lai — bỏ
-                     sec:authorize="!isAuthenticated()" theo yêu cầu: link
-                     này giờ LUÔN hiện, kể cả khi đã đăng nhập (trước đây
-                     ẩn đi vì nghĩ user đã login dùng dropdown "Đơn hàng"
-                     thay thế, nhưng giữ cố định ở đây tiện hơn cho khách
-                     không muốn mở dropdown tài khoản). -->
-                <a th:href="@{/order/lookup-guest}" title="Tra cứu đơn hàng">
-                    <i class="bi bi-receipt fs-5"></i>
+                <a th:href="@{/cart-guest}" class="position-relative" sec:authorize="!isAuthenticated()">
+                    <i class="bi bi-cart3 fs-5"></i>
+                    <span th:if="${guestCartCount != null and guestCartCount > 0}"
+                          class="position-absolute top-0 start-100 translate-middle badge rounded-pill"
+                          style="font-size:0.6rem;"
+                          th:text="${guestCartCount > 9} ? '9+' : ${guestCartCount}"></span>
                 </a>
 
                 <div class="dropdown" sec:authorize="isAuthenticated()">

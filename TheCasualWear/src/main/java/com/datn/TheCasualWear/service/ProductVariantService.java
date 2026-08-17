@@ -1,5 +1,6 @@
 package com.datn.TheCasualWear.service;
 
+import com.datn.TheCasualWear.config.DuplicateVariantException;
 import com.datn.TheCasualWear.config.ResourceNotFoundException;
 import com.datn.TheCasualWear.entity.*;
 import com.datn.TheCasualWear.enums.OrderStatus;
@@ -43,18 +44,21 @@ public class ProductVariantService {
     //PHÍA ADMIN
 
     public ProductVariant createVariant(Product product, ProductVariant variant) {
-        if (variant.getSku() != null && variantRepository.existsBySku(variant.getSku())) {
-            throw new IllegalArgumentException("SKU đã tồn tại: " + variant.getSku());
-        }
 
+        // 1. Check trùng size + màu TRƯỚC — nếu trùng thì ném DuplicateVariantException
+        // ngay, để controller gom vào danh sách chuyển sang trang nhập kho.
         variantRepository.findByProductAndSizeAndColor(
                 product.getId(),
                 variant.getSize()  != null ? variant.getSize().getId()  : null,
                 variant.getColor() != null ? variant.getColor().getId() : null
-        ).ifPresent(v -> {
-            throw new IllegalArgumentException(
-                    "Variant với size và màu này đã tồn tại cho sản phẩm này!");
+        ).ifPresent(existing -> {
+            throw new DuplicateVariantException(existing);
         });
+
+        // 2. Chỉ check trùng SKU khi chắc chắn đây là variant mới (size+màu chưa tồn tại)
+        if (variant.getSku() != null && variantRepository.existsBySku(variant.getSku())) {
+            throw new IllegalArgumentException("SKU đã tồn tại: " + variant.getSku());
+        }
 
         // Luôn ép tồn kho + giá vốn ban đầu = 0, bất kể client gửi lên giá trị
         // gì — cả 2 giờ chỉ được thiết lập qua GoodsReceiptService (module

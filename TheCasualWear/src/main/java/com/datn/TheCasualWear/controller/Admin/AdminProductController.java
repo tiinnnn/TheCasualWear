@@ -1,5 +1,6 @@
 package com.datn.TheCasualWear.controller.Admin;
 
+import com.datn.TheCasualWear.config.DuplicateVariantException;
 import com.datn.TheCasualWear.entity.*;
 import com.datn.TheCasualWear.service.*;
 import lombok.RequiredArgsConstructor;
@@ -143,7 +144,7 @@ public class AdminProductController {
         }
 
         Product product = productService.getProductById(id);
-        int added = 0, skipped = 0;
+        int added = 0, existing = 0, skipped = 0;
         StringBuilder errors = new StringBuilder();
         List<Integer> createdVariantIds = new java.util.ArrayList<>();
 
@@ -180,6 +181,12 @@ public class AdminProductController {
                     ProductVariant saved = variantService.createVariant(product, v);
                     createdVariantIds.add(saved.getId());
                     added++;
+                } catch (DuplicateVariantException e) {
+                    // Biến thể (màu + size) này đã có sẵn — không báo lỗi và bỏ
+                    // qua như trước nữa, mà gom id variant cũ vào chung danh sách
+                    // để chuyển sang trang nhập kho cho admin bổ sung số lượng.
+                    createdVariantIds.add(e.getExistingVariant().getId());
+                    existing++;
                 } catch (IllegalArgumentException e) {
                     skipped++;
                     errors.append(e.getMessage()).append("; ");
@@ -187,13 +194,23 @@ public class AdminProductController {
             }
         }
 
-        if (added > 0) {
-            ra.addFlashAttribute("successMessage",
-                    "Đã thêm " + added + " biến thể (tồn kho = 0)!" +
-                            (skipped > 0 ? " Bỏ qua " + skipped + " trùng." : "") +
-                            " Hãy tạo phiếu nhập kho để thêm số lượng.");
-            // Chuyển thẳng sang trang nhập kho, pre-select sẵn sản phẩm + các
-            // biến thể vừa tạo để admin không phải chọn lại thủ công.
+        if (added > 0 || existing > 0) {
+            StringBuilder msg = new StringBuilder();
+            if (added > 0) {
+                msg.append("Đã thêm ").append(added).append(" biến thể mới (tồn kho = 0). ");
+            }
+            if (existing > 0) {
+                msg.append(existing).append(" biến thể đã có sẵn (trùng màu/size) — ")
+                        .append("chuyển sang nhập kho để bổ sung số lượng. ");
+            }
+            if (skipped > 0) {
+                msg.append("Bỏ qua ").append(skipped).append(" lỗi: ").append(errors);
+            }
+            ra.addFlashAttribute("successMessage", msg.toString());
+
+            // Chuyển thẳng sang trang nhập kho, pre-select sẵn sản phẩm + toàn bộ
+            // variant liên quan (cả variant mới tạo lẫn variant trùng đã có sẵn)
+            // để admin không phải tự tìm/chọn lại thủ công.
             StringBuilder url = new StringBuilder(
                     "redirect:/admin/warehouse/receipts/add?productId=" + id);
             for (Integer vid : createdVariantIds) {

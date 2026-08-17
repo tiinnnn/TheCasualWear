@@ -13,11 +13,12 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 /**
- * Gửi email xác nhận đơn hàng (4.3) — trigger từ AdminOrderController sau khi
- * admin xác nhận đơn (PENDING → CONFIRMED). Chạy bất đồng bộ qua
- * "mailTaskExecutor" (xem MailAsyncConfig) để không làm chậm response, và
- * KHÔNG được để lỗi gửi mail làm fail luồng xác nhận đơn — đơn đã CONFIRMED
- * xong trước khi hàm này được gọi, ở đây chỉ log lại nếu gửi thất bại.
+ * Gửi email xác nhận đơn hàng (4.3) — ĐÃ ĐỔI (theo yêu cầu mới): trigger ngay
+ * trong OrderService.placeOrder()/placeOrderGuest() lúc khách vừa đặt hàng
+ * (status PENDING), KHÔNG còn chờ admin xác nhận (CONFIRMED) nữa. Chạy bất
+ * đồng bộ qua "mailTaskExecutor" (xem MailAsyncConfig) để không làm chậm
+ * response, và KHÔNG được để lỗi gửi mail làm fail luồng đặt hàng — đơn đã
+ * lưu DB xong trước khi hàm này được gọi, ở đây chỉ log lại nếu gửi thất bại.
  *
  * ⚠️ GIẢ ĐỊNH: application.properties đã có spring.mail.username (theo xác
  * nhận SMTP đã cấu hình sẵn) — dùng làm địa chỉ "From". Nếu key tên khác,
@@ -33,6 +34,14 @@ public class OrderEmailService {
 
     @Value("${spring.mail.username}")
     private String fromAddress;
+
+    // MỚI: base URL của app để dựng link tuyệt đối trong email (link tương
+    // đối như "/order/lookup-guest" không mở được từ trong email client).
+    // ⚠️ GIẢ ĐỊNH: chưa có property "app.base-url" trong application.properties
+    // — cần thêm, ví dụ app.base-url=http://localhost:8080 lúc dev, đổi thành
+    // domain thật lúc deploy VPS. Fallback dưới đây chỉ để không vỡ lúc chưa cấu hình.
+    @Value("${app.base-url:http://localhost:8080}")
+    private String appBaseUrl;
 
     @Async("mailTaskExecutor")
     public void sendOrderConfirmationAsync(AppOrder order) {
@@ -53,7 +62,7 @@ public class OrderEmailService {
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setTo(recipient);
             helper.setFrom(fromAddress);
-            helper.setSubject("Xác nhận đơn hàng #" + order.getOrderCode() + " — TheCasualWear");
+            helper.setSubject("Đã tiếp nhận đơn hàng #" + order.getOrderCode() + " — TheCasualWear");
             helper.setText(html, true);
 
             mailSender.send(message);
@@ -79,6 +88,12 @@ public class OrderEmailService {
                 order.getShippingAddress() != null ? order.getShippingAddress().getFullName()
                         : (order.getCustomer() != null ? order.getCustomer().getUsername() : "Quý khách"));
         context.setVariable("isGuest", order.getCustomer() == null);
+        // MỚI: hiển thị email liên hệ trong bảng thông tin đơn hàng.
+        context.setVariable("recipientEmail", recipient);
+        // MỚI: link tra cứu đơn tuyệt đối, chỉ hiển thị cho khách vãng lai
+        // (template chỉ render khối này khi isGuest=true, nhưng vẫn set biến
+        // luôn cho gọn — không set thì Thymeleaf lỗi biến null trong th:href).
+        context.setVariable("guestLookupUrl", appBaseUrl + "/order/lookup-guest");
         return templateEngine.process("email/order-confirmation", context);
     }
 }

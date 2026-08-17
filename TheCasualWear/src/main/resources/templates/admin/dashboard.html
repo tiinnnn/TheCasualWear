@@ -38,9 +38,9 @@
         <div class="dm-card dm-filter-scope dm-stagger" id="dm-filter-scope">
             <div class="dm-section-title dm-section-title--wrap">
                 <span><i class="bi bi-funnel"></i>Số liệu theo bộ lọc thời gian</span>
-                <form class="dm-filter-form" method="get" th:action="@{/admin/dashboard}"
+                <form id="dm-filter-form" class="dm-filter-form" method="get" th:action="@{/admin/dashboard}"
                       th:attr="hx-get=@{/admin/dashboard}"
-                      hx-trigger="change"
+                      hx-trigger="change[window.dmIsFilterRangeValid()]"
                       hx-target="#dm-filter-scope"
                       hx-select="#dm-filter-scope"
                       hx-swap="outerHTML"
@@ -49,13 +49,16 @@
                     <div class="dm-filter-field">
                         <label for="dm-from">Từ ngày</label>
                         <input type="date" id="dm-from" name="from" class="dm-input"
-                               th:value="${filterFrom}"/>
+                               th:value="${filterFrom}"
+                               th:max="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}"/>
                     </div>
                     <div class="dm-filter-field">
                         <label for="dm-to">Đến ngày</label>
                         <input type="date" id="dm-to" name="to" class="dm-input"
-                               th:value="${filterTo}"/>
+                               th:value="${filterTo}"
+                               th:max="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}"/>
                     </div>
+                    <span id="dm-filter-error" class="dm-filter-error" style="display:none;"></span>
                     <a th:if="${filterFrom != null or filterTo != null}"
                        th:href="@{/admin/dashboard}"
                        th:attr="hx-get=@{/admin/dashboard}"
@@ -565,6 +568,16 @@
         display: inline-flex; align-items: center; gap: 6px;
         font-size: .78rem; color: var(--text-faint);
     }
+
+    /* Cảnh báo khi "Đến ngày" bị chọn nhỏ hơn "Từ ngày" */
+    .dm-filter-error {
+        display: inline-flex; align-items: center; gap: 6px;
+        font-size: .78rem; color: var(--bad); font-weight: 600;
+    }
+    .dm-filter-error i { margin-right: 2px; }
+    #dm-to.dm-input--error, #dm-from.dm-input--error {
+        border-color: var(--bad) !important;
+    }
     .dm-spin { animation: dm-spin-rotate .8s linear infinite; }
     @keyframes dm-spin-rotate { to { transform: rotate(360deg); } }
 
@@ -712,6 +725,58 @@
         }
         initCountups(document);
 
+        // ── Chặn "Đến ngày" nhỏ hơn "Từ ngày" trong bộ lọc thời gian ────
+        // Định nghĩa lại mỗi lần gọi vì htmx (hx-swap="outerHTML") thay hẳn
+        // phần tử form bằng phần tử mới → listener cũ gắn trên input cũ sẽ mất,
+        // nên cần init lại sau mỗi lần htmx:afterSwap, giống initCountups.
+        function initFilterRangeGuard() {
+            var fromInput = document.getElementById('dm-from');
+            var toInput = document.getElementById('dm-to');
+            var errorEl = document.getElementById('dm-filter-error');
+            if (!fromInput || !toInput || !errorEl) return;
+
+            function todayStr() {
+                var d = new Date();
+                var mm = String(d.getMonth() + 1).padStart(2, '0');
+                var dd = String(d.getDate()).padStart(2, '0');
+                return d.getFullYear() + '-' + mm + '-' + dd;
+            }
+            var today = todayStr();
+
+            // Trả về thông báo lỗi tương ứng, hoặc null nếu khoảng ngày hợp lệ
+            function rangeError() {
+                if (fromInput.value && fromInput.value > today) return 'Từ ngày không được lớn hơn ngày hiện tại';
+                if (toInput.value && toInput.value > today) return 'Đến ngày không được lớn hơn ngày hiện tại';
+                if (fromInput.value && toInput.value && toInput.value < fromInput.value) return 'Đến ngày không được nhỏ hơn Từ ngày';
+                return null;
+            }
+            // Được gọi từ hx-trigger="change[window.dmIsFilterRangeValid()]" ở form
+            // để htmx bỏ qua request khi khoảng ngày đang không hợp lệ.
+            window.dmIsFilterRangeValid = function () { return rangeError() === null; };
+
+            function syncBounds() {
+                // Không cho chọn "Đến ngày" nhỏ hơn "Từ ngày", và không cho chọn ngày
+                // sau hôm nay ở cả hai ô, ngay trên lịch chọn ngày của trình duyệt
+                toInput.max = today;
+                fromInput.max = today;
+                if (fromInput.value) toInput.min = fromInput.value; else toInput.removeAttribute('min');
+            }
+
+            function refreshState() {
+                syncBounds();
+                var error = rangeError();
+                errorEl.style.display = error ? 'inline-flex' : 'none';
+                errorEl.innerHTML = error ? '<i class="bi bi-exclamation-circle"></i>' + error : '';
+                fromInput.classList.toggle('dm-input--error', !!error);
+                toInput.classList.toggle('dm-input--error', !!error);
+            }
+
+            fromInput.addEventListener('change', refreshState);
+            toInput.addEventListener('change', refreshState);
+            refreshState();
+        }
+        initFilterRangeGuard();
+
         // Ô "Số liệu theo bộ lọc thời gian" được htmx thay mới (không reload trang)
         // mỗi khi đổi Từ ngày / Đến ngày → chạy lại hiệu ứng đếm số cho phần vừa thay.
         document.body.addEventListener('htmx:afterSwap', function (evt) {
@@ -719,6 +784,7 @@
             // nên evt.detail.target (tham chiếu tới phần tử CŨ) đã bị gỡ khỏi DOM.
             // Phải querySelector lại bằng id để lấy đúng phần tử MỚI vừa được chèn vào.
             initCountups(document.getElementById('dm-filter-scope') || document);
+            initFilterRangeGuard();
         });
 
         // ── Thanh so sánh doanh thu theo kênh / biến động kho ──────────

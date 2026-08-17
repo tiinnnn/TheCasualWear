@@ -5,7 +5,9 @@ import com.datn.TheCasualWear.repository.AppUserRepository;
 import com.datn.TheCasualWear.service.AppUserService;
 import com.datn.TheCasualWear.service.CartService;
 import com.datn.TheCasualWear.service.CategoryService;
+import com.datn.TheCasualWear.service.GuestCartService;
 import com.datn.TheCasualWear.service.NotificationService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -24,6 +26,7 @@ public class GlobalControllerAdvice {
     private final NotificationService notificationService;
     private final CartService cartService;
     private final AppUserRepository appUserRepository;
+    private final GuestCartService guestCartService; // MỚI: badge giỏ hàng cho khách vãng lai
 
     // Tự động truyền categories vào tất cả trang
     @ModelAttribute("navCategories")
@@ -67,6 +70,21 @@ public class GlobalControllerAdvice {
                     .orElse(null);
             if (user == null) return 0;
             return cartService.getCartItemCount(user);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    // MỚI: giỏ hàng khách vãng lai, tương đương cartCount ở trên nhưng đọc từ
+    // HttpSession thay vì DB (xem GuestCartService.getItemCount() — cố ý
+    // không dùng getCart(session) để tránh tự tạo session rỗng cho mọi khách
+    // ghé trang, vì @ModelAttribute này chạy trên MỌI request).
+    @ModelAttribute("guestCartCount")
+    public int guestCartCount(@AuthenticationPrincipal UserDetails userDetails,
+                              HttpServletRequest request) {
+        if (userDetails != null) return 0; // đã login -> dùng cartCount ở trên
+        try {
+            return guestCartService.getItemCount(request.getSession(false));
         } catch (Exception e) {
             return 0;
         }

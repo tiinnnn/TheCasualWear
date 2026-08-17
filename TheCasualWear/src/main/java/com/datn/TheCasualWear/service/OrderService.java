@@ -266,6 +266,18 @@ public class OrderService {
                         + user.getUsername() + " đang chờ xác nhận!",
                 "/admin/orders/" + order.getId()
         );
+
+        // MỚI (đổi 4.3): gửi email ngay khi đặt hàng (status PENDING), không
+        // còn chờ admin confirm. Dùng getOrderForEmail() (JOIN FETCH sẵn
+        // customer/shippingAddress/orderDetails/variant...) chứ không truyền
+        // thẳng biến `order` ở trên — sendOrderConfirmationAsync() chạy trên
+        // thread khác (mailTaskExecutor, @Async) không còn session Hibernate
+        // của transaction này, đọc field LAZY sẽ ăn LazyInitializationException.
+        // Gọi self (this.getOrderForEmail) nên bỏ qua proxy @Transactional của
+        // chính nó, nhưng vẫn chạy được vì đang ở trong transaction của
+        // placeOrder() rồi — không sao.
+        orderEmailService.sendOrderConfirmationAsync(getOrderForEmail(order.getId()));
+
         return order;
     }
 
@@ -392,6 +404,11 @@ public class OrderService {
                         + form.getPhone() + ") đang chờ xác nhận!",
                 "/admin/orders/" + order.getId()
         );
+
+        // MỚI (đổi 4.3): giống placeOrder() ở trên — gửi email ngay lúc đặt
+        // hàng (PENDING), không chờ admin confirm nữa.
+        orderEmailService.sendOrderConfirmationAsync(getOrderForEmail(order.getId()));
+
         return order;
     }
 
@@ -402,12 +419,22 @@ public class OrderService {
                         "Không tìm thấy đơn hàng với mã: " + orderCode));
     }
 
-    public java.util.Optional<AppOrder> lookupGuestOrder(String orderCode, String contact) {
-        if (orderCode == null || orderCode.isBlank() || contact == null || contact.isBlank()) {
+    // ĐÃ ĐỔI (theo yêu cầu mới): bỏ yêu cầu SĐT/email — khách chỉ cần nhập
+    // đúng mã đơn hàng là tra cứu được. Trước đây bắt buộc khớp cả contact
+    // (phone HOẶC guestEmail) trong 1 query gộp để chống dò mã đơn hàng, nhưng
+    // đây cũng chính là nguyên nhân lỗi "copy đúng mã đơn mà không ra thông
+    // tin" — chỉ cần lệch định dạng SĐT/email 1 chút (khoảng trắng, hoa/thường,
+    // +84 vs 0...) là query không khớp, dù mã đơn hàng đúng 100%.
+    // ⚠️ Đánh đổi bảo mật: giờ chỉ cần biết mã đơn hàng (8 ký tự hex ngẫu
+    // nhiên, generateUniqueOrderCode()) là xem được thông tin đơn — không gian
+    // mã đủ lớn (36^8) nên khó dò mù, nhưng nếu mã bị lộ (chụp màn hình, gửi
+    // qua tin nhắn công khai...) ai cũng tra được. OrderLookupRateLimiter vẫn
+    // giữ nguyên để chặn dò mã hàng loạt.
+    public java.util.Optional<AppOrder> lookupGuestOrder(String orderCode) {
+        if (orderCode == null || orderCode.isBlank()) {
             return java.util.Optional.empty();
         }
-        return orderRepository.findByOrderCodeAndContact(
-                orderCode.trim().toUpperCase(), contact.trim());
+        return orderRepository.findByOrderCode(orderCode.trim().toUpperCase());
     }
 
     private String generateUniqueOrderCode() {

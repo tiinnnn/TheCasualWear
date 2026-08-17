@@ -69,9 +69,17 @@ public class GuestCartService {
         BigDecimal unitPrice = productSaleService.getEffectivePrice(product);
         Optional<ProductSale> activeSale = productSaleService.getActiveSale(product);
 
-        String imageUrl = (variant.getImages() != null && !variant.getImages().isEmpty())
-                ? variant.getImages().get(0).getImageUrl()
-                : null;
+        // Ảnh: ưu tiên ảnh riêng của variant; nếu variant không có ảnh thì
+        // fallback sang ảnh của product (giống cách cart.html / checkout.html
+        // của user đã đăng nhập đang làm với item.variant.product.images).
+        String imageUrl;
+        if (variant.getImages() != null && !variant.getImages().isEmpty()) {
+            imageUrl = variant.getImages().get(0).getImageUrl();
+        } else if (product.getImages() != null && !product.getImages().isEmpty()) {
+            imageUrl = product.getImages().get(0).getImageUrl();
+        } else {
+            imageUrl = null;
+        }
 
         GuestCartItem item = new GuestCartItem();
         item.setVariantId(variant.getId());
@@ -100,6 +108,24 @@ public class GuestCartService {
 
     public void clearCart(HttpSession session) {
         session.removeAttribute(SESSION_KEY);
+    }
+
+    /**
+     * Đếm tổng số lượng sản phẩm trong giỏ khách vãng lai — dùng cho badge
+     * icon giỏ hàng ở GlobalControllerAdvice (hiển thị trên mọi trang).
+     *
+     * CỐ Ý đọc thẳng session attribute thay vì gọi getCart(session) ở trên:
+     * getCart() tự tạo + lưu 1 giỏ rỗng vào session nếu chưa có, nghĩa là chỉ
+     * cần load 1 trang bất kỳ (kể cả khách chưa từng thêm gì vào giỏ) cũng
+     * sẽ tạo session mới cho họ — lãng phí, vì GlobalControllerAdvice chạy
+     * trên MỌI request. Ở đây chỉ "nhìn" session hiện có (nếu có), không tạo.
+     */
+    @SuppressWarnings("unchecked")
+    public int getItemCount(HttpSession session) {
+        if (session == null) return 0;
+        List<GuestCartItem> cart = (List<GuestCartItem>) session.getAttribute(SESSION_KEY);
+        if (cart == null) return 0;
+        return cart.stream().mapToInt(GuestCartItem::getQuantity).sum();
     }
 
     public BigDecimal getTotalPrice(HttpSession session) {

@@ -507,15 +507,13 @@ public class OrderController {
             return "layouts/shop-layout";
         }
 
-        Optional<AppOrder> orderOpt = orderService.lookupGuestOrder(form.getOrderCode(), form.getContact());
+        Optional<AppOrder> orderOpt = orderService.lookupGuestOrder(form.getOrderCode());
 
         if (orderOpt.isEmpty()) {
             orderLookupRateLimiter.recordFailure(rateLimitKey);
-            // Cùng 1 thông báo lỗi chung chung cho MỌI trường hợp không khớp
-            // (sai mã đơn, sai SĐT/email, hay cả hai) — xem ghi chú ở
-            // OrderService.lookupGuestOrder(), tránh lộ qua response việc mã
-            // đơn có tồn tại hay không.
-            model.addAttribute("errorMessage", "Không tìm thấy đơn hàng khớp với thông tin đã nhập.");
+            // Thông báo lỗi chung chung khi không tìm thấy mã đơn — xem ghi
+            // chú ở OrderService.lookupGuestOrder().
+            model.addAttribute("errorMessage", "Không tìm thấy đơn hàng với mã đã nhập.");
             model.addAttribute("view", "shop/order-lookup-guest");
             return "layouts/shop-layout";
         }

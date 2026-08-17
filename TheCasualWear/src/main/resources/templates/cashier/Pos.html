@@ -529,7 +529,8 @@
             }
 
             const url = '/cashier/validate-voucher'
-                + '?code='       + encodeURIComponent(code)
+                + '?cartId='     + encodeURIComponent(ACTIVE_CART_ID)
+                + '&code='       + encodeURIComponent(code)
                 + '&orderTotal=' + GRAND_TOTAL
                 + (customerId ? '&customerId=' + customerId : '');
 
