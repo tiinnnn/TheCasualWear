@@ -7,9 +7,145 @@
     <title>Bán hàng tại quầy - The Casual Wear</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css"/>
     <link rel="icon" type="image/png" href="/images/footer.png"/>
     <style>
+        /* ══ Token màu — retint sang tông guysclosetvn.com (kem ấm, mù tạt,
+           bo tròn khắp nơi) thay cho theme tối trước đây. Giữ nguyên TÊN
+           biến --adm-* để mọi override bên dưới lẫn CSS nhúng riêng trong
+           Pos.html (cũng dùng var(--adm-...)) tự động ăn theo mà không cần
+           sửa HTML của Pos.html/orders.html/order-detail.html. ══ */
+        :root {
+            --adm-bg: #FBF6EC;
+            --adm-surface: #FFFFFF;
+            --adm-surface-2: #F3ECDC;
+            --adm-border: #ECE3D2;
+            --adm-accent: #F5C247;
+            --adm-accent-dark: #E2AC1F;
+            --adm-accent-soft: rgba(245,194,71,.22);
+            --adm-text: #1A1A1A;
+            --adm-text-dim: #7a7368;
+            --adm-text-faint: #a89f8f;
+            --adm-good: #2e8b57;
+            --adm-good-soft: rgba(46,139,87,.14);
+            --adm-bad: #E14B4B;
+            --adm-bad-soft: rgba(225,75,75,.12);
+            --adm-warn: #E2AC1F;
+            --adm-warn-soft: rgba(226,172,31,.16);
+
+            --alert-success-bg: #EAF7EF;
+            --alert-success-border: #BFE8CE;
+            --alert-success-text: #1e6b3d;
+            --alert-danger-bg: #FDECEC;
+            --alert-danger-border: #F3B9B9;
+            --alert-danger-text: #a32c2c;
+        }
+        html, body {
+            background: var(--adm-bg);
+            min-height: 100%;
+            color: var(--adm-text);
+            font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+        }
+
+        nav.navbar {
+            background-color: var(--adm-surface) !important;
+            border-bottom: 1px solid var(--adm-border);
+        }
+        nav.navbar .navbar-brand,
+        nav.navbar .cashier-nav-link,
+        nav.navbar .cashier-nav-user { color: var(--adm-text) !important; }
+        nav.navbar .cashier-nav-link { text-decoration: none; font-weight: 600; font-size: .88rem; transition: color .2s; }
+        nav.navbar .cashier-nav-link:hover { color: var(--adm-accent-dark) !important; }
+        nav.navbar .cashier-nav-user { color: var(--adm-accent-dark) !important; font-weight: 700; }
+        nav.navbar .navbar-toggler { border-color: var(--adm-border); }
+        nav.navbar .navbar-toggler-icon { filter: invert(1) grayscale(1); }
+
+        .col-12.pt-4.px-4 { background: var(--adm-bg); }
+
+        /* ══ Override component Bootstrap mặc định dùng trong orders.html /
+           order-detail.html — để 2 file đó lên theme kem/mù tạt mà KHÔNG
+           cần sửa HTML, chỉ nhờ cascade CSS từ layout ══ */
+        h1, h2, h3, h4, h5, h6 { color: var(--adm-text); }
+        .text-muted { color: var(--adm-text-dim) !important; }
+        small { color: inherit; }
+
+        .card {
+            background-color: var(--adm-surface) !important;
+            border: 1px solid var(--adm-border) !important;
+            border-radius: 18px !important;
+            color: var(--adm-text);
+        }
+        .card.shadow-sm { box-shadow: 0 10px 24px rgba(26,26,26,.05) !important; }
+
+        .table { color: var(--adm-text); }
+        .table > :not(caption) > * > * { background-color: transparent; color: inherit; border-bottom-color: var(--adm-border); }
+        .table-hover > tbody > tr:hover > * { background-color: var(--adm-surface-2); color: var(--adm-text); }
+        .table-dark { --bs-table-bg: var(--adm-text); --bs-table-color: #fff; }
+        .table thead.table-dark th { border-radius: 0; }
+
+        .form-select, .form-control {
+            background-color: var(--adm-surface);
+            border: 1px solid var(--adm-border);
+            color: var(--adm-text);
+            border-radius: 999px;
+        }
+        .form-select:focus, .form-control:focus {
+            background-color: var(--adm-surface);
+            color: var(--adm-text);
+            border-color: var(--adm-accent-dark);
+            box-shadow: 0 0 0 .18rem var(--adm-accent-soft);
+        }
+        .form-control::placeholder { color: var(--adm-text-faint); opacity: 1; }
+        .form-label { color: var(--adm-text-dim); }
+
+        .btn { border-radius: 999px; }
+        .btn-outline-secondary, .btn-outline-dark {
+            color: var(--adm-text); border-color: var(--adm-border);
+        }
+        .btn-outline-secondary:hover, .btn-outline-dark:hover {
+            background: var(--adm-text); color: #fff; border-color: var(--adm-text);
+        }
+        .btn-primary, .btn-success {
+            background-color: var(--adm-accent) !important;
+            border-color: var(--adm-accent) !important;
+            color: var(--adm-text) !important;
+            font-weight: 700;
+        }
+        .btn-primary:hover, .btn-success:hover { background-color: var(--adm-accent-dark) !important; border-color: var(--adm-accent-dark) !important; }
+        .btn-outline-primary { color: var(--adm-accent-dark); border-color: var(--adm-accent-dark); }
+        .btn-outline-primary:hover { background: var(--adm-accent); color: var(--adm-text); border-color: var(--adm-accent); }
+        .btn-outline-danger { color: var(--adm-bad); border-color: var(--adm-bad); }
+        .btn-outline-danger:hover { background: var(--adm-bad); color: #fff; border-color: var(--adm-bad); }
+        .text-white-50 { color: var(--adm-text-dim) !important; }
+
+        .modal-content {
+            background-color: var(--adm-surface);
+            border: 1px solid var(--adm-border);
+            border-radius: 20px;
+            color: var(--adm-text);
+        }
+        .modal-header, .modal-footer { border-color: var(--adm-border) !important; }
+        .btn-close { filter: none; }
+
+        hr { border-color: var(--adm-border); opacity: 1; }
+        .border-bottom { border-color: var(--adm-border) !important; }
+        .border-top { border-color: var(--adm-border) !important; }
+        .bg-light { background-color: var(--adm-surface-2) !important; color: var(--adm-text); }
+
+        .badge { border-radius: 999px; }
+        .badge.bg-danger { background-color: var(--adm-bad) !important; }
+        .badge.bg-success { background-color: var(--adm-good) !important; }
+        .badge.bg-warning { background-color: var(--adm-accent) !important; color: var(--adm-text) !important; }
+        .badge.bg-secondary { background-color: var(--adm-text-dim) !important; }
+        .badge.bg-primary { background-color: var(--adm-accent-dark) !important; }
+        .badge.bg-dark { background-color: var(--adm-text) !important; }
+
+        .alert-success { background: var(--alert-success-bg); border-color: var(--alert-success-border); color: var(--alert-success-text); border-radius: 14px; }
+        .alert-danger { background: var(--alert-danger-bg); border-color: var(--alert-danger-border); color: var(--alert-danger-text); border-radius: 14px; }
+        .alert-warning { background: var(--adm-warn-soft); border-color: var(--adm-accent); color: #7a5a0a; border-radius: 14px; }
+
         /* Khoảng trống chuyên dùng để hiện thông báo (alerts), nằm ngay dưới
            navbar. position:relative để .app-alert-slot (position:absolute
            bên trong fragment) đè đúng lên khu vực này mà không đẩy nội dung
@@ -21,7 +157,7 @@
 </head>
 <body>
 <!-- Navbar -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+<nav class="navbar navbar-expand-lg sticky-top">
     <div class="container-fluid px-4">
         <a class="navbar-brand fw-bold" th:href="@{/cashier}">
             <i class="bi bi-cash-coin"></i> Bán hàng tại quầy
@@ -32,14 +168,14 @@
         </button>
         <div class="collapse navbar-collapse" id="cashierNav">
             <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-2 gap-lg-3 ms-auto mt-3 mt-lg-0">
-                <a class="text-white text-decoration-none" th:href="@{/cashier/orders}">
+                <a class="cashier-nav-link" th:href="@{/cashier/orders}">
                     <i class="bi bi-receipt"></i> Đơn đã bán
                 </a>
-                <a class="text-white text-decoration-none" sec:authorize="hasAnyRole('ADMIN','OWNER')"
+                <a class="cashier-nav-link" sec:authorize="hasAnyRole('ADMIN','OWNER')"
                    th:href="@{/admin}">
                     <i class="bi bi-gear"></i> Về trang Admin
                 </a>
-                <span class="text-warning">
+                <span class="cashier-nav-user">
                     <i class="bi bi-person-circle"></i>
                     <span sec:authentication="name"></span>
                 </span>

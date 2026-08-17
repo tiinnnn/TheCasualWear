@@ -1,10 +1,54 @@
-<div xmlns:th="http://www.thymeleaf.org">
+<div xmlns:th="http://www.thymeleaf.org" class="pos-page">
+
+    <style>
+        /* ══ Bổ sung riêng cho POS — phủ các component Bootstrap mà CSS
+           chung ở cashier-layout.html chưa với tới (list-group, btn-light,
+           badge sáng, alert màu, viền active tab xanh mặc định) ══ */
+        .pos-page .list-group-item {
+            background: var(--adm-surface-2);
+            border-color: var(--adm-border);
+            color: var(--adm-text);
+        }
+        .pos-page .list-group-item-action:hover,
+        .pos-page .list-group-item-action:focus {
+            background: var(--adm-accent-soft);
+            color: var(--adm-text);
+        }
+
+        .pos-page .btn-light {
+            background: var(--adm-surface-2);
+            border: 1px solid var(--adm-border);
+            color: var(--adm-text);
+        }
+        .pos-page .btn-light:hover { background: var(--adm-border); color: var(--adm-text); }
+
+        .pos-page .badge.bg-light.text-dark {
+            background: var(--adm-bg) !important;
+            color: var(--adm-text) !important;
+            border: 1px solid var(--adm-border);
+        }
+
+        .pos-page .border-primary { border-color: var(--adm-accent) !important; }
+
+        .pos-page .alert-success {
+            background: rgba(52,211,153,.14); border: 1px solid rgba(52,211,153,.35); color: var(--adm-good);
+        }
+        .pos-page .alert-info {
+            background: var(--adm-accent-soft); border: 1px solid rgba(139,124,246,.35); color: var(--adm-accent);
+        }
+
+        /* Tab giỏ hàng + khối tìm/giỏ — bo góc mềm, không viền cứng cạnh */
+        .pos-page .card { border-radius: 18px; }
+        .pos-page .list-group-item:first-child { border-top-left-radius: 14px; border-top-right-radius: 14px; }
+        .pos-page .list-group-item:last-child { border-bottom-left-radius: 14px; border-bottom-right-radius: 14px; }
+        .pos-page .list-group { border-radius: 14px; overflow: hidden; }
+    </style>
 
     <div class="row g-4">
         <!-- ───────────── CỘT TRÁI: TÌM SẢN PHẨM ───────────── -->
         <div class="col-md-7">
             <div class="card shadow-sm">
-                <div class="card-header bg-white">
+                <div class="card-header">
                     <strong><i class="bi bi-search"></i> Tìm sản phẩm</strong>
                 </div>
                 <div class="card-body">
@@ -49,7 +93,7 @@
             </div>
 
             <div class="card shadow-sm">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <strong><i class="bi bi-cart3"></i> Giỏ hàng</strong>
                     <form th:action="@{/cashier/cart/clear}" method="post"
                           onsubmit="return confirm('Xóa toàn bộ giỏ hàng?')">
@@ -79,7 +123,7 @@
                                      style="width:40px;height:40px;object-fit:cover;border-radius:6px;">
                                 <div th:unless="${item.imageUrl != null}"
                                      class="d-flex align-items-center justify-content-center"
-                                     style="width:40px;height:40px;border-radius:6px;background:#f1f1f1;">
+                                     style="width:40px;height:40px;border-radius:6px;background:var(--adm-surface-2);">
                                     <i class="bi bi-image text-muted"></i>
                                 </div>
                             </td>
@@ -129,7 +173,7 @@
                     </p>
                 </div>
 
-                <div class="card-footer bg-white" th:if="${!#lists.isEmpty(cartItems)}">
+                <div class="card-footer" th:if="${!#lists.isEmpty(cartItems)}">
 
                     <!-- Tổng hàng (trước giảm) -->
                     <div class="d-flex justify-content-between mb-1">
@@ -349,7 +393,7 @@
                         ${item.imageUrl
                             ? `<img src="${item.imageUrl}" alt=""
                                    style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0;">`
-                            : `<div style="width:44px;height:44px;border-radius:6px;background:#f1f1f1;
+                            : `<div style="width:44px;height:44px;border-radius:6px;background:var(--adm-surface-2);
                                           display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                                    <i class="bi bi-image text-muted"></i>
                                </div>`

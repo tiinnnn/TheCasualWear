@@ -3,18 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <title>Hóa đơn #<span th:text="${order.id}"></span></title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --cream: #FBF6EC;
+            --paper: #FFFFFF;
+            --ink: #1A1A1A;
+            --mute: #7a7368;
+            --line: #ECE3D2;
+            --mustard: #F5C247;
+            --mustard-dark: #E2AC1F;
+        }
         @media print {
             @page { size: 80mm auto; margin: 0; }
-            body { margin: 0; }
+            body { margin: 0; background: #fff !important; }
             .no-print { display: none !important; }
+            .invoice-sheet { box-shadow: none !important; border: none !important; border-radius: 0 !important; }
         }
         body {
+            font-family: 'Be Vietnam Pro', system-ui, sans-serif;
+            background: var(--cream);
+            margin: 0;
+            padding: 24px 0 40px;
+            color: var(--ink);
+        }
+        .invoice-sheet {
             font-family: 'Courier New', monospace;
             width: 280px;
-            margin: 20px auto;
+            margin: 0 auto;
             font-size: 13px;
             color: #000;
+            background: var(--paper);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 18px 16px;
+            box-shadow: 0 10px 24px rgba(26,26,26,.06);
+        }
+        .brand-strip {
+            height: 4px;
+            width: 46px;
+            background: var(--mustard);
+            border-radius: 999px;
+            margin: 0 auto 10px;
         }
         .center { text-align: center; }
         .line { border-top: 1px dashed #000; margin: 8px 0; }
@@ -23,14 +54,25 @@
         .qty { text-align: center; width: 30px; }
         .price { text-align: right; }
         .total-row td { font-weight: bold; font-size: 15px; }
+        .no-print { max-width: 280px; margin: 14px auto 0; font-family: 'Be Vietnam Pro', sans-serif; }
         .btn-print {
-            display: block; margin: 16px auto; padding: 8px 20px;
-            font-size: 14px; cursor: pointer;
+            display: block; width: 100%; margin: 0 0 10px; padding: .7rem 1rem;
+            font-size: .82rem; font-weight: 700; cursor: pointer;
+            border-radius: 999px; border: 1px solid var(--ink);
+            background: var(--mustard); color: var(--ink);
+            transition: background .2s, transform .2s;
         }
+        .btn-print:hover { background: var(--mustard-dark); transform: translateY(-1px); }
+        .btn-print.btn-secondary-outline { background: var(--paper); color: var(--ink); }
+        .btn-print.btn-secondary-outline:hover { background: var(--cream); }
+        .btn-print.btn-danger-outline { background: var(--paper); color: #b00020; border-color: #b00020; }
+        .btn-print.btn-danger-outline:hover { background: #FDECEC; }
     </style>
 </head>
 <body>
 
+<div class="invoice-sheet">
+<div class="brand-strip"></div>
 <div class="center">
     <strong>THE CASUAL WEAR</strong><br>
     Hóa đơn bán hàng tại quầy<br>
@@ -96,16 +138,19 @@
     Cảm ơn quý khách đã mua hàng!<br>
     Hẹn gặp lại.
 </div>
+</div>
 
-<button class="btn-print no-print" onclick="window.print()">In hóa đơn</button>
-<button class="btn-print no-print" onclick="window.location.href='/cashier'">Quay lại bán hàng</button>
+<div class="no-print">
+    <button class="btn-print" onclick="window.print()">In hóa đơn</button>
+    <button class="btn-print btn-secondary-outline" onclick="window.location.href='/cashier'">Quay lại bán hàng</button>
 
-<!-- Hủy cần chọn lý do → dẫn vào trang chi tiết đơn (có modal xác nhận), không hủy thẳng từ hóa đơn -->
-<a th:if="${order.status.name() == 'COMPLETED'}"
-   th:href="@{'/cashier/orders/' + ${order.id}}"
-   class="btn-print no-print" style="display:block;text-align:center;color:#b00020;border:1px solid #b00020;text-decoration:none">
-    Hủy đơn này
-</a>
+    <!-- Hủy cần chọn lý do → dẫn vào trang chi tiết đơn (có modal xác nhận), không hủy thẳng từ hóa đơn -->
+    <a th:if="${order.status.name() == 'COMPLETED'}"
+       th:href="@{'/cashier/orders/' + ${order.id}}"
+       class="btn-print btn-danger-outline" style="display:block;text-align:center;text-decoration:none">
+        Hủy đơn này
+    </a>
+</div>
 
 </body>
 </html>
