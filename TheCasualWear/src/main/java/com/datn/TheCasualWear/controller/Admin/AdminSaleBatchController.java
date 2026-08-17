@@ -1,4 +1,4 @@
-package com.datn.TheCasualWear.controller.admin;
+package com.datn.TheCasualWear.controller.Admin;
 
 import com.datn.TheCasualWear.entity.Product;
 import com.datn.TheCasualWear.entity.SaleBatch;
