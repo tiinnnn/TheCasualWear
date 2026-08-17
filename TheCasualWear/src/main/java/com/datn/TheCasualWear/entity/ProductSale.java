@@ -37,6 +37,9 @@ public class ProductSale {
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Column(name = "sale_batch_id")
+    private Integer saleBatchId;
+
     @Transient
     public boolean isCurrentlyRunning() {
         LocalDateTime now = LocalDateTime.now();

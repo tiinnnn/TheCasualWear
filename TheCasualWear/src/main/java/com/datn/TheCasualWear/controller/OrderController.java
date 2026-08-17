@@ -120,14 +120,28 @@ public class OrderController {
                              RedirectAttributes redirectAttributes) {
         AppUser user = getCurrentUser(auth);
 
-        // Validate COD > 1 triệu (áp dụng trên tổng tiền hàng, chưa gồm phí ship)
-        long totalPrice = cartService.getTotalPrice(user);
-        long grandTotal = totalPrice + OrderService.SHIPPING_FEE.longValue();
-        if (totalPrice > 1000000 && "COD".equals(paymentMethod)) {
-            redirectAttributes.addFlashAttribute("errorMessage",
-                    "Đơn hàng trên 1.000.000 đ bắt buộc thanh toán qua ngân hàng!");
-            return "redirect:/order/checkout";
+        // MỚI: tính finalPrice đã trừ voucher (nếu có) TRƯỚC khi tính
+        // grandTotal — dùng chung cho cả check ngưỡng COD lẫn số tiền gửi
+        // sang VNPay. Trước đây 2 chỗ này dùng totalPrice thô (chưa trừ
+        // voucher, chưa cộng ship đúng lúc) nên: (1) đơn "hàng đúng 1tr +
+        // 30k ship" vẫn lọt COD, và (2) khách có voucher chọn VNPay bị tính
+        // tiền cao hơn số thực sẽ lưu vào order.totalPrice.
+        BigDecimal totalPriceBD = BigDecimal.valueOf(cartService.getTotalPrice(user));
+        BigDecimal finalPrice = totalPriceBD;
+        if (voucherCode != null && !voucherCode.isBlank()) {
+            boolean hasSaleItem = cartService.getCartItems(user).stream()
+                    .anyMatch(item -> productSaleService
+                            .getActiveSale(item.getVariant().getProduct())
+                            .isPresent());
+            try {
+                Voucher voucher = voucherService.applyVoucher(voucherCode, totalPriceBD, user, hasSaleItem);
+                finalPrice = voucherService.calcDiscountedPrice(totalPriceBD, voucher);
+            } catch (RuntimeException e) {
+                redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+                return "redirect:/order/checkout";
+            }
         }
+        long grandTotal = finalPrice.add(OrderService.SHIPPING_FEE).longValue();
 
         if ("VNPAY".equals(paymentMethod)) {
             // Lưu vào session để dùng sau khi VNPay callback
@@ -137,7 +151,8 @@ public class OrderController {
                     billingAddressId != null ? billingAddressId : shippingAddressId);
             session.setAttribute("pendingVoucherCode", voucherCode);
 
-            // Số tiền thanh toán qua VNPay phải gồm cả phí ship
+            // Số tiền thanh toán qua VNPay phải gồm cả phí ship (và giờ đã
+            // trừ đúng voucher — xem finalPrice ở trên)
             String paymentUrl = vnPayService.createPaymentUrl(
                     grandTotal,
                     "Thanh toan don hang",
@@ -146,17 +161,25 @@ public class OrderController {
             return "redirect:" + paymentUrl;
         }
 
-        // COD — tạo order bình thường
+        // COD — tạo order bình thường. Rule ">1 triệu bắt buộc VNPay" giờ
+        // nằm trong OrderService.placeOrder() (check bằng grandTotal thật,
+        // sau voucher + ship) — bắt exception ở đây để hiển thị lỗi cho khách
+        // thay vì để lộ lỗi 500.
         Address shippingAddress = addressService.getAddressById(shippingAddressId, user);
         Address billingAddress  = billingAddressId != null
                 ? addressService.getAddressById(billingAddressId, user)
                 : shippingAddress;
 
-        AppOrder order = orderService.placeOrder(user, shippingAddress,
-                billingAddress, voucherCode, "COD");
-        redirectAttributes.addFlashAttribute("successMessage",
-                "Đặt hàng thành công! Mã đơn hàng: #" + order.getOrderCode());
-        return "redirect:/order/success/" + order.getId();
+        try {
+            AppOrder order = orderService.placeOrder(user, shippingAddress,
+                    billingAddress, voucherCode, "COD");
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Đặt hàng thành công! Mã đơn hàng: #" + order.getOrderCode());
+            return "redirect:/order/success/" + order.getId();
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/order/checkout";
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -175,16 +198,13 @@ public class OrderController {
         BigDecimal totalPrice = guestCartService.getTotalPrice(session);
         BigDecimal grandTotal = totalPrice.add(OrderService.SHIPPING_FEE);
 
-        List<Voucher> eligibleVouchers = voucherService.getActiveVouchers().stream()
-                .filter(v -> v.getMinOrderValue() == null
-                        || totalPrice.compareTo(v.getMinOrderValue()) >= 0)
-                .toList();
+        // MỚI: guest không dùng voucher nữa — bỏ hẳn eligibleVouchers,
+        // không hiển thị danh sách voucher trên trang checkout-guest.
 
         model.addAttribute("cartItems", cartItems);
         model.addAttribute("totalPrice", totalPrice);
         model.addAttribute("shippingFee", OrderService.SHIPPING_FEE);
         model.addAttribute("grandTotal", grandTotal);
-        model.addAttribute("activeVouchers", eligibleVouchers);
         model.addAttribute("guestCheckoutForm", new GuestCheckoutFormDTO());
         model.addAttribute("view", "shop/checkout-guest");
         return "layouts/shop-layout";
@@ -204,13 +224,16 @@ public class OrderController {
         }
 
         BigDecimal totalPrice = guestCartService.getTotalPrice(session);
+
+        // MỚI: guest không dùng voucher nữa — bỏ hẳn finalPrice/voucher,
+        // grandTotal chỉ còn totalPrice (đã tự áp sale, nếu có) + ship.
         BigDecimal grandTotal = totalPrice.add(OrderService.SHIPPING_FEE);
 
-        // Validate COD > 1 triệu, giống luồng user đã login
-        if (totalPrice.compareTo(BigDecimal.valueOf(1_000_000)) > 0
+        // Validate COD > 1 triệu — dùng grandTotal đã cộng ship.
+        if (grandTotal.compareTo(BigDecimal.valueOf(1_000_000)) > 0
                 && "COD".equals(form.getPaymentMethod())) {
             bindingResult.reject("codLimitExceeded",
-                    "Đơn hàng trên 1.000.000 đ bắt buộc thanh toán qua ngân hàng!");
+                    "Đơn hàng trên 1.000.000 đ (đã gồm phí ship) bắt buộc thanh toán qua VNPay!");
         }
 
         if (bindingResult.hasErrors()) {
@@ -218,7 +241,6 @@ public class OrderController {
             model.addAttribute("totalPrice", totalPrice);
             model.addAttribute("shippingFee", OrderService.SHIPPING_FEE);
             model.addAttribute("grandTotal", grandTotal);
-            model.addAttribute("activeVouchers", voucherService.getActiveVouchers());
             model.addAttribute("view", "shop/checkout-guest");
             return "layouts/shop-layout";
         }
@@ -249,13 +271,26 @@ public class OrderController {
             return "redirect:" + paymentUrl;
         }
 
-        // COD — tạo order bình thường
-        AppOrder order = orderService.placeOrderGuest(form, cartItems);
-        guestCartService.clearCart(session);
+        // COD — tạo order bình thường. Rule ">1 triệu" đã check ở trên bằng
+        // bindingResult, nhưng OrderService.placeOrderGuest cũng tự check lại
+        // (phòng hờ nơi khác gọi thẳng service không qua controller này) —
+        // nên vẫn bọc try/catch để không lộ lỗi 500 nếu rơi vào edge case.
+        try {
+            AppOrder order = orderService.placeOrderGuest(form, cartItems);
+            guestCartService.clearCart(session);
 
-        redirectAttributes.addFlashAttribute("successMessage",
-                "Đặt hàng thành công! Mã đơn hàng: #" + order.getOrderCode());
-        return "redirect:/order/success-guest/" + order.getOrderCode();
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Đặt hàng thành công! Mã đơn hàng: #" + order.getOrderCode());
+            return "redirect:/order/success-guest/" + order.getOrderCode();
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            model.addAttribute("cartItems", cartItems);
+            model.addAttribute("totalPrice", totalPrice);
+            model.addAttribute("shippingFee", OrderService.SHIPPING_FEE);
+            model.addAttribute("grandTotal", grandTotal);
+            model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute("view", "shop/checkout-guest");
+            return "layouts/shop-layout";
+        }
     }
 
     // Trang thành công riêng cho guest — tra theo orderCode (không phải id),
@@ -418,7 +453,14 @@ public class OrderController {
         try {
             AppUser user = getCurrentUser(auth);
             BigDecimal totalPrice = BigDecimal.valueOf(total);
-            Voucher voucher = voucherService.applyVoucher(code, totalPrice, user);
+
+            // MỚI (4.4): không cộng dồn sale + voucher — chặn nếu bất kỳ item
+            // nào trong giỏ đang có sale active.
+            boolean hasSaleItem = cartService.getCartItems(user).stream()
+                    .anyMatch(item -> productSaleService
+                            .getActiveSale(item.getVariant().getProduct())
+                            .isPresent());
+            Voucher voucher = voucherService.applyVoucher(code, totalPrice, user, hasSaleItem);
             BigDecimal finalPrice = voucherService.calcDiscountedPrice(totalPrice, voucher);
             BigDecimal discountAmount = totalPrice.subtract(finalPrice);
 
@@ -504,35 +546,5 @@ public class OrderController {
         String local = parts[0];
         String masked = local.isEmpty() ? "*" : local.charAt(0) + "***";
         return masked + "@" + parts[1];
-    }
-
-
-    // MỚI: apply-voucher cho guest — không có AppUser nên gọi voucherService
-    // với user=null. ⚠️ CẦN XÁC NHẬN: voucherService.applyVoucher(code, total, user)
-    // có chấp nhận user null không (VD nếu voucher có giới hạn "1 lần/khách"
-    // dựa trên user, guest sẽ không check được điều đó bằng field này).
-    @GetMapping("/apply-voucher-guest")
-    @ResponseBody
-    public Map<String, Object> applyVoucherGuest(@RequestParam String code,
-                                                 @RequestParam Long total) {
-        Map<String, Object> result = new HashMap<>();
-        try {
-            BigDecimal totalPrice = BigDecimal.valueOf(total);
-            Voucher voucher = voucherService.applyVoucher(code, totalPrice, null);
-            BigDecimal finalPrice = voucherService.calcDiscountedPrice(totalPrice, voucher);
-            BigDecimal discountAmount = totalPrice.subtract(finalPrice);
-
-            result.put("success", true);
-            result.put("discountPercent", voucher.getDiscountPercent());
-            result.put("maxDiscount", voucher.getMaxDiscount() != null
-                    ? String.format("%,.0f", voucher.getMaxDiscount()) : null);
-            result.put("discountAmount", String.format("%,.0f", discountAmount));
-            result.put("finalPrice", String.format("%,.0f", finalPrice));
-            result.put("finalPriceRaw", finalPrice.doubleValue());
-        } catch (Exception e) {
-            result.put("success", false);
-            result.put("message", e.getMessage());
-        }
-        return result;
     }
 }

@@ -7,41 +7,8 @@
 
     <form th:action="@{/order/checkout-guest}" th:object="${guestCheckoutForm}" method="post" id="checkout-form">
 
-        <!-- Banner mã ưu đãi -->
-        <div class="alert alert-primary bg-primary-subtle border-0 d-flex align-items-center gap-2 mb-2"
-             style="cursor:pointer" data-bs-toggle="collapse" data-bs-target="#voucherPanel" role="button">
-            <i class="bi bi-info-circle-fill"></i>
-            <span>Bạn có mã ưu đãi? Ấn vào đây để nhập mã</span>
-        </div>
-
-        <div class="collapse mb-4" id="voucherPanel">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body p-4">
-                    <div class="input-group mb-3">
-                        <span class="input-group-text bg-white"><i class="bi bi-ticket-perforated"></i></span>
-                        <input type="text" th:field="*{voucherCode}" id="voucherCode"
-                               class="form-control" placeholder="Nhập mã giảm giá..."/>
-                        <button type="button" class="btn btn-dark" onclick="applyVoucher()">Áp dụng</button>
-                    </div>
-                    <div id="voucher-result" class="mb-3"></div>
-
-                    <div th:if="${!#lists.isEmpty(activeVouchers)}">
-                        <h6 class="fw-bold text-uppercase small mb-2">Mã giảm giá dành cho bạn</h6>
-                        <div th:each="v : ${activeVouchers}"
-                             class="d-flex align-items-center justify-content-between border rounded-3 p-3 mb-2 voucher-item"
-                             th:attr="data-code=${v.code}">
-                            <div>
-                                <div class="fw-bold" th:text="${v.code}"></div>
-                                <small class="text-muted"
-                                       th:text="'Giảm ' + ${v.discountPercent} + '%' + (${v.maxDiscount != null} ? ', tối đa ' + ${#numbers.formatInteger(v.maxDiscount, 0, 'COMMA')} + ' đ' : '')"></small>
-                            </div>
-                            <button type="button" class="btn btn-outline-dark btn-sm rounded-pill px-3"
-                                    onclick="selectVoucher(this)">Áp dụng</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- Banner + panel voucher đã bị GỠ — guest không dùng voucher nữa,
+             chỉ mua giá gốc hoặc giá đã sale. -->
 
         <!-- Thông tin liên hệ + địa chỉ giao hàng (Tỉnh/Phường-Xã chọn qua dropdown) -->
         <div class="mb-4">
@@ -143,13 +110,7 @@
                             th:text="${#numbers.formatInteger(shippingFee, 0, 'COMMA') + ' đ'}"></td>
                     </tr>
 
-                    <tr id="discount-row" class="text-success d-none">
-                        <td>
-                            <i class="bi bi-tag-fill me-1"></i>Giảm giá
-                            <span id="discount-label" class="small"></span>
-                        </td>
-                        <td class="text-end fw-semibold" id="discount-amount"></td>
-                    </tr>
+                    <!-- Dòng "Giảm giá" đã bị GỠ — guest không dùng voucher nữa. -->
 
                     <tr class="table-light">
                         <td class="fw-bold fs-5">Tổng</td>
@@ -224,62 +185,8 @@
         setTimeout(() => { btn.disabled = true; }, 0);
     });
 
-    function selectVoucher(btn) {
-        const code = btn.closest('.voucher-item').dataset.code;
-        document.getElementById('voucherCode').value = code;
-        applyVoucher();
-    }
-
-    function applyVoucher() {
-        const code      = document.getElementById('voucherCode').value.trim();
-        const resultDiv = document.getElementById('voucher-result');
-
-        if (!code) {
-            resultDiv.innerHTML = '<span class="text-danger">Vui lòng nhập mã giảm giá!</span>';
-            return;
-        }
-
-        // Endpoint riêng cho guest — không cần Authentication
-        fetch('/order/apply-voucher-guest?code=' + encodeURIComponent(code) + '&total=' + originalTotal)
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    let label = '(' + data.discountPercent + '%';
-                    if (data.maxDiscount) label += ', tối đa ' + data.maxDiscount + ' đ';
-                    label += ')';
-
-                    resultDiv.innerHTML =
-                        '<span class="text-success">' +
-                        '<i class="bi bi-check-circle me-1"></i>' +
-                        'Áp dụng thành công!</span>';
-
-                    document.getElementById('discount-row').classList.remove('d-none');
-                    document.getElementById('discount-label').textContent = label;
-                    document.getElementById('discount-amount').textContent =
-                        '- ' + data.discountAmount + ' đ';
-
-                    document.getElementById('final-price').textContent =
-                        (parseFloat(data.finalPriceRaw) + shippingFee).toLocaleString('vi-VN') + ' đ';
-
-                    updatePaymentMethod(parseFloat(data.finalPriceRaw));
-                } else {
-                    resultDiv.innerHTML =
-                        '<span class="text-danger">' +
-                        '<i class="bi bi-x-circle me-1"></i>' +
-                        data.message + '</span>';
-
-                    document.getElementById('discount-row').classList.add('d-none');
-                    document.getElementById('final-price').textContent =
-                        (originalTotal + shippingFee).toLocaleString('vi-VN') + ' đ';
-
-                    updatePaymentMethod(originalTotal);
-                }
-            })
-            .catch(() => {
-                resultDiv.innerHTML =
-                    '<span class="text-danger">Có lỗi xảy ra, vui lòng thử lại!</span>';
-            });
-    }
+    // selectVoucher() và applyVoucher() đã bị GỠ — guest không dùng voucher
+    // nữa. Endpoint /order/apply-voucher-guest cũng đã bị xoá ở Controller.
 
     function updatePaymentMethod(price) {
         const codOption   = document.getElementById('codOption');
@@ -309,7 +216,10 @@
     });
 
     document.addEventListener('DOMContentLoaded', function () {
-        updatePaymentMethod(originalTotal);
+        // MỚI: dùng originalTotal + shippingFee (giống cách server tính
+        // grandTotal) thay vì chỉ originalTotal — trước đây thiếu ship nên
+        // nút COD có thể không bị disable dù server sẽ từ chối đơn đó.
+        updatePaymentMethod(originalTotal + shippingFee);
         togglePaymentDesc();
     });
 </script>

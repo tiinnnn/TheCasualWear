@@ -43,6 +43,11 @@ public class OrderService {
     private final StockMovementLogService   stockMovementLogService;
     private final AppUserRepository         appUserRepository;
     private final ProductSaleService        productSaleService;
+    // MỚI (4.3): gửi email xác nhận đơn sau khi admin confirm — dùng cùng
+    // OrderEmailService.sendOrderConfirmationAsync() mà getOrderForEmail()
+    // ở trên đã chuẩn bị sẵn dữ liệu (fetch join, tránh LazyInitException
+    // vì email chạy trên thread khác qua @Async).
+    private final OrderEmailService         orderEmailService;
     // MỚI (4.1): checkout khách vãng lai — tạo Address mới (không chọn từ danh
     // sách có sẵn) và tra variant trực tiếp từ GuestCartItem.variantId.
     // ⚠️ GIẢ ĐỊNH: AddressRepository là interface Spring Data JPA chuẩn
@@ -169,7 +174,13 @@ public class OrderService {
         Voucher voucher = null;
         BigDecimal discountAmount = BigDecimal.ZERO;
         if (voucherCode != null && !voucherCode.isBlank()) {
-            voucher              = voucherService.applyVoucher(voucherCode, totalPrice, user);
+            // MỚI (4.4): không cộng dồn sale + voucher — chặn nếu bất kỳ item
+            // nào trong giỏ đang có sale active.
+            boolean hasSaleItem = cartItems.stream()
+                    .anyMatch(item -> productSaleService
+                            .getActiveSale(item.getVariant().getProduct())
+                            .isPresent());
+            voucher              = voucherService.applyVoucher(voucherCode, totalPrice, user, hasSaleItem);
             BigDecimal discounted = voucherService.calcDiscountedPrice(totalPrice, voucher);
             discountAmount       = totalPrice.subtract(discounted);
             totalPrice           = discounted;
@@ -177,6 +188,18 @@ public class OrderService {
 
         // Cộng phí ship sau khi đã áp voucher — đây là số tiền cuối cùng khách phải trả
         BigDecimal grandTotal = totalPrice.add(SHIPPING_FEE);
+
+        // MỚI: bắt buộc VNPay nếu tổng đơn thực trả (đã gồm voucher + ship)
+        // vượt 1 triệu. ⚠️ THAY THẾ pre-check cũ ở OrderController (dòng
+        // ~123-130 trước sửa) — check đó dùng totalPrice thô, CHƯA trừ
+        // voucher, CHƯA cộng ship nên bị lọt qua các đơn kiểu "hàng đúng 1tr
+        // + 30k ship vẫn COD được". Đây là nơi duy nhất biết đúng grandTotal
+        // cuối cùng, nên chuyển check vào đây.
+        if ("COD".equals(paymentMethod)
+                && grandTotal.compareTo(BigDecimal.valueOf(1_000_000)) > 0) {
+            throw new IllegalStateException(
+                    "Đơn hàng trên 1.000.000 đ (đã gồm phí ship) bắt buộc thanh toán qua VNPay!");
+        }
 
         AppOrder order = new AppOrder();
         // MỚI (6.6): order_code giờ NOT NULL — bắt buộc set ở mọi nơi tạo AppOrder,
@@ -313,19 +336,19 @@ public class OrderService {
                 .map(GuestCartItem::getLineTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        Voucher voucher = null;
-        BigDecimal discountAmount = BigDecimal.ZERO;
-        if (form.getVoucherCode() != null && !form.getVoucherCode().isBlank()) {
-            // Guest không có AppUser -> truyền null. ⚠️ Nếu voucherService.applyVoucher
-            // có logic giới hạn "1 lần/khách" dựa vào user, guest sẽ không bị chặn bởi
-            // điều kiện đó (chưa có cách định danh guest để áp dụng giới hạn này).
-            voucher = voucherService.applyVoucher(form.getVoucherCode(), totalPrice, null);
-            BigDecimal discounted = voucherService.calcDiscountedPrice(totalPrice, voucher);
-            discountAmount = totalPrice.subtract(discounted);
-            totalPrice = discounted;
-        }
-
+        // MỚI: guest KHÔNG được dùng voucher nữa — chỉ mua giá gốc hoặc giá
+        // đã sale (snapshot sẵn trong GuestCartItem.getLineTotal()). Bỏ hẳn
+        // voucher/discountAmount khỏi luồng này, kể cả khi form còn field
+        // voucherCode (nếu FE chưa gỡ input đó, giá trị gửi lên sẽ bị lờ đi).
         BigDecimal grandTotal = totalPrice.add(SHIPPING_FEE);
+
+        // Rule ">1 triệu bắt buộc VNPay" vẫn giữ nguyên, tính trên grandTotal
+        // (giờ đơn giản hơn vì không còn phải trừ voucher trước).
+        if ("COD".equals(form.getPaymentMethod())
+                && grandTotal.compareTo(BigDecimal.valueOf(1_000_000)) > 0) {
+            throw new IllegalStateException(
+                    "Đơn hàng trên 1.000.000 đ (đã gồm phí ship) bắt buộc thanh toán qua VNPay!");
+        }
 
         AppOrder order = new AppOrder();
         order.setOrderCode(generateUniqueOrderCode());
@@ -362,14 +385,7 @@ public class OrderService {
             // Giống placeOrder(): KHÔNG trừ kho ở đây, chỉ trừ khi admin confirmOrder().
         }
 
-        if (voucher != null) {
-            OrderVoucher orderVoucher = new OrderVoucher();
-            orderVoucher.setOrder(order);
-            orderVoucher.setVoucher(voucher);
-            orderVoucher.setCustomer(null); // guest
-            orderVoucher.setDiscountAmount(discountAmount);
-            orderVoucherRepository.save(orderVoucher);
-        }
+        // Không còn lưu OrderVoucher cho guest — guest không dùng voucher nữa.
 
         notificationService.createNotificationForAdmins(
                 "Đơn hàng mới #" + order.getOrderCode() + " từ khách vãng lai ("
@@ -449,11 +465,21 @@ public class OrderService {
         order.setStatus(OrderStatus.CONFIRMED);
         orderRepository.save(order);
 
-        notificationService.createNotification(
-                order.getCustomer(),
-                "Đơn hàng #" + orderId + " đã được xác nhận! Chúng tôi đang chuẩn bị hàng.",
-                "/order/detail/" + orderId
-        );
+        // Notification trong app chỉ áp dụng cho user đã login — guest
+        // không có tài khoản để nhận, nên guard null ở đây.
+        if (order.getCustomer() != null) {
+            notificationService.createNotification(
+                    order.getCustomer(),
+                    "Đơn hàng #" + orderId + " đã được xác nhận! Chúng tôi đang chuẩn bị hàng.",
+                    "/order/detail/" + orderId
+            );
+        }
+
+        // MỚI (4.3): gửi email xác nhận đơn — bắt buộc dùng getOrderForEmail()
+        // (fetch join sẵn) chứ không phải "order" ở trên, vì
+        // sendOrderConfirmationAsync() chạy trên thread khác (@Async) —
+        // field LAZY chưa load sẽ ăn LazyInitializationException.
+        orderEmailService.sendOrderConfirmationAsync(getOrderForEmail(orderId));
     }
 
     /**

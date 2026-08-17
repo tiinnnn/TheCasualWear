@@ -33,8 +33,14 @@ public class VoucherService {
 
     //PHÍA CUSTOMER
 
-    // Kiểm tra và lấy voucher theo code
-    public Voucher applyVoucher(String code, BigDecimal totalPrice, AppUser user) {
+    // Kiểm tra và lấy voucher theo code.
+    // MỚI: nhận thêm hasSaleItem (tính sẵn ở phía gọi — OrderService) để
+    // chặn áp voucher nếu giỏ hàng có sản phẩm đang sale — rule "không cộng
+    // dồn sale + voucher" (4.4). Dùng boolean thay vì List<CartItem> vì
+    // luồng guest checkout dùng GuestCartItem (kiểu khác hẳn CartItem) —
+    // để VoucherService không phải biết về 2 kiểu cart item khác nhau.
+    public Voucher applyVoucher(String code, BigDecimal totalPrice, AppUser user,
+                                boolean hasSaleItem) {
         Voucher voucher = voucherRepository.findByCode(code)
                 .orElseThrow(() -> new IllegalArgumentException("Mã giảm giá không tồn tại!"));
 
@@ -64,9 +70,19 @@ public class VoucherService {
             throw new IllegalStateException("Mã giảm giá đã hết lượt sử dụng!");
         }
 
-        // Kiểm tra user đã dùng voucher này chưa
-        if (orderVoucherRepository.existsByCustomerIdAndVoucherId(user.getId(), voucher.getId())) {
+        // Kiểm tra user đã dùng voucher này chưa — chỉ áp dụng khi có
+        // AppUser (guest checkout truyền user = null, không có cách định
+        // danh guest để áp giới hạn 1 lần/khách, nên bỏ qua check này).
+        if (user != null
+                && orderVoucherRepository.existsByCustomerIdAndVoucherId(user.getId(), voucher.getId())) {
             throw new IllegalStateException("Bạn đã sử dụng mã giảm giá này rồi!");
+        }
+
+        // MỚI: không cộng dồn với sale — nếu giỏ hàng có bất kỳ sản phẩm
+        // nào đang sale active thì chặn hẳn, không cho áp voucher.
+        if (hasSaleItem) {
+            throw new IllegalStateException(
+                    "Đơn hàng có sản phẩm đang giảm giá, không thể áp dụng thêm mã giảm giá!");
         }
 
         return voucher;

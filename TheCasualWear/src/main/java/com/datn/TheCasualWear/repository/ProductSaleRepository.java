@@ -68,4 +68,21 @@ public interface ProductSaleRepository extends JpaRepository<ProductSale, Intege
           AND s.endDate < :now
         """)
     List<ProductSale> findExpiredButStillActive(@Param("now") LocalDateTime now);
+
+    // ── SALE THEO ĐỢT (sale_batch) ──────────────────────────────────────
+
+    // Toàn bộ product_sale thuộc 1 đợt — dùng để huỷ sớm cả đợt
+    // (SaleBatchService.deactivateBatch)
+    List<ProductSale> findBySaleBatchId(Integer saleBatchId);
+
+    // Đếm số sản phẩm trong 1 đợt — dùng cho trang danh sách đợt sale,
+    // tránh load cả entity chỉ để đếm.
+    long countBySaleBatchId(Integer saleBatchId);
+
+    // Batch còn dòng product_sale nào đang active không — dùng để phân biệt
+    // "Đã huỷ sớm" (deactivateBatch() đã set is_active=false hết) với
+    // "Đang chạy" (endDate batch vẫn còn ở tương lai nhưng chưa bị huỷ tay).
+    // Cần thiết vì sale_batch KHÔNG có cột trạng thái riêng — trạng thái
+    // thật nằm ở is_active của từng dòng product_sale con.
+    boolean existsBySaleBatchIdAndIsActiveTrue(Integer saleBatchId);
 }

@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component
 public class OrderLookupRateLimiter {
 
-    private static final int MAX_ATTEMPTS = 5;
+    private static final int MAX_ATTEMPTS = 10;
     private static final long BLOCK_DURATION_MS = 5 * 60 * 1000; // 5 phút
 
     private final ConcurrentHashMap<String, Attempt> attempts = new ConcurrentHashMap<>();

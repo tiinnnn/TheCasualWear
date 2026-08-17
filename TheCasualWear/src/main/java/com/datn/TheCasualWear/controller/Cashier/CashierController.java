@@ -294,9 +294,12 @@ public class CashierController {
     @GetMapping("/validate-voucher")
     @ResponseBody
     public CashierService.VoucherPreviewDTO validateVoucher(
+            @RequestParam String cartId,
             @RequestParam String code,
             @RequestParam BigDecimal orderTotal,
             @RequestParam(required = false) Integer customerId) {
+        // Xác nhận cartId còn tồn tại (chưa timeout/đóng) trước khi validate voucher.
+        cashierService.getCartOrThrow(cartId);
         return cashierService.validateVoucher(code, orderTotal, customerId);
     }
 

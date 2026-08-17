@@ -405,6 +405,11 @@ public class CashierService {
         AppUser cashier = getCurrentUser();
 
         AppOrder order = new AppOrder();
+        // MỚI: order_code là NOT NULL ở DB nhưng trước đây không được set
+        // khi tạo đơn POS -> lỗi "Cannot insert the value NULL into column
+        // 'order_code'". Sinh mã giống cách OrderService.generateUniqueOrderCode()
+        // đang làm cho luồng online/guest.
+        order.setOrderCode(generateUniqueOrderCode());
         order.setOrderType(OrderType.COUNTER);
         order.setCashier(cashier);
         order.setStatus(OrderStatus.COMPLETED);
@@ -610,5 +615,20 @@ public class CashierService {
         order.setCancelledBy(actor);
         order.setCancelledAt(LocalDateTime.now());
         orderRepository.save(order);
+    }
+
+    // Sinh order_code duy nhất (8 ký tự hex viết hoa) — cùng logic với
+    // OrderService.generateUniqueOrderCode() (luồng online/guest), tách
+    // riêng ở đây vì method đó là private bên OrderService, không gọi
+    // chéo được từ CashierService.
+    private String generateUniqueOrderCode() {
+        String code;
+        do {
+            code = java.util.UUID.randomUUID().toString()
+                    .replace("-", "")
+                    .substring(0, 8)
+                    .toUpperCase();
+        } while (orderRepository.existsByOrderCode(code));
+        return code;
     }
 }

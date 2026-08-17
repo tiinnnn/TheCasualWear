@@ -313,9 +313,13 @@
                      còn đúng nữa sau khi thêm GuestCartService/cart-guest.html. -->
                 <a th:href="@{/cart-guest}" sec:authorize="!isAuthenticated()"><i class="bi bi-cart3 fs-5"></i></a>
 
-                <!-- MỚI (4.2): tra cứu đơn hàng cho khách vãng lai — không có
-                     dropdown "Đơn hàng" như user đã login nên cần 1 icon riêng. -->
-                <a th:href="@{/order/lookup-guest}" sec:authorize="!isAuthenticated()" title="Tra cứu đơn hàng">
+                <!-- MỚI (4.2): tra cứu đơn hàng cho khách vãng lai — bỏ
+                     sec:authorize="!isAuthenticated()" theo yêu cầu: link
+                     này giờ LUÔN hiện, kể cả khi đã đăng nhập (trước đây
+                     ẩn đi vì nghĩ user đã login dùng dropdown "Đơn hàng"
+                     thay thế, nhưng giữ cố định ở đây tiện hơn cho khách
+                     không muốn mở dropdown tài khoản). -->
+                <a th:href="@{/order/lookup-guest}" title="Tra cứu đơn hàng">
                     <i class="bi bi-receipt fs-5"></i>
                 </a>
 
