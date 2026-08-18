@@ -5,7 +5,7 @@
 <div class="container py-4" style="max-width:900px;">
     <h3 class="mb-4 fw-bold">Thanh toán</h3>
 
-    <form th:action="@{/order/checkout}" method="post" id="checkout-form">
+    <form th:action="@{/order/checkout}" th:object="${checkoutForm}" method="post" id="checkout-form">
 
         <!-- Banner mã ưu đãi -->
         <div class="alert alert-primary bg-primary-subtle border-0 d-flex align-items-center gap-2 mb-2"
@@ -19,7 +19,7 @@
                 <div class="card-body p-4">
                     <div class="input-group mb-3">
                         <span class="input-group-text bg-white"><i class="bi bi-ticket-perforated"></i></span>
-                        <input type="text" name="voucherCode" id="voucherCode"
+                        <input type="text" th:field="*{voucherCode}" id="voucherCode"
                                class="form-control" placeholder="Nhập mã giảm giá..."/>
                         <button type="button" class="btn btn-dark" onclick="applyVoucher()">Áp dụng</button>
                     </div>
@@ -47,29 +47,77 @@
         <div class="mb-4">
             <h5 class="fw-bold mb-3">Địa chỉ giao hàng</h5>
 
-            <div th:if="${#lists.isEmpty(addresses)}" class="alert alert-warning d-flex align-items-center gap-2">
-                <i class="bi bi-exclamation-triangle"></i>
-                <span>Bạn chưa có địa chỉ! <a th:href="@{/account/address/add}" class="fw-semibold">Thêm địa chỉ ngay</a></span>
+            <!-- Chọn nhanh từ sổ địa chỉ đã lưu (nếu có). Chọn 1 địa chỉ sẽ
+                 tự điền vào các ô bên dưới và đánh dấu "dùng nguyên địa chỉ
+                 này"; gõ vào bất kỳ ô nào cũng coi như đang nhập địa chỉ
+                 khác — xem checkoutAddress.js phía dưới +
+                 OrderController.resolveShippingAddress(). -->
+            <div th:if="${!#lists.isEmpty(addresses)}" class="mb-3">
+                <div th:each="addr : ${addresses}" class="form-check border rounded-3 p-3 mb-2">
+                    <input class="form-check-input address-radio" type="radio" name="pickAddress"
+                           th:id="${'addr-' + addr.id}"
+                           th:checked="${addr.isDefault}"
+                           th:attr="data-id=${addr.id},
+                                    data-fullname=${addr.fullName},
+                                    data-phone=${addr.phone},
+                                    data-street=${addr.street},
+                                    data-city=${addr.city},
+                                    data-district=${addr.district}"/>
+                    <label class="form-check-label" th:for="${'addr-' + addr.id}">
+                        <strong th:text="${addr.fullName}"></strong> —
+                        <span th:text="${addr.phone}"></span>
+                        <span th:if="${addr.isDefault}" class="badge rounded-pill bg-dark ms-1">Mặc định</span><br/>
+                        <small class="text-muted" th:text="${addr.street + ', ' + addr.district + ', ' + addr.city}"></small>
+                    </label>
+                </div>
             </div>
 
-            <div th:each="addr : ${addresses}"
-                 class="form-check border rounded-3 p-3 mb-2">
-                <input class="form-check-input address-radio" type="radio"
-                       name="shippingAddressId" th:value="${addr.id}"
-                       th:checked="${addr.isDefault}"
-                       th:attr="data-fullname=${addr.fullName},
-                                data-phone=${addr.phone},
-                                data-address=${addr.street + ', ' + addr.district + ', ' + addr.city}"/>
-                <label class="form-check-label">
-                    <strong th:text="${addr.fullName}"></strong> —
-                    <span th:text="${addr.phone}"></span>
-                    <span th:if="${addr.isDefault}" class="badge rounded-pill bg-dark ms-1">Mặc định</span><br/>
-                    <small class="text-muted" th:text="${addr.street + ', ' + addr.district + ', ' + addr.city}"></small>
+            <!-- Field nhập/sửa địa chỉ — luôn hiện, prefill từ địa chỉ mặc
+                 định (nếu có). Khách sửa ô nào cũng được, submit sẽ ưu tiên
+                 đúng những gì đang hiển thị ở đây. -->
+            <input type="hidden" th:field="*{useExistingAddressId}" id="useExistingAddressId"/>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Họ tên</label>
+                    <input type="text" th:field="*{fullName}" class="form-control"/>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Số điện thoại</label>
+                    <input type="text" th:field="*{phone}" class="form-control"/>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Thành phố/Tỉnh</label>
+                    <select th:field="*{city}" th:attr="data-current=*{city}"
+                            id="citySelect" class="form-select">
+                        <option value="">-- Chọn Tỉnh/Thành phố --</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Phường/Xã</label>
+                    <select th:field="*{district}" th:attr="data-current=*{district}"
+                            id="districtSelect" class="form-select" disabled>
+                        <option value="">-- Chọn Tỉnh/Thành phố trước --</option>
+                    </select>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">Địa chỉ cụ thể</label>
+                    <input type="text" th:field="*{street}" class="form-control" placeholder="Số nhà, tên đường..."/>
+                </div>
+            </div>
+
+            <!-- Chỉ hiện khi đang nhập/sửa địa chỉ mới (useExistingAddressId
+                 rỗng) — chọn nguyên 1 địa chỉ đã lưu thì khỏi cần vì nó đã
+                 có sẵn trong sổ rồi. Khách chưa có địa chỉ nào thì tick sẵn
+                 (xem OrderController.checkoutPage). -->
+            <div class="form-check mt-2" id="saveAsDefaultRow">
+                <input class="form-check-input" type="checkbox" th:field="*{saveAsDefault}" id="saveAsDefault"/>
+                <label class="form-check-label" for="saveAsDefault">
+                    Đặt làm địa chỉ mặc định cho lần sau
                 </label>
             </div>
 
-            <a th:href="@{/account/address/add}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 mt-1">
-                <i class="bi bi-plus-lg me-1"></i>Thêm địa chỉ mới
+            <a th:href="@{/account/address}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 mt-2">
+                <i class="bi bi-geo-alt me-1"></i>Quản lý sổ địa chỉ
             </a>
         </div>
 
@@ -159,7 +207,7 @@
             <div class="border rounded-3 overflow-hidden">
                 <label class="d-block p-3 border-bottom" style="cursor:pointer">
                     <input class="form-check-input me-2" type="radio"
-                           name="paymentMethod" value="COD" id="codOption" checked/>
+                           th:field="*{paymentMethod}" value="COD" id="codOption"/>
                     Thanh toán khi nhận hàng
                     <div class="mt-2 ps-4 text-muted small payment-desc" data-for="codOption">
                         Trả tiền mặt khi giao hàng.
@@ -167,7 +215,7 @@
                 </label>
                 <label class="d-block p-3" style="cursor:pointer">
                     <input class="form-check-input me-2" type="radio"
-                           name="paymentMethod" value="VNPAY" id="vnpayOption"/>
+                           th:field="*{paymentMethod}" value="VNPAY" id="vnpayOption"/>
                     Chuyển khoản ngân hàng / VNPay
                     <div class="mt-2 ps-4 text-muted small payment-desc d-none" data-for="vnpayOption">
                         Bạn sẽ được chuyển đến cổng thanh toán VNPay để hoàn tất đơn hàng.
@@ -187,7 +235,6 @@
 
         <div class="text-end">
             <button type="button" class="btn btn-dark rounded-pill px-5 py-2" id="btn-open-confirm"
-                    th:disabled="${#lists.isEmpty(addresses)}"
                     onclick="openConfirmModal()">
                 <i class="bi bi-bag-check me-2"></i>Đặt hàng
             </button>
@@ -239,21 +286,86 @@
     </div>
 </div>
 
+<script th:src="@{/js/address-cascade.js}"></script>
 <script th:inline="javascript">
     const originalTotal = /*[[${totalPrice}]]*/ 0;
     const shippingFee   = /*[[${shippingFee}]]*/ 0;
     const LIMIT = 1000000;
 
+    // ══════════════════════════════════════════════════════════════════
+    // MỚI: chọn nhanh địa chỉ đã lưu (tự điền field) + phát hiện khách
+    // sửa/nhập địa chỉ khác — xem CustomerCheckoutFormDTO +
+    // OrderController.resolveShippingAddress() ở phía server.
+    // ══════════════════════════════════════════════════════════════════
+    document.addEventListener('DOMContentLoaded', function () {
+        initAddressCascade('citySelect', 'districtSelect');
+        toggleSaveAsDefaultRow();
+    });
+
+    const useExistingInput = document.getElementById('useExistingAddressId');
+    const saveAsDefaultRow = document.getElementById('saveAsDefaultRow');
+    const addressFieldIds  = ['fullName', 'phone', 'street', 'citySelect', 'districtSelect'];
+
+    function toggleSaveAsDefaultRow() {
+        // Chỉ cho tick "đặt làm mặc định" khi đang nhập/sửa địa chỉ mới —
+        // chọn nguyên 1 địa chỉ đã lưu (không sửa gì) thì khỏi cần, vì nó
+        // vốn đã nằm sẵn trong sổ địa chỉ rồi.
+        saveAsDefaultRow.classList.toggle('d-none', !!useExistingInput.value);
+    }
+
+    // Chọn 1 địa chỉ có sẵn → tự điền field + đánh dấu "dùng nguyên địa chỉ này"
+    document.querySelectorAll('.address-radio').forEach(function (radio) {
+        radio.addEventListener('change', function () {
+            document.getElementById('fullName').value = radio.dataset.fullname;
+            document.getElementById('phone').value = radio.dataset.phone;
+            document.getElementById('street').value = radio.dataset.street;
+
+            const citySelect = document.getElementById('citySelect');
+            citySelect.dataset.current = radio.dataset.city;
+            citySelect.value = radio.dataset.city;
+            // Kích hoạt cascade tải lại danh sách phường/xã đúng tỉnh vừa chọn
+            citySelect.dispatchEvent(new Event('change'));
+            document.getElementById('districtSelect').dataset.current = radio.dataset.district;
+
+            // Đặt SAU dispatchEvent ở trên — 'change' của citySelect cũng
+            // kích hoạt clearUseExisting() bên dưới, cần ghi đè lại giá trị
+            // đúng sau cùng.
+            useExistingInput.value = radio.dataset.id;
+            toggleSaveAsDefaultRow();
+        });
+    });
+
+    // Khách gõ/sửa bất kỳ field địa chỉ nào → không còn "dùng nguyên địa chỉ
+    // đã chọn" nữa, chuyển sang chế độ nhập/sửa mới.
+    addressFieldIds.forEach(function (id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('input', clearUseExisting);
+        el.addEventListener('change', clearUseExisting);
+    });
+
+    function clearUseExisting() {
+        if (useExistingInput.value) {
+            useExistingInput.value = '';
+            toggleSaveAsDefaultRow();
+        }
+    }
+
     function openConfirmModal() {
-        const addressRadio = document.querySelector('.address-radio:checked');
-        if (!addressRadio) {
-            alert('Vui lòng chọn địa chỉ giao hàng!');
+        const fullName = document.getElementById('fullName').value.trim();
+        const phone    = document.getElementById('phone').value.trim();
+        const street   = document.getElementById('street').value.trim();
+        const city     = document.getElementById('citySelect').value;
+        const district = document.getElementById('districtSelect').value;
+
+        if (!fullName || !phone || !street || !city) {
+            alert('Vui lòng nhập đầy đủ thông tin địa chỉ giao hàng!');
             return;
         }
 
-        document.getElementById('confirm-name').textContent = addressRadio.dataset.fullname;
-        document.getElementById('confirm-phone').textContent = addressRadio.dataset.phone;
-        document.getElementById('confirm-address').textContent = addressRadio.dataset.address;
+        document.getElementById('confirm-name').textContent = fullName;
+        document.getElementById('confirm-phone').textContent = phone;
+        document.getElementById('confirm-address').textContent = street + ', ' + district + ', ' + city;
 
         const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked');
         document.getElementById('confirm-payment').textContent =

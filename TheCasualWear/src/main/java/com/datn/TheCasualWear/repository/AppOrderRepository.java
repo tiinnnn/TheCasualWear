@@ -167,6 +167,15 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
     boolean existsByOrderCode(String orderCode);
     Optional<AppOrder> findByOrderCode(String orderCode);
 
+    // MỚI: kiểm tra Address (theo id) có đang được đơn hàng nào tham chiếu
+    // (shippingAddress hoặc billingAddress) không — dùng để chặn xóa/sửa
+    // đè địa chỉ ở AddressService.deleteAddress()/updateAddress(), tránh vi
+    // phạm FK constraint ở DB gây lỗi 500 khi khách tự xóa/sửa 1 địa chỉ đã
+    // lưu nhưng từng dùng để đặt hàng trước đó.
+    @Query("SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END FROM AppOrder o " +
+            "WHERE o.shippingAddress.id = :addressId OR o.billingAddress.id = :addressId")
+    boolean existsByAddressId(@Param("addressId") Integer addressId);
+
     @Query("SELECT o FROM AppOrder o LEFT JOIN o.shippingAddress a " +
             "WHERE o.orderCode = :orderCode AND (a.phone = :contact OR o.guestEmail = :contact)")
     Optional<AppOrder> findByOrderCodeAndContact(@Param("orderCode") String orderCode,

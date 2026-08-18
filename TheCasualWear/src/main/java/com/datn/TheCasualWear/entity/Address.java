@@ -41,4 +41,7 @@ public class Address {
 
     @Column(name = "is_default")
     private Boolean isDefault = false;
+
+    @Column(name = "active", nullable = false)
+    private Boolean active = true;
 }

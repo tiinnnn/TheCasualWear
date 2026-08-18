@@ -1,6 +1,7 @@
 package com.datn.TheCasualWear.controller;
 
 import com.datn.TheCasualWear.config.VNPayConfig;
+import com.datn.TheCasualWear.dto.CustomerCheckoutFormDTO;
 import com.datn.TheCasualWear.dto.GuestCartItem;
 import com.datn.TheCasualWear.dto.GuestCheckoutFormDTO;
 import com.datn.TheCasualWear.dto.GuestOrderLookupDTO;
@@ -97,28 +98,73 @@ public class OrderController {
                         || totalPriceBD.compareTo(v.getMinOrderValue()) >= 0)
                 .toList();
 
+        // MỚI: form checkout nhận field địa chỉ trực tiếp (giống guest) thay
+        // vì chỉ nhận shippingAddressId — prefill sẵn từ địa chỉ mặc định
+        // (nếu có) để khách không phải gõ lại từ đầu, chỉ sửa khi cần.
+        List<Address> savedAddresses = addressService.getAddressesByUser(user);
+        Address defaultAddress = addressService.getDefaultAddress(user);
+
+        CustomerCheckoutFormDTO checkoutForm = new CustomerCheckoutFormDTO();
+        checkoutForm.setPaymentMethod("COD");
+        // Chưa có địa chỉ nào thì tick sẵn "đặt làm mặc định" — xem
+        // CustomerCheckoutFormDTO + AddressService.createAddressForOrder().
+        checkoutForm.setSaveAsDefault(savedAddresses.isEmpty());
+        if (defaultAddress != null) {
+            checkoutForm.setUseExistingAddressId(defaultAddress.getId());
+            checkoutForm.setFullName(defaultAddress.getFullName());
+            checkoutForm.setPhone(defaultAddress.getPhone());
+            checkoutForm.setStreet(defaultAddress.getStreet());
+            checkoutForm.setCity(defaultAddress.getCity());
+            checkoutForm.setDistrict(defaultAddress.getDistrict());
+        }
+
         model.addAttribute("cartItems", cartItems);
         model.addAttribute("itemPrices", itemPrices);
         model.addAttribute("activeSales", activeSales);
         model.addAttribute("totalPrice", totalPrice);
         model.addAttribute("shippingFee", OrderService.SHIPPING_FEE);
         model.addAttribute("grandTotal", grandTotal);
-        model.addAttribute("addresses", addressService.getAddressesByUser(user));
-        model.addAttribute("defaultAddress", addressService.getDefaultAddress(user));
+        model.addAttribute("addresses", savedAddresses);
+        model.addAttribute("defaultAddress", defaultAddress);
+        model.addAttribute("checkoutForm", checkoutForm);
         model.addAttribute("activeVouchers", eligibleVouchers);
         model.addAttribute("view", "shop/checkout");
         return "layouts/shop-layout";
     }
 
+    // MỚI: xác định Address dùng để giao hàng từ CustomerCheckoutFormDTO —
+    // xem javadoc ở CustomerCheckoutFormDTO để biết quy tắc
+    // useExistingAddressId vs nhập/sửa mới + saveAsDefault.
+    private Address resolveShippingAddress(CustomerCheckoutFormDTO form, AppUser user) {
+        if (form.getUseExistingAddressId() != null) {
+            return addressService.getAddressById(form.getUseExistingAddressId(), user);
+        }
+
+        if (form.getFullName() == null || form.getFullName().isBlank()
+                || form.getPhone() == null || form.getPhone().isBlank()
+                || form.getStreet() == null || form.getStreet().isBlank()
+                || form.getCity() == null || form.getCity().isBlank()) {
+            throw new IllegalArgumentException("Vui lòng nhập đầy đủ thông tin địa chỉ giao hàng!");
+        }
+
+        Address input = new Address();
+        input.setFullName(form.getFullName());
+        input.setPhone(form.getPhone());
+        input.setStreet(form.getStreet());
+        input.setCity(form.getCity());
+        input.setDistrict(form.getDistrict());
+
+        return addressService.createAddressForOrder(user, input, Boolean.TRUE.equals(form.getSaveAsDefault()));
+    }
+
     @PostMapping("/checkout")
-    public String placeOrder(@RequestParam Integer shippingAddressId,
-                             @RequestParam(required = false) Integer billingAddressId,
-                             @RequestParam(required = false) String voucherCode,
-                             @RequestParam String paymentMethod,
+    public String placeOrder(@ModelAttribute("checkoutForm") CustomerCheckoutFormDTO form,
                              Authentication auth,
                              HttpServletRequest request,
                              RedirectAttributes redirectAttributes) {
         AppUser user = getCurrentUser(auth);
+        String voucherCode = form.getVoucherCode();
+        String paymentMethod = form.getPaymentMethod();
 
         // MỚI: tính finalPrice đã trừ voucher (nếu có) TRƯỚC khi tính
         // grandTotal — dùng chung cho cả check ngưỡng COD lẫn số tiền gửi
@@ -126,6 +172,10 @@ public class OrderController {
         // voucher, chưa cộng ship đúng lúc) nên: (1) đơn "hàng đúng 1tr +
         // 30k ship" vẫn lọt COD, và (2) khách có voucher chọn VNPay bị tính
         // tiền cao hơn số thực sẽ lưu vào order.totalPrice.
+        //
+        // MỚI: validate voucher TRƯỚC khi resolveShippingAddress() — nếu
+        // voucher lỗi thì dừng ở đây, tránh lỡ tạo Address mới (trường hợp
+        // khách nhập/sửa địa chỉ) rồi không dùng vào đơn nào cả.
         BigDecimal totalPriceBD = BigDecimal.valueOf(cartService.getTotalPrice(user));
         BigDecimal finalPrice = totalPriceBD;
         if (voucherCode != null && !voucherCode.isBlank()) {
@@ -143,12 +193,25 @@ public class OrderController {
         }
         long grandTotal = finalPrice.add(OrderService.SHIPPING_FEE).longValue();
 
+        Address shippingAddress;
+        try {
+            shippingAddress = resolveShippingAddress(form, user);
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/order/checkout";
+        }
+        // Không tách billing address riêng nữa — đồng bộ với checkout-guest
+        // (billingAddress = shippingAddress), giảm phức tạp không cần thiết
+        // cho phần đã đủ việc phải làm trước deadline.
+        Address billingAddress = shippingAddress;
+
         if ("VNPAY".equals(paymentMethod)) {
-            // Lưu vào session để dùng sau khi VNPay callback
+            // Lưu vào session để dùng sau khi VNPay callback — shippingAddress
+            // ở đây đã được resolve/tạo xong ở trên (có id thật), kể cả
+            // trường hợp là địa chỉ "dùng 1 lần" (user = null).
             HttpSession session = request.getSession();
-            session.setAttribute("pendingShippingAddressId", shippingAddressId);
-            session.setAttribute("pendingBillingAddressId",
-                    billingAddressId != null ? billingAddressId : shippingAddressId);
+            session.setAttribute("pendingShippingAddressId", shippingAddress.getId());
+            session.setAttribute("pendingBillingAddressId", shippingAddress.getId());
             session.setAttribute("pendingVoucherCode", voucherCode);
 
             // Số tiền thanh toán qua VNPay phải gồm cả phí ship (và giờ đã
@@ -164,12 +227,8 @@ public class OrderController {
         // COD — tạo order bình thường. Rule ">1 triệu bắt buộc VNPay" giờ
         // nằm trong OrderService.placeOrder() (check bằng grandTotal thật,
         // sau voucher + ship) — bắt exception ở đây để hiển thị lỗi cho khách
-        // thay vì để lộ lỗi 500.
-        Address shippingAddress = addressService.getAddressById(shippingAddressId, user);
-        Address billingAddress  = billingAddressId != null
-                ? addressService.getAddressById(billingAddressId, user)
-                : shippingAddress;
-
+        // thay vì để lộ lỗi 500. shippingAddress/billingAddress đã resolve
+        // xong ở trên.
         try {
             AppOrder order = orderService.placeOrder(user, shippingAddress,
                     billingAddress, voucherCode, "COD");
@@ -374,8 +433,12 @@ public class OrderController {
                 return "redirect:/cart";
             }
 
-            Address shippingAddress = addressService.getAddressById(shippingAddressId, user);
-            Address billingAddress  = addressService.getAddressById(billingAddressId, user);
+            // MỚI: dùng getAddressByIdForOrder() thay vì getAddressById(id, user)
+            // — address ở đây đã được xác thực quyền sở hữu (nếu có) lúc resolve
+            // ở POST /checkout, và có thể là loại "dùng 1 lần" (user = null) nên
+            // getAddressById() thường sẽ NullPointerException khi check ownership.
+            Address shippingAddress = addressService.getAddressByIdForOrder(shippingAddressId);
+            Address billingAddress  = addressService.getAddressByIdForOrder(billingAddressId);
 
             AppOrder order = orderService.placeOrder(user, shippingAddress,
                     billingAddress, voucherCode, "VNPAY");
