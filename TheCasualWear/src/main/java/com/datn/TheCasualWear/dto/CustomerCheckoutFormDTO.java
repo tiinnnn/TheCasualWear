@@ -59,6 +59,14 @@ public class CustomerCheckoutFormDTO implements Serializable {
 
     private String district;
 
+
+    // useExistingAddressId == null (đang nhập/sửa địa chỉ mới). Khi dùng
+    // nguyên địa chỉ đã lưu, phí ship lấy theo mã GHN đã lưu sẵn trên
+    // Address đó (nếu có), không cần các field này.
+    private Integer ghnProvinceId;
+    private Integer ghnDistrictId;
+    private String ghnWardCode;
+
     private String voucherCode;
 
     @NotBlank(message = "Vui lòng chọn phương thức thanh toán")

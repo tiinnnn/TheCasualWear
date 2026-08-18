@@ -154,6 +154,12 @@ public class AddressService {
             address.setCity(details.getCity());
             address.setDistrict(details.getDistrict());
             address.setCountry(details.getCountry());
+            // MỚI (4.5): copy mã GHN — thiếu bước này thì sửa địa chỉ xong
+            // sẽ mất mã GHN đã chọn, checkout sau đó rơi về fallback
+            // region-based dù khách đã chọn đúng GHN cascade ở form.
+            address.setGhnProvinceId(details.getGhnProvinceId());
+            address.setGhnDistrictId(details.getGhnDistrictId());
+            address.setGhnWardCode(details.getGhnWardCode());
             return addressRepository.save(address);
         }
 
@@ -166,6 +172,12 @@ public class AddressService {
         replacement.setDistrict(details.getDistrict());
         replacement.setCountry(details.getCountry());
         replacement.setActive(true);
+        // MỚI (4.5): tương tự nhánh trên — replacement là Address MỚI hoàn
+        // toàn (address cũ bị ẩn đi), không copy thì mã GHN luôn NULL dù
+        // khách vừa chọn đúng ở form.
+        replacement.setGhnProvinceId(details.getGhnProvinceId());
+        replacement.setGhnDistrictId(details.getGhnDistrictId());
+        replacement.setGhnWardCode(details.getGhnWardCode());
         // Địa chỉ mới kế thừa vị trí mặc định của địa chỉ cũ (nếu có), giữ
         // đúng bất biến "chỉ 1 địa chỉ active là mặc định".
         replacement.setIsDefault(address.getIsDefault());

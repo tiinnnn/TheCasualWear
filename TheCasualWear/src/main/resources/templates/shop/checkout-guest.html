@@ -31,22 +31,33 @@
                     <small class="text-muted">Dùng để nhận email xác nhận đơn và để tra cứu đơn hàng sau này.</small>
                     <div class="text-danger small" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label">Thành phố/Tỉnh</label>
-                    <select th:field="*{city}" th:attr="data-current=*{city}"
-                            id="citySelect" class="form-select">
+                <div class="col-md-4">
+                    <label class="form-label">Tỉnh/Thành phố</label>
+                    <select id="ghnProvinceSelect" class="form-select">
                         <option value="">-- Chọn Tỉnh/Thành phố --</option>
                     </select>
-                    <div class="text-danger small" th:if="${#fields.hasErrors('city')}" th:errors="*{city}"></div>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label">Phường/Xã</label>
-                    <select th:field="*{district}" th:attr="data-current=*{district}"
-                            id="districtSelect" class="form-select" disabled>
+                <div class="col-md-4">
+                    <label class="form-label">Quận/Huyện</label>
+                    <select id="ghnDistrictSelect" class="form-select" disabled>
                         <option value="">-- Chọn Tỉnh/Thành phố trước --</option>
                     </select>
-                    <div class="text-danger small" th:if="${#fields.hasErrors('district')}" th:errors="*{district}"></div>
                 </div>
+                <div class="col-md-4">
+                    <label class="form-label">Phường/Xã</label>
+                    <select id="ghnWardSelect" class="form-select" disabled>
+                        <option value="">-- Chọn Quận/Huyện trước --</option>
+                    </select>
+                </div>
+                <!-- MỚI (4.5): giữ hidden input cùng th:field city/district như cũ
+                     (server vẫn nhận String bình thường), chỉ khác nguồn set giá
+                     trị giờ là JS từ lựa chọn GHN thay vì select trực tiếp. -->
+                <input type="hidden" th:field="*{city}" id="citySelect"/>
+                <div class="text-danger small" th:if="${#fields.hasErrors('city')}" th:errors="*{city}"></div>
+                <input type="hidden" th:field="*{district}" id="districtSelect"/>
+                <input type="hidden" th:field="*{ghnProvinceId}" id="ghnProvinceIdField"/>
+                <input type="hidden" th:field="*{ghnDistrictId}" id="ghnDistrictIdField"/>
+                <input type="hidden" th:field="*{ghnWardCode}" id="ghnWardCodeField"/>
                 <div class="col-md-12">
                     <label class="form-label">Địa chỉ cụ thể</label>
                     <input type="text" th:field="*{street}" class="form-control" placeholder="Số nhà, tên đường..."/>
@@ -163,15 +174,65 @@
     </form>
 </div>
 
-<script th:src="@{/js/address-cascade.js}"></script>
+<script th:src="@{/js/ghn-address-cascade.js}"></script>
 <script th:inline="javascript">
     const originalTotal = /*[[${totalPrice}]]*/ 0;
-    const shippingFee   = /*[[${shippingFee}]]*/ 0;
+    // MỚI (4.5): shippingFee giờ là biến động (let), cập nhật qua AJAX
+    // /order/shipping-fee-preview mỗi khi khách chọn xong Tỉnh/Quận-Huyện/
+    // Phường-Xã (GHN). Giá trị server-render ban đầu chỉ là ước tính mặc
+    // định (chưa có địa chỉ nào — xem OrderController.checkoutGuestPage).
+    let shippingFee = /*[[${shippingFee}]]*/ 0;
     const LIMIT = 1000000;
 
     document.addEventListener('DOMContentLoaded', function () {
-        initAddressCascade('citySelect', 'districtSelect');
+        initGhnAddressCascade({
+            provinceSelectId: 'ghnProvinceSelect',
+            districtSelectId: 'ghnDistrictSelect',
+            wardSelectId: 'ghnWardSelect',
+            onWardSelected: handleGhnWardSelected,
+            onIncomplete: handleGhnIncomplete,
+            onError: function () {
+                console.error('Không tải được danh sách địa chỉ GHN, phí ship sẽ dùng mức ước tính.');
+            }
+        });
     });
+
+    function handleGhnWardSelected({ provinceId, provinceName, districtId, districtName, wardCode, wardName }) {
+        document.getElementById('citySelect').value = provinceName;
+        document.getElementById('districtSelect').value = wardName;
+        document.getElementById('ghnProvinceIdField').value = provinceId;
+        document.getElementById('ghnDistrictIdField').value = districtId;
+        document.getElementById('ghnWardCodeField').value = wardCode;
+        fetchShippingFee(districtId, wardCode, provinceName);
+    }
+
+    function handleGhnIncomplete() {
+        document.getElementById('ghnProvinceIdField').value = '';
+        document.getElementById('ghnDistrictIdField').value = '';
+        document.getElementById('ghnWardCodeField').value = '';
+    }
+
+    // Guest không có voucher nên nền giá luôn là originalTotal (khác
+    // checkout.html của user — có currentDiscountedTotal riêng).
+    async function fetchShippingFee(ghnDistrictId, ghnWardCode, city) {
+        const params = new URLSearchParams({ currentTotal: originalTotal });
+        if (ghnDistrictId) params.set('ghnDistrictId', ghnDistrictId);
+        if (ghnWardCode) params.set('ghnWardCode', ghnWardCode);
+        if (city) params.set('city', city);
+        try {
+            const res = await fetch('/order/shipping-fee-preview?' + params.toString());
+            const data = await res.json();
+            if (data.success) {
+                shippingFee = data.fee;
+                document.getElementById('shipping-fee').textContent = shippingFee.toLocaleString('vi-VN') + ' đ';
+                document.getElementById('final-price').textContent =
+                    (originalTotal + shippingFee).toLocaleString('vi-VN') + ' đ';
+                updatePaymentMethod(originalTotal + shippingFee);
+            }
+        } catch (e) {
+            console.error('Không tính lại được phí ship, giữ giá trị hiện tại', e);
+        }
+    }
 
     // SỬA LỖI: trước đây lắng nghe 'click' trên chính nút submit rồi disable
     // ngay lập tức — ở một số trình duyệt, disable nút submit ĐỒNG BỘ trong

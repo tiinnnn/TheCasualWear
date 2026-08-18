@@ -8,16 +8,6 @@ import lombok.Setter;
 
 import java.io.Serializable;
 
-/**
- * Form checkout khách vãng lai (4.1) — nhập trực tiếp thông tin giao hàng +
- * liên hệ, KHÔNG có danh sách địa chỉ để chọn (khác checkout.html của user
- * đã đăng nhập, nơi addresses lấy từ addressService.getAddressesByUser).
- * Dùng cho GET/POST /order/checkout-guest.
- *
- * MỚI: implements Serializable — object này được lưu thẳng vào HttpSession
- * (session.setAttribute("pendingGuestCheckoutForm", form)) trong luồng VNPay
- * guest, cần khi session bị serialize (Tomcat persist session, Redis session...).
- */
 @Getter
 @Setter
 public class GuestCheckoutFormDTO implements Serializable {
@@ -42,6 +32,15 @@ public class GuestCheckoutFormDTO implements Serializable {
     private String city;
 
     private String district;
+
+    // MỚI (4.5): mã GHN của địa chỉ đang nhập — lấy từ dropdown Quận/Huyện
+    // + Phường/Xã theo GHN (ghn-address-cascade.js), KHÔNG phải cascade
+    // 2 cấp city/district ở trên (khác hệ mã, xem GhnService). NULL nếu
+    // GHN lỗi lúc load dropdown hoặc khách bỏ qua — OrderService fallback
+    // về phí region-based khi thiếu.
+    private Integer ghnProvinceId;
+    private Integer ghnDistrictId;
+    private String ghnWardCode;
 
     @NotBlank(message = "Vui lòng chọn phương thức thanh toán")
     private String paymentMethod;

@@ -62,7 +62,10 @@
                                     data-phone=${addr.phone},
                                     data-street=${addr.street},
                                     data-city=${addr.city},
-                                    data-district=${addr.district}"/>
+                                    data-district=${addr.district},
+                                    data-ghn-province-id=${addr.ghnProvinceId},
+                                    data-ghn-district-id=${addr.ghnDistrictId},
+                                    data-ghn-ward-code=${addr.ghnWardCode}"/>
                     <label class="form-check-label" th:for="${'addr-' + addr.id}">
                         <strong th:text="${addr.fullName}"></strong> —
                         <span th:text="${addr.phone}"></span>
@@ -85,20 +88,38 @@
                     <label class="form-label">Số điện thoại</label>
                     <input type="text" th:field="*{phone}" class="form-control"/>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label">Thành phố/Tỉnh</label>
-                    <select th:field="*{city}" th:attr="data-current=*{city}"
-                            id="citySelect" class="form-select">
+                <div class="col-md-4">
+                    <label class="form-label">Tỉnh/Thành phố</label>
+                    <select id="ghnProvinceSelect" class="form-select"
+                            th:attr="data-current-province-id=${checkoutForm.ghnProvinceId},
+                                     data-current-district-id=${checkoutForm.ghnDistrictId},
+                                     data-current-ward-code=${checkoutForm.ghnWardCode}">
                         <option value="">-- Chọn Tỉnh/Thành phố --</option>
                     </select>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label">Phường/Xã</label>
-                    <select th:field="*{district}" th:attr="data-current=*{district}"
-                            id="districtSelect" class="form-select" disabled>
+                <div class="col-md-4">
+                    <label class="form-label">Quận/Huyện</label>
+                    <select id="ghnDistrictSelect" class="form-select" disabled>
                         <option value="">-- Chọn Tỉnh/Thành phố trước --</option>
                     </select>
                 </div>
+                <div class="col-md-4">
+                    <label class="form-label">Phường/Xã</label>
+                    <select id="ghnWardSelect" class="form-select" disabled>
+                        <option value="">-- Chọn Quận/Huyện trước --</option>
+                    </select>
+                </div>
+                <!-- MỚI (4.5): city/district giờ set qua JS từ lựa chọn GHN ở trên
+                     (không còn select trực tiếp) — giữ hidden input cùng id cũ để
+                     mọi logic JS hiện có (radio chọn địa chỉ, clearUseExisting,
+                     confirm modal...) không phải sửa gì thêm, vẫn đọc .value bình
+                     thường. ghnProvinceId/ghnDistrictId/ghnWardCode là field MỚI
+                     dùng riêng cho GHN Calculate Fee. -->
+                <input type="hidden" th:field="*{city}" id="citySelect"/>
+                <input type="hidden" th:field="*{district}" id="districtSelect"/>
+                <input type="hidden" th:field="*{ghnProvinceId}" id="ghnProvinceIdField"/>
+                <input type="hidden" th:field="*{ghnDistrictId}" id="ghnDistrictIdField"/>
+                <input type="hidden" th:field="*{ghnWardCode}" id="ghnWardCodeField"/>
                 <div class="col-md-12">
                     <label class="form-label">Địa chỉ cụ thể</label>
                     <input type="text" th:field="*{street}" class="form-control" placeholder="Số nhà, tên đường..."/>
@@ -286,21 +307,94 @@
     </div>
 </div>
 
-<script th:src="@{/js/address-cascade.js}"></script>
+<script th:src="@{/js/ghn-address-cascade.js}"></script>
 <script th:inline="javascript">
     const originalTotal = /*[[${totalPrice}]]*/ 0;
-    const shippingFee   = /*[[${shippingFee}]]*/ 0;
+    // MỚI (4.5): shippingFee giờ là biến động (let), cập nhật qua AJAX
+    // /order/shipping-fee-preview mỗi khi khách chọn xong Tỉnh/Quận-Huyện/
+    // Phường-Xã (GHN) — giá trị server-render ban đầu chỉ là ước tính theo
+    // địa chỉ mặc định (xem OrderController.checkoutPage).
+    let shippingFee = /*[[${shippingFee}]]*/ 0;
+    // null = chưa áp voucher nào (dùng originalTotal); khác null = đã áp,
+    // dùng giá trị này làm nền để cộng ship — thay cho cách tính rải rác cũ.
+    let currentDiscountedTotal = null;
     const LIMIT = 1000000;
+    let ghnCascadeApi = null;
 
     // ══════════════════════════════════════════════════════════════════
     // MỚI: chọn nhanh địa chỉ đã lưu (tự điền field) + phát hiện khách
     // sửa/nhập địa chỉ khác — xem CustomerCheckoutFormDTO +
     // OrderController.resolveShippingAddress() ở phía server.
     // ══════════════════════════════════════════════════════════════════
-    document.addEventListener('DOMContentLoaded', function () {
-        initAddressCascade('citySelect', 'districtSelect');
+    document.addEventListener('DOMContentLoaded', async function () {
+        ghnCascadeApi = await initGhnAddressCascade({
+            provinceSelectId: 'ghnProvinceSelect',
+            districtSelectId: 'ghnDistrictSelect',
+            wardSelectId: 'ghnWardSelect',
+            onWardSelected: handleGhnWardSelected,
+            onIncomplete: handleGhnIncomplete,
+            onError: function () {
+                document.getElementById('voucher-result').innerHTML =
+                    '<span class="text-danger">Không tải được danh sách địa chỉ GHN, phí ship sẽ dùng mức ước tính.</span>';
+            }
+        });
         toggleSaveAsDefaultRow();
     });
+
+    // MỚI (4.5): khách chọn xong đủ 3 cấp GHN — cập nhật city/district
+    // (String hiển thị/lưu như cũ) từ tên GHN + set mã GHN vào hidden field
+    // + gọi AJAX tính phí thật.
+    function handleGhnWardSelected({ provinceId, provinceName, districtId, districtName, wardCode, wardName }) {
+        const citySelect = document.getElementById('citySelect');
+        citySelect.value = provinceName;
+        document.getElementById('districtSelect').value = wardName;
+        document.getElementById('ghnProvinceIdField').value = provinceId;
+        document.getElementById('ghnDistrictIdField').value = districtId;
+        document.getElementById('ghnWardCodeField').value = wardCode;
+        // Kích hoạt clearUseExisting() như cascade cũ — khách vừa chọn/đổi
+        // địa chỉ nên không còn "dùng nguyên địa chỉ đã lưu" nữa (trừ khi
+        // đang trong luồng click radio, xem addressRadio handler bên dưới —
+        // ở đó useExistingInput được set LẠI sau khi cascade này chạy xong).
+        citySelect.dispatchEvent(new Event('change'));
+        fetchShippingFee(districtId, wardCode, provinceName);
+    }
+
+    function handleGhnIncomplete() {
+        // Chưa chọn đủ 3 cấp — mã GHN cũ (nếu có) không còn chính xác nữa
+        document.getElementById('ghnProvinceIdField').value = '';
+        document.getElementById('ghnDistrictIdField').value = '';
+        document.getElementById('ghnWardCodeField').value = '';
+    }
+
+    // Gọi AJAX tính phí thật — ghnDistrictId/ghnWardCode có thể null (địa
+    // chỉ đã lưu từ trước, chưa có mã GHN) — server tự fallback region-based
+    // theo city trong trường hợp đó.
+    async function fetchShippingFee(ghnDistrictId, ghnWardCode, city) {
+        const total = currentDiscountedTotal !== null ? currentDiscountedTotal : originalTotal;
+        const params = new URLSearchParams({ currentTotal: total });
+        if (ghnDistrictId) params.set('ghnDistrictId', ghnDistrictId);
+        if (ghnWardCode) params.set('ghnWardCode', ghnWardCode);
+        if (city) params.set('city', city);
+        try {
+            const res = await fetch('/order/shipping-fee-preview?' + params.toString());
+            const data = await res.json();
+            if (data.success) {
+                shippingFee = data.fee;
+                document.getElementById('shipping-fee').textContent = shippingFee.toLocaleString('vi-VN') + ' đ';
+                refreshFinalPriceDisplay();
+            }
+        } catch (e) {
+            // Không chặn checkout nếu preview lỗi — giữ nguyên phí đang hiển
+            // thị, phí thật vẫn được tính đúng lúc submit ở server.
+            console.error('Không tính lại được phí ship, giữ giá trị hiện tại', e);
+        }
+    }
+
+    function refreshFinalPriceDisplay() {
+        const total = currentDiscountedTotal !== null ? currentDiscountedTotal : originalTotal;
+        document.getElementById('final-price').textContent =
+            (total + shippingFee).toLocaleString('vi-VN') + ' đ';
+    }
 
     const useExistingInput = document.getElementById('useExistingAddressId');
     const saveAsDefaultRow = document.getElementById('saveAsDefaultRow');
@@ -315,21 +409,33 @@
 
     // Chọn 1 địa chỉ có sẵn → tự điền field + đánh dấu "dùng nguyên địa chỉ này"
     document.querySelectorAll('.address-radio').forEach(function (radio) {
-        radio.addEventListener('change', function () {
+        radio.addEventListener('change', async function () {
             document.getElementById('fullName').value = radio.dataset.fullname;
             document.getElementById('phone').value = radio.dataset.phone;
             document.getElementById('street').value = radio.dataset.street;
 
-            const citySelect = document.getElementById('citySelect');
-            citySelect.dataset.current = radio.dataset.city;
-            citySelect.value = radio.dataset.city;
-            // Kích hoạt cascade tải lại danh sách phường/xã đúng tỉnh vừa chọn
-            citySelect.dispatchEvent(new Event('change'));
-            document.getElementById('districtSelect').dataset.current = radio.dataset.district;
+            // Điền tạm city/district dạng String ngay (phòng khi địa chỉ
+            // này chưa có mã GHN) — nếu có mã GHN, handleGhnWardSelected sẽ
+            // tự ghi đè lại bằng tên chính xác lấy từ GHN ngay sau đây.
+            document.getElementById('citySelect').value = radio.dataset.city;
+            document.getElementById('districtSelect').value = radio.dataset.district;
+            fetchShippingFee(radio.dataset.ghnDistrictId || null, radio.dataset.ghnWardCode || null, radio.dataset.city);
 
-            // Đặt SAU dispatchEvent ở trên — 'change' của citySelect cũng
-            // kích hoạt clearUseExisting() bên dưới, cần ghi đè lại giá trị
-            // đúng sau cùng.
+            // MỚI (4.5): prefill lại 3 dropdown GHN theo mã đã lưu trên địa
+            // chỉ này (rỗng nếu địa chỉ cũ chưa có mã GHN — cascade sẽ tự
+            // reset về "chưa chọn"). await để đảm bảo mọi 'change' event nó
+            // bắn ra (kích hoạt clearUseExisting) chạy XONG trước khi mình
+            // set lại useExistingInput bên dưới.
+            if (ghnCascadeApi) {
+                await ghnCascadeApi.applySelection(
+                    radio.dataset.ghnProvinceId || '',
+                    radio.dataset.ghnDistrictId || '',
+                    radio.dataset.ghnWardCode || ''
+                );
+            }
+
+            // Đặt SAU cascade ở trên — cascade cũng kích hoạt
+            // clearUseExisting() bên dưới, cần ghi đè lại giá trị đúng sau cùng.
             useExistingInput.value = radio.dataset.id;
             toggleSaveAsDefaultRow();
         });
@@ -420,11 +526,14 @@
                     document.getElementById('discount-amount').textContent =
                         '- ' + data.discountAmount + ' đ';
 
-                    // ✅ Tổng sau giảm (đã cộng phí ship)
-                    document.getElementById('final-price').textContent =
-                        (parseFloat(data.finalPriceRaw) + shippingFee).toLocaleString('vi-VN') + ' đ';
+                    // ✅ Tổng sau giảm (đã cộng phí ship) — MỚI: lưu lại
+                    // currentDiscountedTotal để fetchShippingFee() sau này
+                    // (khi đổi địa chỉ) dùng đúng nền giá đã giảm, không bị
+                    // quay về originalTotal.
+                    currentDiscountedTotal = parseFloat(data.finalPriceRaw);
+                    refreshFinalPriceDisplay();
 
-                    updatePaymentMethod(parseFloat(data.finalPriceRaw));
+                    updatePaymentMethod(currentDiscountedTotal);
                 } else {
                     resultDiv.innerHTML =
                         '<span class="text-danger">' +
@@ -433,8 +542,8 @@
 
                     // Reset về giá gốc (đã cộng phí ship)
                     document.getElementById('discount-row').classList.add('d-none');
-                    document.getElementById('final-price').textContent =
-                        (originalTotal + shippingFee).toLocaleString('vi-VN') + ' đ';
+                    currentDiscountedTotal = null;
+                    refreshFinalPriceDisplay();
 
                     updatePaymentMethod(originalTotal);
                 }

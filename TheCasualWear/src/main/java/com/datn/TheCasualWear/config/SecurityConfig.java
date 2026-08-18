@@ -134,7 +134,23 @@ public class SecurityConfig {
                                 // rơi vào rule "/order/**".hasAnyRole(...) bên dưới -> bị chặn
                                 // redirect về /auth/login, và đơn hàng sẽ KHÔNG được tạo dù
                                 // khách đã thanh toán thành công.
-                                "/order/vnpay-return-guest"
+                                "/order/vnpay-return-guest",
+
+                                // MỚI: AJAX tính lại phí ship khi khách (kể cả guest) chọn
+                                // xong Tỉnh/Quận-Huyện/Phường-Xã ở checkout-guest.html. Thiếu
+                                // dòng này, request rơi vào rule "/order/**".hasAnyRole(...)
+                                // bên dưới -> bị chặn -> fetchShippingFee() ở checkout-guest.html
+                                // âm thầm catch lỗi (chỉ console.error), khiến phí ship không
+                                // bao giờ được cập nhật lại sau khi guest chọn địa chỉ.
+                                "/order/shipping-fee-preview",
+
+                                // MỚI: proxy GHN (province/district/ward) dùng chung cho cả
+                                // checkout user lẫn guest (xem ghi chú trong GhnController) —
+                                // guest chưa đăng nhập nên bắt buộc phải permitAll, nếu không
+                                // sẽ rơi vào .anyRequest().authenticated() và bị redirect sang
+                                // /auth/login, khiến dropdown tỉnh/thành ở checkout-guest.html
+                                // không load được (fetch nhận về HTML login page thay vì JSON).
+                                "/api/ghn/**"
                         ).permitAll()
 
                         // Chỉ ADMIN / OWNER

@@ -33,6 +33,11 @@ public class Product {
     @Column(name = "is_deleted")
     private Boolean isDeleted = false;
 
+    // MỚI (4.5): cân nặng (gram) — bắt buộc cho GHN Calculate Fee. Default
+    // 300g khớp với giá trị default ở migration SQL cho sản phẩm cũ.
+    @Column(nullable = false)
+    private Integer weight = 300;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;

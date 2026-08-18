@@ -89,20 +89,29 @@ public class OrderController {
         Map<Integer, ProductSale> activeSales = productSaleService.getActiveSalesByProductIds(productIds);
 
         long totalPrice = cartService.getTotalPrice(user);
-        long grandTotal = totalPrice + OrderService.SHIPPING_FEE.longValue();
-
-        // Chỉ hiển thị voucher đủ điều kiện áp dụng (order.total >= voucher.minOrderValue)
         BigDecimal totalPriceBD = BigDecimal.valueOf(totalPrice);
-        List<Voucher> eligibleVouchers = voucherService.getActiveVouchers().stream()
-                .filter(v -> v.getMinOrderValue() == null
-                        || totalPriceBD.compareTo(v.getMinOrderValue()) >= 0)
-                .toList();
 
         // MỚI: form checkout nhận field địa chỉ trực tiếp (giống guest) thay
         // vì chỉ nhận shippingAddressId — prefill sẵn từ địa chỉ mặc định
         // (nếu có) để khách không phải gõ lại từ đầu, chỉ sửa khi cần.
         List<Address> savedAddresses = addressService.getAddressesByUser(user);
         Address defaultAddress = addressService.getDefaultAddress(user);
+
+        // MỚI (4.5): phí ship ban đầu tính theo địa chỉ mặc định (nếu có) —
+        // gọi GHN thật nếu địa chỉ đã có mã GHN, fallback region-based nếu
+        // chưa/lỗi. Số này chỉ là ước tính lúc load trang; JS sẽ gọi lại
+        // /order/shipping-fee-preview mỗi khi khách đổi tỉnh/quận-huyện/
+        // phường-xã trong dropdown (xem checkout.html).
+        BigDecimal shippingFee = (defaultAddress != null)
+                ? orderService.calculateShippingFee(defaultAddress, totalPriceBD, orderService.getCartWeightGrams(user))
+                : OrderService.DEFAULT_SHIPPING_FEE;
+        long grandTotal = totalPrice + shippingFee.longValue();
+
+        // Chỉ hiển thị voucher đủ điều kiện áp dụng (order.total >= voucher.minOrderValue)
+        List<Voucher> eligibleVouchers = voucherService.getActiveVouchers().stream()
+                .filter(v -> v.getMinOrderValue() == null
+                        || totalPriceBD.compareTo(v.getMinOrderValue()) >= 0)
+                .toList();
 
         CustomerCheckoutFormDTO checkoutForm = new CustomerCheckoutFormDTO();
         checkoutForm.setPaymentMethod("COD");
@@ -122,7 +131,7 @@ public class OrderController {
         model.addAttribute("itemPrices", itemPrices);
         model.addAttribute("activeSales", activeSales);
         model.addAttribute("totalPrice", totalPrice);
-        model.addAttribute("shippingFee", OrderService.SHIPPING_FEE);
+        model.addAttribute("shippingFee", shippingFee);
         model.addAttribute("grandTotal", grandTotal);
         model.addAttribute("addresses", savedAddresses);
         model.addAttribute("defaultAddress", defaultAddress);
@@ -191,8 +200,6 @@ public class OrderController {
                 return "redirect:/order/checkout";
             }
         }
-        long grandTotal = finalPrice.add(OrderService.SHIPPING_FEE).longValue();
-
         Address shippingAddress;
         try {
             shippingAddress = resolveShippingAddress(form, user);
@@ -204,6 +211,16 @@ public class OrderController {
         // (billingAddress = shippingAddress), giảm phức tạp không cần thiết
         // cho phần đã đủ việc phải làm trước deadline.
         Address billingAddress = shippingAddress;
+
+        // MỚI (4.5): SỬA LỖI — trước đây grandTotal tính TRƯỚC khi có
+        // shippingAddress (dùng flat SHIPPING_FEE), nên số tiền gửi sang
+        // VNPay không khớp phí ship thật OrderService.placeOrder() sẽ tính
+        // lại lúc callback (dùng chính shippingAddress này). Giờ tính SAU
+        // khi đã resolve xong địa chỉ, dùng đúng 1 nguồn logic
+        // (OrderService.calculateShippingFee) cho cả khâu thu tiền lẫn lưu đơn.
+        int weightGrams = orderService.getCartWeightGrams(user);
+        BigDecimal shippingFee = orderService.calculateShippingFee(shippingAddress, finalPrice, weightGrams);
+        long grandTotal = finalPrice.add(shippingFee).longValue();
 
         if ("VNPAY".equals(paymentMethod)) {
             // Lưu vào session để dùng sau khi VNPay callback — shippingAddress
@@ -255,14 +272,18 @@ public class OrderController {
         }
 
         BigDecimal totalPrice = guestCartService.getTotalPrice(session);
-        BigDecimal grandTotal = totalPrice.add(OrderService.SHIPPING_FEE);
+        // MỚI (4.5): chưa có địa chỉ nào lúc load trang lần đầu (form trống)
+        // nên chỉ hiện ước tính mặc định — JS gọi /order/shipping-fee-preview
+        // ngay khi khách chọn xong Tỉnh/Quận-Huyện/Phường-Xã (xem checkout-guest.html).
+        BigDecimal shippingFee = OrderService.DEFAULT_SHIPPING_FEE;
+        BigDecimal grandTotal = totalPrice.add(shippingFee);
 
         // MỚI: guest không dùng voucher nữa — bỏ hẳn eligibleVouchers,
         // không hiển thị danh sách voucher trên trang checkout-guest.
 
         model.addAttribute("cartItems", cartItems);
         model.addAttribute("totalPrice", totalPrice);
-        model.addAttribute("shippingFee", OrderService.SHIPPING_FEE);
+        model.addAttribute("shippingFee", shippingFee);
         model.addAttribute("grandTotal", grandTotal);
         model.addAttribute("guestCheckoutForm", new GuestCheckoutFormDTO());
         model.addAttribute("view", "shop/checkout-guest");
@@ -284,9 +305,14 @@ public class OrderController {
 
         BigDecimal totalPrice = guestCartService.getTotalPrice(session);
 
+        // MỚI (4.5): tính phí thật từ mã GHN trong form (khách đã chọn xong
+        // dropdown trước khi bấm đặt hàng) — cùng logic placeOrderGuest() sẽ
+        // dùng lại, tránh lệch số giữa lúc check COD/gửi VNPay và lúc lưu đơn.
+        BigDecimal shippingFee = orderService.calculateShippingFeeForGuestForm(form, cartItems, totalPrice);
+
         // MỚI: guest không dùng voucher nữa — bỏ hẳn finalPrice/voucher,
         // grandTotal chỉ còn totalPrice (đã tự áp sale, nếu có) + ship.
-        BigDecimal grandTotal = totalPrice.add(OrderService.SHIPPING_FEE);
+        BigDecimal grandTotal = totalPrice.add(shippingFee);
 
         // Validate COD > 1 triệu — dùng grandTotal đã cộng ship.
         if (grandTotal.compareTo(BigDecimal.valueOf(1_000_000)) > 0
@@ -298,7 +324,7 @@ public class OrderController {
         if (bindingResult.hasErrors()) {
             model.addAttribute("cartItems", cartItems);
             model.addAttribute("totalPrice", totalPrice);
-            model.addAttribute("shippingFee", OrderService.SHIPPING_FEE);
+            model.addAttribute("shippingFee", shippingFee);
             model.addAttribute("grandTotal", grandTotal);
             model.addAttribute("view", "shop/checkout-guest");
             return "layouts/shop-layout";
@@ -344,7 +370,7 @@ public class OrderController {
         } catch (IllegalStateException | IllegalArgumentException e) {
             model.addAttribute("cartItems", cartItems);
             model.addAttribute("totalPrice", totalPrice);
-            model.addAttribute("shippingFee", OrderService.SHIPPING_FEE);
+            model.addAttribute("shippingFee", shippingFee);
             model.addAttribute("grandTotal", grandTotal);
             model.addAttribute("errorMessage", e.getMessage());
             model.addAttribute("view", "shop/checkout-guest");
@@ -505,6 +531,53 @@ public class OrderController {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
             return "redirect:/order/detail/" + id;
         }
+    }
+
+    // MỚI (4.5): AJAX tính phí ship real-time khi khách đổi Tỉnh/Quận-Huyện/
+    // Phường-Xã ở dropdown checkout (cả user lẫn guest, phân biệt qua auth).
+    // currentTotal do FE tự truyền lên (đã trừ voucher nếu có, xem
+    // checkout.html) — chỉ dùng để check ngưỡng freeship, KHÔNG phải nguồn
+    // sự thật cuối cùng (đơn hàng thật luôn tính lại totalPrice từ server ở
+    // OrderService.placeOrder/placeOrderGuest).
+    @GetMapping("/shipping-fee-preview")
+    @ResponseBody
+    public Map<String, Object> shippingFeePreview(@RequestParam(required = false) Integer ghnDistrictId,
+                                                  @RequestParam(required = false) String ghnWardCode,
+                                                  @RequestParam BigDecimal currentTotal,
+                                                  Authentication auth,
+                                                  HttpServletRequest request) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            int weightGrams;
+            // ⚠️ GIẢ ĐỊNH: theo cấu hình Spring Security mặc định (AnonymousAuthenticationFilter
+            // bật), khách chưa đăng nhập vẫn có Authentication khác null nhưng
+            // isAuthenticated() = false hoặc principal = "anonymousUser" — kiểm tra
+            // lại nếu SecurityConfig có tùy biến khác cách này.
+            boolean isLoggedIn = auth != null && auth.isAuthenticated()
+                    && !"anonymousUser".equals(auth.getPrincipal());
+            if (isLoggedIn) {
+                AppUser user = getCurrentUser(auth);
+                weightGrams = orderService.getCartWeightGrams(user);
+            } else {
+                List<GuestCartItem> cartItems = guestCartService.getCart(request.getSession());
+                weightGrams = orderService.getGuestCartWeightGrams(cartItems);
+            }
+
+            Address transientAddress = new Address();
+            transientAddress.setGhnDistrictId(ghnDistrictId);
+            transientAddress.setGhnWardCode(ghnWardCode);
+            BigDecimal fee = orderService.calculateShippingFee(transientAddress, currentTotal, weightGrams);
+
+            result.put("success", true);
+            result.put("fee", fee.longValue());
+        } catch (Exception e) {
+            // Không để lỗi preview chặn checkout — trả về fallback mặc định,
+            // phí thật vẫn sẽ được tính đúng lúc submit (placeOrder/placeOrderGuest).
+            result.put("success", true);
+            result.put("fee", OrderService.DEFAULT_SHIPPING_FEE.longValue());
+            result.put("fallback", true);
+        }
+        return result;
     }
 
     @GetMapping("/apply-voucher")

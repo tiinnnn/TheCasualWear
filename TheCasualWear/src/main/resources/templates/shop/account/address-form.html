@@ -59,26 +59,38 @@
                         </div>
 
                         <div class="row">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
                                 <label class="form-label fw-semibold">Tỉnh/Thành phố</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-white"><i class="bi bi-geo-alt"></i></span>
-                                    <select th:field="*{city}" th:attr="data-current=*{city}"
-                                            id="citySelect" class="form-select" required>
-                                        <option value="">-- Chọn Tỉnh/Thành phố --</option>
-                                    </select>
-                                </div>
+                                <select id="ghnProvinceSelect" class="form-select" required
+                                        th:attr="data-current-province-id=${address.ghnProvinceId},
+                                                 data-current-district-id=${address.ghnDistrictId},
+                                                 data-current-ward-code=${address.ghnWardCode}">
+                                    <option value="">-- Chọn Tỉnh/Thành phố --</option>
+                                </select>
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-semibold">Quận/Huyện</label>
+                                <select id="ghnDistrictSelect" class="form-select" disabled required>
+                                    <option value="">-- Chọn Tỉnh/Thành phố trước --</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
                                 <label class="form-label fw-semibold">Phường/Xã</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-white"><i class="bi bi-signpost-split"></i></span>
-                                    <select th:field="*{district}" th:attr="data-current=*{district}"
-                                            id="districtSelect" class="form-select" disabled>
-                                        <option value="">-- Chọn Tỉnh/Thành phố trước --</option>
-                                    </select>
-                                </div>
+                                <select id="ghnWardSelect" class="form-select" disabled required>
+                                    <option value="">-- Chọn Quận/Huyện trước --</option>
+                                </select>
                             </div>
+                        </div>
+                        <!-- MỚI (4.5): city/district set qua JS từ lựa chọn GHN (không còn
+                             select trực tiếp) — giữ hidden input cùng th:field như cũ, server
+                             vẫn nhận String bình thường. -->
+                        <input type="hidden" th:field="*{city}" id="citySelect"/>
+                        <input type="hidden" th:field="*{district}" id="districtSelect"/>
+                        <input type="hidden" th:field="*{ghnProvinceId}" id="ghnProvinceIdField"/>
+                        <input type="hidden" th:field="*{ghnDistrictId}" id="ghnDistrictIdField"/>
+                        <input type="hidden" th:field="*{ghnWardCode}" id="ghnWardCodeField"/>
+                        <div class="form-text text-muted mb-3">
+                            <i class="bi bi-info-circle me-1"></i>Chọn đủ 3 cấp để tính phí ship chính xác theo GHN.
                         </div>
 
                         <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
@@ -93,10 +105,38 @@
         </div>
     </div>
 </div>
-<script th:src="@{/js/address-cascade.js}"></script>
+<script th:src="@{/js/ghn-address-cascade.js}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        initAddressCascade('citySelect', 'districtSelect');
+        initGhnAddressCascade({
+            provinceSelectId: 'ghnProvinceSelect',
+            districtSelectId: 'ghnDistrictSelect',
+            wardSelectId: 'ghnWardSelect',
+            onWardSelected: function ({ provinceId, provinceName, districtId, districtName, wardCode, wardName }) {
+                document.getElementById('citySelect').value = provinceName;
+                document.getElementById('districtSelect').value = wardName;
+                document.getElementById('ghnProvinceIdField').value = provinceId;
+                document.getElementById('ghnDistrictIdField').value = districtId;
+                document.getElementById('ghnWardCodeField').value = wardCode;
+            },
+            onIncomplete: function () {
+                document.getElementById('ghnProvinceIdField').value = '';
+                document.getElementById('ghnDistrictIdField').value = '';
+                document.getElementById('ghnWardCodeField').value = '';
+            },
+            onError: function () {
+                alert('Không tải được danh sách địa chỉ từ GHN, vui lòng thử lại sau.');
+            }
+        });
+    });
+
+    // Chặn submit nếu chưa chọn đủ 3 cấp GHN — tránh lưu địa chỉ thiếu mã,
+    // sau này checkout phải fallback region-based (kém chính xác hơn).
+    document.getElementById('address-form').addEventListener('submit', function (e) {
+        if (!document.getElementById('ghnWardCodeField').value) {
+            e.preventDefault();
+            alert('Vui lòng chọn đầy đủ Tỉnh/Thành phố, Quận/Huyện và Phường/Xã!');
+        }
     });
 
     const phoneInput = document.querySelector('[name="phone"]');

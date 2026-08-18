@@ -36,6 +36,20 @@ public class Address {
     @Column(name = "district", length = 100)
     private String district;
 
+    // MỚI (4.5): mã định danh riêng của GHN — khác hệ mã của
+    // provinces.open-api.vn đang dùng cho city/district ở trên. Bắt buộc
+    // phải có đủ 3 mã này mới gọi được GHN Calculate Fee; NULL nếu địa chỉ
+    // được tạo trước khi có tính năng này hoặc GHN master-data lỗi lúc lưu
+    // — GhnService sẽ fallback về phí region-based khi thiếu.
+    @Column(name = "ghn_province_id")
+    private Integer ghnProvinceId;
+
+    @Column(name = "ghn_district_id")
+    private Integer ghnDistrictId;
+
+    @Column(name = "ghn_ward_code", length = 20)
+    private String ghnWardCode;
+
     @Column(name = "country", length = 100)
     private String country = "Vietnam";
 

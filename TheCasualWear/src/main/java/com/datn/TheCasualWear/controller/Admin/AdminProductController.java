@@ -328,6 +328,7 @@ public class AdminProductController {
         copy.setName(source.getName() + " (copy)");
         copy.setDescription(source.getDescription());
         copy.setPrice(source.getPrice());
+        copy.setWeight(source.getWeight());
         copy.setCategory(source.getCategory());
         copy.setImages(source.getImages());
         model.addAttribute("product",      copy);

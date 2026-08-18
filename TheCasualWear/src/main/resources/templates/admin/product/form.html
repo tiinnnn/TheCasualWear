@@ -193,6 +193,18 @@
                             </div>
                             <input type="hidden" name="price" id="price" th:value="${product.price}"/>
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Cân nặng <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group" style="max-width:200px">
+                                <input type="number" name="weight" class="form-control"
+                                       th:value="${product.weight != null ? product.weight : 300}"
+                                       min="1" step="1" required placeholder="300"/>
+                                <span class="input-group-text">g</span>
+                            </div>
+                            <small class="text-muted">Dùng để tính phí ship GHN. VD: áo thun ~250-300g.</small>
+                        </div>
                     </div>
                 </div>
 

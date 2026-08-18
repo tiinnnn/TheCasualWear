@@ -29,6 +29,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -43,17 +45,11 @@ public class OrderService {
     private final StockMovementLogService   stockMovementLogService;
     private final AppUserRepository         appUserRepository;
     private final ProductSaleService        productSaleService;
-    // MỚI (4.3): gửi email xác nhận đơn sau khi admin confirm — dùng cùng
-    // OrderEmailService.sendOrderConfirmationAsync() mà getOrderForEmail()
-    // ở trên đã chuẩn bị sẵn dữ liệu (fetch join, tránh LazyInitException
-    // vì email chạy trên thread khác qua @Async).
     private final OrderEmailService         orderEmailService;
-    // MỚI (4.1): checkout khách vãng lai — tạo Address mới (không chọn từ danh
-    // sách có sẵn) và tra variant trực tiếp từ GuestCartItem.variantId.
-    // ⚠️ GIẢ ĐỊNH: AddressRepository là interface Spring Data JPA chuẩn
-    // (extends JpaRepository<Address, Integer>) — nếu tên khác, đổi lại.
     private final AddressRepository         addressRepository;
     private final ProductVariantRepository  productVariantRepository;
+    // MỚI (4.5): tính phí ship thật qua GHN, fallback region-based khi lỗi/thiếu mã GHN
+    private final GhnService                ghnService;
 
     // Lấy admin/owner đang đăng nhập cho các thao tác phía admin (cancelOrderByAdmin,
     // returnOrder). Trả null nếu không xác định được thay vì throw, vì các method
@@ -69,10 +65,104 @@ public class OrderService {
 
     private static final int ADMIN_PAGE_SIZE = 10;
     private static final int RETURN_DAYS     = 15;
+    // Dùng khi tính weight mà variantMap thiếu item (hiếm, dữ liệu race
+    // condition) — tránh throw ở bước tính phí, lỗi "không tồn tại" thật sự
+    // sẽ bị bắt đúng chỗ ở loop tạo OrderDetail bên dưới.
+    private static final int DEFAULT_ITEM_WEIGHT_FALLBACK = 300;
 
-    // Phí ship cố định (fallback an toàn) — sẽ thay bằng GHN API tính phí thực tế ở Giai đoạn 3.
-    // public để OrderController tái sử dụng cùng một giá trị (tránh khai báo trùng 2 chỗ).
-    public static final BigDecimal SHIPPING_FEE = BigDecimal.valueOf(30_000);
+    // MỚI (4.5): SHIPPING_FEE cũ (flat 30k) đã bị thay bằng calculateShippingFee()
+    // bên dưới — gọi GHN thật, fallback về các hằng số region-based này khi GHN
+    // lỗi/timeout hoặc địa chỉ thiếu mã GHN (ghnDistrictId/ghnWardCode null).
+    // ⚠️ Vẫn giữ tên "SHIPPING_FEE" ở OrderController cho phần hiển thị giá ước
+    // tính TRƯỚC khi có địa chỉ cụ thể (xem OrderController) — dùng DEFAULT_SHIPPING_FEE.
+    private static final BigDecimal FREE_SHIPPING_THRESHOLD = BigDecimal.valueOf(1_000_000);
+    public static final BigDecimal DEFAULT_SHIPPING_FEE     = BigDecimal.valueOf(30_000); // các tỉnh khác
+    private static final BigDecimal HANOI_SHIPPING_FEE      = BigDecimal.valueOf(20_000);
+    private static final BigDecimal DANANG_SHIPPING_FEE     = BigDecimal.valueOf(32_000);
+    private static final BigDecimal HCM_SHIPPING_FEE        = BigDecimal.valueOf(38_000);
+
+    /**
+     * Tính phí ship cuối cùng cho 1 đơn hàng — ưu tiên gọi GHN thật nếu địa
+     * chỉ có đủ mã GHN (ghnDistrictId + ghnWardCode), fallback về bảng phí
+     * region-based (theo city String) khi: thiếu mã GHN, GHN lỗi/timeout,
+     * hoặc weightGrams không hợp lệ. KHÔNG bao giờ throw ra ngoài — checkout
+     * phải luôn tính được 1 mức phí nào đó.
+     *
+     * public: OrderController gọi trực tiếp cho endpoint AJAX
+     * /order/shipping-fee-preview (tính lại phí khi khách đổi địa chỉ ở
+     * checkout, trước khi bấm đặt hàng — xem checkout.html).
+     */
+    public BigDecimal calculateShippingFee(Address address, BigDecimal totalPriceAfterDiscount, int weightGrams) {
+        if (totalPriceAfterDiscount.compareTo(FREE_SHIPPING_THRESHOLD) >= 0) {
+            return BigDecimal.ZERO;
+        }
+
+        if (address.getGhnDistrictId() != null
+                && address.getGhnWardCode() != null && !address.getGhnWardCode().isBlank()) {
+            try {
+                return ghnService.calculateFee(address.getGhnDistrictId(), address.getGhnWardCode(), weightGrams);
+            } catch (GhnApiException e) {
+                // Không chặn checkout vì GHN lỗi — rơi xuống fallback region-based bên dưới.
+            }
+        }
+
+        return calculateShippingFeeRegionBased(address);
+    }
+
+    /**
+     * Tính phí ship cho guest NGAY LÚC submit form (trước khi tạo Address
+     * thật trong DB) — dùng transient Address chỉ để truyền vào
+     * calculateShippingFee(), không save. Cần thiết vì OrderController phải
+     * biết đúng phí ship TRƯỚC khi biết chấp nhận COD hay không (rule >1tr)
+     * và trước khi gửi số tiền sang VNPay — cùng 1 logic
+     * placeOrderGuest() sẽ dùng lại khi thực sự tạo đơn.
+     */
+    public BigDecimal calculateShippingFeeForGuestForm(GuestCheckoutFormDTO form, List<GuestCartItem> cartItems,
+                                                       BigDecimal totalPrice) {
+        Address transientAddress = new Address();
+        transientAddress.setCity(form.getCity());
+        transientAddress.setDistrict(form.getDistrict());
+        transientAddress.setGhnDistrictId(form.getGhnDistrictId());
+        transientAddress.setGhnWardCode(form.getGhnWardCode());
+        int weightGrams = getGuestCartWeightGrams(cartItems);
+        return calculateShippingFee(transientAddress, totalPrice, weightGrams);
+    }
+
+    /** Tổng weight (gram) giỏ hàng của user đã đăng nhập — dùng cho AJAX preview phí ship. */
+    public int getCartWeightGrams(AppUser user) {
+        return cartService.getCartItems(user).stream()
+                .mapToInt(item -> item.getVariant().getProduct().getWeight() * item.getQuantity())
+                .sum();
+    }
+
+    /** Tổng weight (gram) giỏ hàng guest (session) — dùng cho AJAX preview phí ship. */
+    public int getGuestCartWeightGrams(List<GuestCartItem> cartItems) {
+        List<Integer> variantIds = cartItems.stream().map(GuestCartItem::getVariantId).toList();
+        Map<Integer, ProductVariant> variantMap = productVariantRepository.findAllById(variantIds).stream()
+                .collect(Collectors.toMap(ProductVariant::getId, v -> v));
+        return cartItems.stream()
+                .mapToInt(item -> {
+                    ProductVariant v = variantMap.get(item.getVariantId());
+                    int unitWeight = (v != null) ? v.getProduct().getWeight() : DEFAULT_ITEM_WEIGHT_FALLBACK;
+                    return unitWeight * item.getQuantity();
+                })
+                .sum();
+    }
+
+    private BigDecimal calculateShippingFeeRegionBased(Address address) {
+        String city = address.getCity() == null ? "" : address.getCity().toLowerCase();
+        if (city.contains("hà nội") || city.contains("ha noi")) {
+            return HANOI_SHIPPING_FEE;
+        }
+        if (city.contains("đà nẵng") || city.contains("da nang")) {
+            return DANANG_SHIPPING_FEE;
+        }
+        if (city.contains("hồ chí minh") || city.contains("ho chi minh")
+                || city.contains("tp.hcm") || city.contains("tphcm")) {
+            return HCM_SHIPPING_FEE;
+        }
+        return DEFAULT_SHIPPING_FEE;
+    }
 
     // ─────────────────────────────────────────────────────────────
     // QUERY
@@ -186,8 +276,13 @@ public class OrderService {
             totalPrice           = discounted;
         }
 
-        // Cộng phí ship sau khi đã áp voucher — đây là số tiền cuối cùng khách phải trả
-        BigDecimal grandTotal = totalPrice.add(SHIPPING_FEE);
+        // Cộng phí ship sau khi đã áp voucher — đây là số tiền cuối cùng khách phải trả.
+        // MỚI (4.5): weight lấy từ CartItem.variant.product (đã fetch sẵn, không query thêm).
+        int totalWeightGrams = cartItems.stream()
+                .mapToInt(item -> item.getVariant().getProduct().getWeight() * item.getQuantity())
+                .sum();
+        BigDecimal shippingFee = calculateShippingFee(shippingAddress, totalPrice, totalWeightGrams);
+        BigDecimal grandTotal = totalPrice.add(shippingFee);
 
         // MỚI: bắt buộc VNPay nếu tổng đơn thực trả (đã gồm voucher + ship)
         // vượt 1 triệu. ⚠️ THAY THẾ pre-check cũ ở OrderController (dòng
@@ -208,9 +303,7 @@ public class OrderService {
         order.setCustomer(user);
         order.setShippingAddress(shippingAddress);
         order.setBillingAddress(billingAddress);
-        // TODO: cần thêm field `shippingFee` (BigDecimal) vào entity AppOrder + migration SQL
-        // để lưu lại phí ship của từng đơn (hiện tại đang set tạm, sẽ lỗi compile nếu field chưa có).
-        order.setShippingFee(SHIPPING_FEE);
+        order.setShippingFee(shippingFee);
         order.setTotalPrice(grandTotal);
         order.setStatus(OrderStatus.PENDING);
         order.setPaymentMethod(paymentMethod);
@@ -341,6 +434,12 @@ public class OrderService {
         shippingAddress.setStreet(form.getStreet());
         shippingAddress.setCity(form.getCity());
         shippingAddress.setDistrict(form.getDistrict());
+        // MỚI (4.5): mã GHN lấy từ dropdown Quận/Huyện + Phường/Xã theo GHN
+        // (khác cascade city/district ở trên) — NULL nếu khách bỏ qua/GHN lỗi
+        // lúc load dropdown, calculateShippingFee() sẽ tự fallback region-based.
+        shippingAddress.setGhnProvinceId(form.getGhnProvinceId());
+        shippingAddress.setGhnDistrictId(form.getGhnDistrictId());
+        shippingAddress.setGhnWardCode(form.getGhnWardCode());
         shippingAddress.setIsDefault(false);
         addressRepository.save(shippingAddress);
 
@@ -348,11 +447,27 @@ public class OrderService {
                 .map(GuestCartItem::getLineTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        // MỚI (4.5): fetch hết ProductVariant 1 lần (thay vì query lẻ từng item
+        // trong loop tạo OrderDetail bên dưới) — dùng lại map này cho cả tính
+        // weight lẫn tạo OrderDetail, đỡ N truy vấn trùng lặp.
+        List<Integer> variantIds = cartItems.stream().map(GuestCartItem::getVariantId).toList();
+        Map<Integer, ProductVariant> variantMap = productVariantRepository.findAllById(variantIds).stream()
+                .collect(Collectors.toMap(ProductVariant::getId, v -> v));
+
+        int totalWeightGrams = cartItems.stream()
+                .mapToInt(item -> {
+                    ProductVariant v = variantMap.get(item.getVariantId());
+                    int unitWeight = (v != null) ? v.getProduct().getWeight() : DEFAULT_ITEM_WEIGHT_FALLBACK;
+                    return unitWeight * item.getQuantity();
+                })
+                .sum();
+
         // MỚI: guest KHÔNG được dùng voucher nữa — chỉ mua giá gốc hoặc giá
         // đã sale (snapshot sẵn trong GuestCartItem.getLineTotal()). Bỏ hẳn
         // voucher/discountAmount khỏi luồng này, kể cả khi form còn field
         // voucherCode (nếu FE chưa gỡ input đó, giá trị gửi lên sẽ bị lờ đi).
-        BigDecimal grandTotal = totalPrice.add(SHIPPING_FEE);
+        BigDecimal shippingFee = calculateShippingFee(shippingAddress, totalPrice, totalWeightGrams);
+        BigDecimal grandTotal = totalPrice.add(shippingFee);
 
         // Rule ">1 triệu bắt buộc VNPay" vẫn giữ nguyên, tính trên grandTotal
         // (giờ đơn giản hơn vì không còn phải trừ voucher trước).
@@ -368,7 +483,7 @@ public class OrderService {
         order.setGuestEmail(form.getEmail());
         order.setShippingAddress(shippingAddress);
         order.setBillingAddress(shippingAddress); // guest không tách địa chỉ thanh toán riêng
-        order.setShippingFee(SHIPPING_FEE);
+        order.setShippingFee(shippingFee);
         order.setTotalPrice(grandTotal);
         order.setStatus(OrderStatus.PENDING);
         order.setPaymentMethod(form.getPaymentMethod());
@@ -376,8 +491,10 @@ public class OrderService {
         orderRepository.save(order);
 
         for (GuestCartItem item : cartItems) {
-            ProductVariant variant = productVariantRepository.findById(item.getVariantId())
-                    .orElseThrow(() -> new IllegalArgumentException("Sản phẩm không tồn tại"));
+            ProductVariant variant = variantMap.get(item.getVariantId());
+            if (variant == null) {
+                throw new IllegalArgumentException("Sản phẩm không tồn tại");
+            }
 
             if (variant.getStock() < item.getQuantity()) {
                 throw new IllegalStateException(
