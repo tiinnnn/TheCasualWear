@@ -68,6 +68,61 @@
                 overflow-y: auto;
             }
         }
+
+        /* Thanh cuộn theo tông tối — mặc định trình duyệt (Windows/Chrome)
+           dùng thanh cuộn trắng/xám sáng theo theme hệ điều hành, chỉ lộ ra
+           khi nội dung dài hơn khung nhìn (ví dụ khi mở DevTools làm co
+           chiều cao trang). Tự định nghĩa màu để dù có hiện ra cũng không
+           lạc tông. Áp dụng cho toàn trang lẫn riêng sidebar. */
+        html { scrollbar-width: thin; scrollbar-color: var(--adm-border) transparent; }
+        #sidebarMenu.bg-dark { scrollbar-width: thin; scrollbar-color: var(--adm-border) transparent; }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--adm-border); border-radius: 999px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--adm-accent); }
+
+        #sidebarMenu.bg-dark::-webkit-scrollbar { width: 6px; }
+
+        /* ══ Nút toggle thu/phóng sidebar ══ */
+        #sidebarCollapseBtn {
+            width: 34px; height: 34px; padding: 0;
+            border: 1px solid var(--adm-border);
+            border-radius: 8px;
+            color: #fff;
+            background: transparent;
+            transition: background .18s ease, transform .18s ease;
+        }
+        #sidebarCollapseBtn:hover { background: var(--adm-accent-soft); }
+
+        /* ══ Trạng thái thu gọn — chỉ áp dụng desktop (md+), mobile vẫn
+           dùng offcanvas riêng nên không bị ảnh hưởng ══ */
+        @media (min-width: 768px) {
+            #sidebarMenu.bg-dark,
+            .col-md-10 {
+                transition: width .25s ease, flex-basis .25s ease, max-width .25s ease, margin-left .25s ease;
+            }
+            html.adm-sidebar-collapsed #sidebarMenu.bg-dark {
+                width: 76px !important;
+                flex: 0 0 76px !important;
+                max-width: 76px !important;
+            }
+            html.adm-sidebar-collapsed .col-md-10 {
+                flex: 1 1 auto !important;
+                max-width: calc(100% - 76px) !important;
+            }
+            /* Ẩn nhãn chữ, căn icon vào giữa, thu hẹp padding */
+            html.adm-sidebar-collapsed #sidebarMenu .nav-label { display: none; }
+            html.adm-sidebar-collapsed #sidebarMenu .nav-link {
+                display: flex; justify-content: center; padding-left: .5rem; padding-right: .5rem;
+            }
+            html.adm-sidebar-collapsed #sidebarMenu .nav-link i { margin-right: 0 !important; font-size: 1.15rem; }
+            /* "Quản lý kho" thu gọn: ẩn mũi tên, ẩn hẳn submenu con (icon-only
+               không đủ chỗ hiển thị hợp lý cho 2 cấp) */
+            html.adm-sidebar-collapsed #warehouseMenu { display: none !important; }
+        }
+        #sidebarCollapseBtn i { transition: transform .25s ease; }
+        html.adm-sidebar-collapsed #sidebarCollapseBtn i { transform: rotate(180deg); }
         #sidebarMenu .nav-link {
             border-radius: 10px;
             margin: 2px 10px;
@@ -117,18 +172,34 @@
             position: relative;
         }
     </style>
+    <script>
+        // Chạy sớm nhất có thể (trước khi body render) để tránh nháy giao
+        // diện: sidebar hiện to rồi mới co lại theo trạng thái đã lưu.
+        // Gắn class lên <html> vì thẻ này có sẵn ngay từ đầu, sớm hơn <body>.
+        if (localStorage.getItem('admSidebarCollapsed') === '1') {
+            document.documentElement.classList.add('adm-sidebar-collapsed');
+        }
+    </script>
 </head>
 <body>
 <!-- Navbar -->
 <nav class="navbar navbar-dark bg-dark sticky-top">
     <div class="container-fluid px-4">
-        <button class="navbar-toggler text-white border-0 me-2 d-md-none" type="button"
-                data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <a class="navbar-brand fw-bold" th:href="@{/admin}">
-            <i class="bi bi-gear"></i> Admin Panel
-        </a>
+        <div class="d-flex align-items-center">
+            <button class="navbar-toggler text-white border-0 me-2 d-md-none" type="button"
+                    data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <!-- Nút thu/phóng sidebar — chỉ desktop, mobile vẫn dùng offcanvas hamburger phía trên -->
+            <button type="button" id="sidebarCollapseBtn"
+                    class="btn btn-sm d-none d-md-inline-flex align-items-center justify-content-center me-3"
+                    title="Thu gọn / mở rộng menu" onclick="toggleAdminSidebar()">
+                <i class="bi bi-layout-sidebar-inset"></i>
+            </button>
+            <a class="navbar-brand fw-bold mb-0" th:href="@{/admin}">
+                <i class="bi bi-gear"></i> Admin Panel
+            </a>
+        </div>
         <div class="d-flex align-items-center flex-wrap gap-3">
             <a class="text-white text-decoration-none" th:href="@{/}">
                 <i class="bi bi-shop"></i> <span class="d-none d-sm-inline">Về trang shop</span>
@@ -216,75 +287,75 @@
             <div class="offcanvas-body p-0">
                 <ul class="nav flex-column">
                     <li class="nav-item">
-                        <a class="nav-link text-white py-3 px-4" th:href="@{/admin}">
-                            <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                        <a class="nav-link text-white py-3 px-4" th:href="@{/admin}" title="Dashboard">
+                            <i class="bi bi-speedometer2 me-2"></i><span class="nav-label">Dashboard</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link text-white py-3 px-4" th:href="@{/admin/products}">
-                            <i class="bi bi-box-seam me-2"></i>Sản phẩm
+                        <a class="nav-link text-white py-3 px-4" th:href="@{/admin/products}" title="Sản phẩm">
+                            <i class="bi bi-box-seam me-2"></i><span class="nav-label">Sản phẩm</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link text-white py-3 px-4" th:href="@{/admin/categories}">
-                            <i class="bi bi-tags me-2"></i>Danh mục
+                        <a class="nav-link text-white py-3 px-4" th:href="@{/admin/categories}" title="Danh mục">
+                            <i class="bi bi-tags me-2"></i><span class="nav-label">Danh mục</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link text-white py-3 px-4" th:href="@{/admin/orders}">
-                            <i class="bi bi-cart-check me-2"></i>Đơn hàng
+                        <a class="nav-link text-white py-3 px-4" th:href="@{/admin/orders}" title="Đơn hàng">
+                            <i class="bi bi-cart-check me-2"></i><span class="nav-label">Đơn hàng</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link text-white py-3 px-4" th:href="@{/admin/employees}">
-                            <i class="bi bi-people-fill me-2"></i>Nhân viên
+                        <a class="nav-link text-white py-3 px-4" th:href="@{/admin/employees}" title="Nhân viên">
+                            <i class="bi bi-people-fill me-2"></i><span class="nav-label">Nhân viên</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link text-white py-3 px-4" th:href="@{/admin/users}">
-                            <i class="bi bi-people me-2"></i>User
+                        <a class="nav-link text-white py-3 px-4" th:href="@{/admin/users}" title="User">
+                            <i class="bi bi-people me-2"></i><span class="nav-label">User</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link text-white py-3 px-4" th:href="@{/admin/vouchers}">
-                            <i class="bi bi-ticket-perforated me-2"></i>Voucher
+                        <a class="nav-link text-white py-3 px-4" th:href="@{/admin/vouchers}" title="Voucher">
+                            <i class="bi bi-ticket-perforated me-2"></i><span class="nav-label">Voucher</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link text-white py-3 px-4" th:href="@{/admin/sale-batches}">
-                            <i class="bi bi-percent me-2"></i>Sale theo đợt
+                        <a class="nav-link text-white py-3 px-4" th:href="@{/admin/sale-batches}" title="Sale theo đợt">
+                            <i class="bi bi-percent me-2"></i><span class="nav-label">Sale theo đợt</span>
                         </a>
                     </li>
                     <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','OWNER')">
                         <a class="nav-link text-white py-3 px-4 d-flex justify-content-between align-items-center"
                            data-bs-toggle="collapse" href="#warehouseMenu" role="button"
-                           aria-expanded="false" aria-controls="warehouseMenu">
-                            <span><i class="bi bi-boxes me-2"></i>Quản lý kho</span>
-                            <i class="bi bi-chevron-down small"></i>
+                           aria-expanded="false" aria-controls="warehouseMenu" title="Quản lý kho">
+                            <span><i class="bi bi-boxes me-2"></i><span class="nav-label">Quản lý kho</span></span>
+                            <i class="bi bi-chevron-down small nav-label"></i>
                         </a>
                         <div class="collapse" id="warehouseMenu">
                             <ul class="nav flex-column ps-3">
                                 <li class="nav-item">
-                                    <a class="nav-link text-white-50 py-2 px-4" th:href="@{/admin/warehouse/receipts}">
-                                        <i class="bi bi-truck me-2"></i>Phiếu nhập kho
+                                    <a class="nav-link text-white-50 py-2 px-4" th:href="@{/admin/warehouse/receipts}" title="Phiếu nhập kho">
+                                        <i class="bi bi-truck me-2"></i><span class="nav-label">Phiếu nhập kho</span>
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-white-50 py-2 px-4" th:href="@{/admin/warehouse/stock-log}">
-                                        <i class="bi bi-clock-history me-2"></i>Lịch sử tồn kho
+                                    <a class="nav-link text-white-50 py-2 px-4" th:href="@{/admin/warehouse/stock-log}" title="Lịch sử tồn kho">
+                                        <i class="bi bi-clock-history me-2"></i><span class="nav-label">Lịch sử tồn kho</span>
                                     </a>
                                 </li>
                             </ul>
                         </div>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link text-white py-3 px-4" th:href="@{/admin/collections}">
-                            <i class="bi bi-collection me-2"></i>Collections
+                        <a class="nav-link text-white py-3 px-4" th:href="@{/admin/collections}" title="Collections">
+                            <i class="bi bi-collection me-2"></i><span class="nav-label">Collections</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link text-success py-3 px-4" th:href="@{/cashier}">
-                            <i class="bi bi-cash-coin me-2"></i>Bán hàng tại quầy
+                        <a class="nav-link text-success py-3 px-4" th:href="@{/cashier}" title="Bán hàng tại quầy">
+                            <i class="bi bi-cash-coin me-2"></i><span class="nav-label">Bán hàng tại quầy</span>
                         </a>
                     </li>
                 </ul>
@@ -313,6 +384,15 @@
     syncAdminSidebarOffset();
     window.addEventListener('resize', syncAdminSidebarOffset);
     window.addEventListener('load', syncAdminSidebarOffset);
+
+    // Thu/phóng sidebar — nhớ trạng thái qua localStorage để lần vào lại
+    // trang vẫn giữ nguyên lựa chọn của người dùng. (Trạng thái ban đầu đã
+    // được set sớm ở script trong <head> để tránh nháy giao diện.)
+    function toggleAdminSidebar() {
+        document.documentElement.classList.toggle('adm-sidebar-collapsed');
+        localStorage.setItem('admSidebarCollapsed',
+            document.documentElement.classList.contains('adm-sidebar-collapsed') ? '1' : '0');
+    }
 </script>
 </body>
 </html>
