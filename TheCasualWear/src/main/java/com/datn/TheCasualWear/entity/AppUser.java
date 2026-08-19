@@ -40,6 +40,20 @@ public class AppUser {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    // ── MỚI: tính năng "Cashier tạo tài khoản trước cho khách" ─────────────
+    // Tài khoản do cashier tạo sẽ có enabled=false + activationToken khác
+    // null cho tới khi khách tự bấm link trong email và đặt mật khẩu thật
+    // (xem CashierAccountService.activateAccount). Sau khi kích hoạt xong,
+    // cả 2 field này được set về null lại.
+    // Cũng chính 2 field này là "dấu hiệu" để AccountCleanupScheduler nhận
+    // biết đây là tài khoản đang chờ kích hoạt (không cần thêm cột riêng để
+    // đánh dấu nguồn gốc tài khoản).
+    @Column(name = "activation_token", unique = true, length = 100)
+    private String activationToken;
+
+    @Column(name = "activation_expires_at")
+    private LocalDateTime activationExpiresAt;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_role",

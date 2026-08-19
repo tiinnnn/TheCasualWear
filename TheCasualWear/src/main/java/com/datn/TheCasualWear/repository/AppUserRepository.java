@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -40,4 +41,12 @@ public interface AppUserRepository extends JpaRepository<AppUser, Integer> {
             "LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
             "u.phone LIKE CONCAT('%', :keyword, '%'))")
     List<AppUser> searchCustomersByKeyword(@Param("keyword") String keyword);
+
+    Optional<AppUser> findByActivationToken(String activationToken);
+
+    // Dùng cho AccountCleanupScheduler — tìm các tài khoản cashier tạo đã hết
+    // hạn kích hoạt (activationToken khác null nghĩa là đang ở trạng thái chờ
+    // kích hoạt, không phải tài khoản bị khóa vì lý do khác).
+    List<AppUser> findByActivationTokenIsNotNullAndActivationExpiresAtBefore(LocalDateTime now);
+
 }

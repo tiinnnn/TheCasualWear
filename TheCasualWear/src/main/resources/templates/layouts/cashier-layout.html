@@ -171,6 +171,10 @@
                 <a class="cashier-nav-link" th:href="@{/cashier/orders}">
                     <i class="bi bi-receipt"></i> Đơn đã bán
                 </a>
+                <button type="button" class="cashier-nav-link btn btn-link p-0 border-0"
+                        data-bs-toggle="modal" data-bs-target="#createAccountModalNav">
+                    <i class="bi bi-person-plus"></i> Tạo tài khoản cho khách
+                </button>
                 <a class="cashier-nav-link" sec:authorize="hasAnyRole('ADMIN','OWNER')"
                    th:href="@{/admin}">
                     <i class="bi bi-gear"></i> Về trang Admin
@@ -197,6 +201,96 @@
     </div>
 </div>
 
+<!-- Modal "Tạo tài khoản cho khách" — dùng chung ở mọi trang cashier, độc lập
+     với giỏ hàng/đơn hàng (chỉ tạo tài khoản + gửi email kích hoạt). -->
+<div class="modal fade" id="createAccountModalNav" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>Tạo tài khoản cho khách</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted">
+                    Hệ thống sẽ gửi email kích hoạt để khách tự đặt mật khẩu,
+                    dùng để đăng nhập mua hàng online sau này.
+                </p>
+                <div class="mb-2">
+                    <label class="form-label small">Email khách <span class="text-danger">*</span></label>
+                    <input type="email" id="navNewAccountEmail" class="form-control form-control-sm"
+                           placeholder="email@example.com" autocomplete="off">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small">Số điện thoại <span class="text-muted">(không bắt buộc)</span></label>
+                    <input type="text" id="navNewAccountPhone" class="form-control form-control-sm"
+                           placeholder="09xxxxxxxx" autocomplete="off">
+                </div>
+                <div id="navCreateAccountMsg" class="mt-1 small" style="display:none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-success btn-sm" id="navCreateAccountBtn"
+                        onclick="submitCreateAccountNav()">
+                    <i class="bi bi-send"></i> Tạo & Gửi email
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Tạo tài khoản cho khách từ navbar — dùng chung mọi trang cashier.
+    // Cùng pattern fetch POST + query params như trong Pos.html, nhưng KHÔNG
+    // gán tài khoản vừa tạo vào giỏ/đơn nào (vì trang hiện tại có thể không
+    // có ngữ cảnh giỏ hàng, ví dụ trang "Đơn đã bán").
+    function submitCreateAccountNav() {
+        const email = document.getElementById('navNewAccountEmail').value.trim();
+        const phone = document.getElementById('navNewAccountPhone').value.trim();
+        const msgEl = document.getElementById('navCreateAccountMsg');
+        const btn   = document.getElementById('navCreateAccountBtn');
+
+        if (!email) {
+            msgEl.textContent  = 'Vui lòng nhập email.';
+            msgEl.className    = 'mt-1 small text-danger';
+            msgEl.style.display = 'block';
+            return;
+        }
+
+        btn.disabled = true;
+
+        const params = new URLSearchParams();
+        params.set('email', email);
+        if (phone) params.set('phone', phone);
+
+        fetch('/cashier/accounts/create?' + params.toString(), { method: 'POST' })
+            .then(res => res.json().then(data => ({ ok: res.ok, data })))
+            .then(({ ok, data }) => {
+                btn.disabled = false;
+
+                if (!ok) {
+                    msgEl.textContent  = data.message || 'Có lỗi xảy ra, vui lòng thử lại.';
+                    msgEl.className    = 'mt-1 small text-danger';
+                    msgEl.style.display = 'block';
+                    return;
+                }
+
+                msgEl.textContent = data.newlyCreated
+                    ? 'Đã tạo tài khoản, email kích hoạt đã được gửi.'
+                    : 'Email này đã có tài khoản sẵn.';
+                msgEl.className    = 'mt-1 small text-success';
+                msgEl.style.display = 'block';
+
+                document.getElementById('navNewAccountEmail').value = '';
+                document.getElementById('navNewAccountPhone').value = '';
+            })
+            .catch(() => {
+                btn.disabled = false;
+                msgEl.textContent  = 'Lỗi kết nối, thử lại.';
+                msgEl.className    = 'mt-1 small text-danger';
+                msgEl.style.display = 'block';
+            });
+    }
+</script>
 </body>
 </html>

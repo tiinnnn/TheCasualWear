@@ -338,7 +338,19 @@
                     '<span class="text-danger">Không tải được danh sách địa chỉ GHN, phí ship sẽ dùng mức ước tính.</span>';
             }
         });
-        toggleSaveAsDefaultRow();
+
+        // FIX: radio địa chỉ mặc định được đánh dấu "checked" sẵn từ server
+        // (th:checked="${addr.isDefault}"), nhưng set checked bằng HTML/thuộc
+        // tính không tự bắn sự kiện 'change' — nên logic fill field bên dưới
+        // (chỉ gắn trên listener 'change') không chạy, khiến field trống cho
+        // đến khi khách bấm chọn lại. Gọi thẳng applyAddressRadio() ở đây cho
+        // radio đang được check sẵn (nếu có) để fill ngay từ đầu.
+        const checkedAddressRadio = document.querySelector('.address-radio:checked');
+        if (checkedAddressRadio) {
+            await applyAddressRadio(checkedAddressRadio);
+        } else {
+            toggleSaveAsDefaultRow();
+        }
     });
 
     // MỚI (4.5): khách chọn xong đủ 3 cấp GHN — cập nhật city/district
@@ -407,37 +419,45 @@
         saveAsDefaultRow.classList.toggle('d-none', !!useExistingInput.value);
     }
 
-    // Chọn 1 địa chỉ có sẵn → tự điền field + đánh dấu "dùng nguyên địa chỉ này"
+    // Chọn 1 địa chỉ có sẵn → tự điền field + đánh dấu "dùng nguyên địa chỉ này".
+    // Tách thành hàm riêng (thay vì inline trong listener 'change') để có thể
+    // gọi lại cho radio mặc định đã được check sẵn từ server lúc trang vừa
+    // load (xem DOMContentLoaded phía trên) — vì set "checked" bằng HTML thì
+    // KHÔNG tự bắn sự kiện 'change'.
+    async function applyAddressRadio(radio) {
+        document.getElementById('fullName').value = radio.dataset.fullname;
+        document.getElementById('phone').value = radio.dataset.phone;
+        document.getElementById('street').value = radio.dataset.street;
+
+        // Điền tạm city/district dạng String ngay (phòng khi địa chỉ
+        // này chưa có mã GHN) — nếu có mã GHN, handleGhnWardSelected sẽ
+        // tự ghi đè lại bằng tên chính xác lấy từ GHN ngay sau đây.
+        document.getElementById('citySelect').value = radio.dataset.city;
+        document.getElementById('districtSelect').value = radio.dataset.district;
+        fetchShippingFee(radio.dataset.ghnDistrictId || null, radio.dataset.ghnWardCode || null, radio.dataset.city);
+
+        // MỚI (4.5): prefill lại 3 dropdown GHN theo mã đã lưu trên địa
+        // chỉ này (rỗng nếu địa chỉ cũ chưa có mã GHN — cascade sẽ tự
+        // reset về "chưa chọn"). await để đảm bảo mọi 'change' event nó
+        // bắn ra (kích hoạt clearUseExisting) chạy XONG trước khi mình
+        // set lại useExistingInput bên dưới.
+        if (ghnCascadeApi) {
+            await ghnCascadeApi.applySelection(
+                radio.dataset.ghnProvinceId || '',
+                radio.dataset.ghnDistrictId || '',
+                radio.dataset.ghnWardCode || ''
+            );
+        }
+
+        // Đặt SAU cascade ở trên — cascade cũng kích hoạt
+        // clearUseExisting() bên dưới, cần ghi đè lại giá trị đúng sau cùng.
+        useExistingInput.value = radio.dataset.id;
+        toggleSaveAsDefaultRow();
+    }
+
     document.querySelectorAll('.address-radio').forEach(function (radio) {
-        radio.addEventListener('change', async function () {
-            document.getElementById('fullName').value = radio.dataset.fullname;
-            document.getElementById('phone').value = radio.dataset.phone;
-            document.getElementById('street').value = radio.dataset.street;
-
-            // Điền tạm city/district dạng String ngay (phòng khi địa chỉ
-            // này chưa có mã GHN) — nếu có mã GHN, handleGhnWardSelected sẽ
-            // tự ghi đè lại bằng tên chính xác lấy từ GHN ngay sau đây.
-            document.getElementById('citySelect').value = radio.dataset.city;
-            document.getElementById('districtSelect').value = radio.dataset.district;
-            fetchShippingFee(radio.dataset.ghnDistrictId || null, radio.dataset.ghnWardCode || null, radio.dataset.city);
-
-            // MỚI (4.5): prefill lại 3 dropdown GHN theo mã đã lưu trên địa
-            // chỉ này (rỗng nếu địa chỉ cũ chưa có mã GHN — cascade sẽ tự
-            // reset về "chưa chọn"). await để đảm bảo mọi 'change' event nó
-            // bắn ra (kích hoạt clearUseExisting) chạy XONG trước khi mình
-            // set lại useExistingInput bên dưới.
-            if (ghnCascadeApi) {
-                await ghnCascadeApi.applySelection(
-                    radio.dataset.ghnProvinceId || '',
-                    radio.dataset.ghnDistrictId || '',
-                    radio.dataset.ghnWardCode || ''
-                );
-            }
-
-            // Đặt SAU cascade ở trên — cascade cũng kích hoạt
-            // clearUseExisting() bên dưới, cần ghi đè lại giá trị đúng sau cùng.
-            useExistingInput.value = radio.dataset.id;
-            toggleSaveAsDefaultRow();
+        radio.addEventListener('change', function () {
+            applyAddressRadio(radio);
         });
     });
 

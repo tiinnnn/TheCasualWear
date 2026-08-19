@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+</head>
+<body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:24px;">
+    <table role="presentation" width="100%" style="max-width:600px; margin:0 auto; background:#ffffff; border-radius:8px; overflow:hidden;">
+        <tr>
+            <td style="background:#111111; padding:20px; text-align:center;">
+                <span style="color:#ffffff; font-size:20px; font-weight:bold; letter-spacing:1px;">THE CASUAL WEAR</span>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding:28px;">
+                <p style="font-size:16px; color:#222;">Xin chào <strong th:text="${username}">khach01</strong>,</p>
+
+                <p style="font-size:15px; color:#444; line-height:1.6;">
+                    Nhân viên cửa hàng đã tạo sẵn cho bạn một tài khoản TheCasualWear
+                    khi bạn mua hàng tại quầy. Bấm vào nút bên dưới để đặt mật khẩu
+                    và kích hoạt tài khoản — từ đó bạn có thể đăng nhập mua hàng online
+                    bất cứ lúc nào.
+                </p>
+
+                <div style="text-align:center; margin:32px 0;">
+                    <a th:href="${activationUrl}"
+                       style="background:#111111; color:#ffffff; text-decoration:none; padding:14px 32px; border-radius:6px; font-size:15px; display:inline-block;">
+                        Kích hoạt tài khoản
+                    </a>
+                </div>
+
+                <p style="font-size:13px; color:#888; line-height:1.6;">
+                    Link kích hoạt có hiệu lực trong
+                    <strong th:text="${expiresInHours}">48</strong> giờ.
+                    Nếu bạn không thực hiện giao dịch này, vui lòng bỏ qua email —
+                    tài khoản sẽ không được kích hoạt và sẽ tự động bị hủy.
+                </p>
+
+                <p style="font-size:13px; color:#aaa; word-break:break-all;">
+                    Nếu nút bấm không hoạt động, copy link sau vào trình duyệt:<br/>
+                    <span th:text="${activationUrl}">http://localhost:8080/activate-account?token=...</span>
+                </p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

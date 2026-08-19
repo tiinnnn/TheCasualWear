@@ -14,6 +14,10 @@ public interface StockMovementLogRepository extends JpaRepository<StockMovementL
 
     List<StockMovementLog> findByVariantIdOrderByCreatedAtDesc(Integer variantId);
 
+    // MỚI: dọn log trước khi hard-delete variant/product — StockMovementLog
+    // có FK NOT NULL tới variant, không xóa trước sẽ vỡ FK khi xóa variant.
+    void deleteByVariantId(Integer variantId);
+
     List<StockMovementLog> findByCreatedAtBetweenOrderByCreatedAtDesc(
             LocalDateTime from, LocalDateTime to);
 

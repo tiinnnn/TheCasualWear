@@ -54,27 +54,45 @@
                     <div class="dm-table-wrap dm-table-wrap--scroll">
                         <table class="dm-table">
                             <colgroup>
-                                <col style="width:48px">
-                                <col style="width:55%">
-                                <col>
+                                <col style="width:44px">
+                                <col style="width:60px">
+                                <col style="width:38%">
+                                <col style="width:17%">
+                                <col style="width:15%">
                             </colgroup>
                             <thead>
                             <tr>
                                 <th class="dm-text-center"><input type="checkbox" id="selectAll" class="dm-checkbox"></th>
+                                <th class="dm-text-center">Ảnh</th>
                                 <th>Sản phẩm</th>
                                 <th>Danh mục</th>
+                                <th class="dm-text-end">Giá</th>
                             </tr>
                             </thead>
                             <tbody>
-                            <tr th:each="p : ${products}" th:attr="data-name=${#strings.toLowerCase(p.name)}">
+                            <tr th:each="p : ${products}" th:attr="data-name=${#strings.toLowerCase(p.name)}"
+                                class="dm-row-clickable">
                                 <td class="dm-text-center">
                                     <input type="checkbox" name="productIds" th:value="${p.id}" class="dm-checkbox product-checkbox">
                                 </td>
+                                <td class="dm-text-center">
+                                    <img th:if="${p.images != null and !p.images.isEmpty()}"
+                                         th:src="${p.images[0].imageUrl}"
+                                         th:alt="${p.name}"
+                                         class="dm-thumb"
+                                         loading="lazy"
+                                         onerror="this.onerror=null;this.src='https://placehold.co/64x64/1a1e29/6b7080?text=%20';">
+                                    <div th:if="${p.images == null or p.images.isEmpty()}" class="dm-thumb dm-thumb--empty">
+                                        <i class="bi bi-image"></i>
+                                    </div>
+                                </td>
                                 <td class="dm-cell-strong dm-truncate" th:text="${p.name}"></td>
-                                <td class="dm-text-dim" th:text="${p.category != null ? p.category.name : ''}"></td>
+                                <td class="dm-text-dim dm-truncate" th:text="${p.category != null ? p.category.name : ''}"></td>
+                                <td class="dm-text-end dm-text-dim"
+                                    th:text="${p.price != null ? #numbers.formatDecimal(p.price, 0, 'COMMA', 0, 'POINT') + 'đ' : ''}"></td>
                             </tr>
                             <tr th:if="${products.isEmpty()}">
-                                <td colspan="3" class="dm-empty">Không có sản phẩm nào</td>
+                                <td colspan="5" class="dm-empty">Không có sản phẩm nào</td>
                             </tr>
                             </tbody>
                         </table>
@@ -157,6 +175,7 @@
 
         .dm-text-dim { color: var(--text-dim); }
         .dm-text-center { text-align: center; }
+        .dm-text-end { text-align: right; }
         .dm-cell-strong { font-weight: 700; }
         .dm-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -169,12 +188,24 @@
             padding: 10px; background: var(--surface-2); border-bottom: 1px solid var(--border);
             white-space: nowrap;
         }
-        .dm-table tbody td { padding: 11px 10px; border-bottom: 1px solid var(--border); }
+        .dm-table th.dm-text-end { text-align: right; }
+        .dm-table th.dm-text-center { text-align: center; }
+        .dm-table tbody td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
         .dm-table tbody tr:last-child td { border-bottom: none; }
         .dm-table tbody tr { transition: background .2s ease; }
         .dm-table tbody tr:hover { background: var(--surface-2); }
+        .dm-row-clickable { cursor: pointer; }
 
         .dm-checkbox { accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer; }
+
+        .dm-thumb {
+            width: 44px; height: 44px; border-radius: 8px; object-fit: cover;
+            border: 1px solid var(--border); background: var(--surface-2); display: block; margin: 0 auto;
+        }
+        .dm-thumb--empty {
+            display: flex; align-items: center; justify-content: center;
+            color: var(--text-faint); font-size: 1rem;
+        }
 
         .dm-empty { text-align: center; padding: 24px 0; color: var(--text-faint); font-size: .85rem; }
 
@@ -231,6 +262,18 @@
 
             document.querySelectorAll('.product-checkbox').forEach(cb =>
                 cb.addEventListener('change', updateCount));
+
+            // Click bất kỳ đâu trên dòng (trừ chính checkbox) cũng toggle chọn —
+            // hữu ích vì giờ dòng có ảnh + nhiều thông tin hơn, dễ bấm trúng hơn
+            document.querySelectorAll('.dm-row-clickable').forEach(row => {
+                row.addEventListener('click', function (e) {
+                    if (e.target.classList.contains('product-checkbox')) return;
+                    const cb = row.querySelector('.product-checkbox');
+                    if (!cb) return;
+                    cb.checked = !cb.checked;
+                    cb.dispatchEvent(new Event('change'));
+                });
+            });
 
             document.getElementById('saleBatchForm').addEventListener('submit', function (e) {
                 if (checkboxes().filter(cb => cb.checked).length === 0) {

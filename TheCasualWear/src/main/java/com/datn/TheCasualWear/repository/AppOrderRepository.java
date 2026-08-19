@@ -51,14 +51,12 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
                                 @Param("toDate")   LocalDateTime toDate,
                                 Pageable pageable);
 
-    // ── MỚI: đơn bán tại quầy của 1 cashier trong khoảng thời gian gần đây ──
     @Query("SELECT o FROM AppOrder o WHERE o.orderType = com.datn.TheCasualWear.enums.OrderType.COUNTER " +
             "AND o.cashier.id = :cashierId AND o.orderDate >= :fromDate " +
             "ORDER BY o.orderDate DESC")
     List<AppOrder> findRecentCounterOrdersByCashier(@Param("cashierId") Integer cashierId,
                                                     @Param("fromDate") LocalDateTime fromDate);
 
-    // ── DASHBOARD: doanh thu theo kênh bán (ONLINE/COUNTER) ─────────────
     @Query("""
         SELECT o.orderType, COALESCE(SUM(o.totalPrice), 0), COUNT(o)
         FROM AppOrder o
@@ -69,7 +67,6 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
     List<Object[]> sumRevenueByOrderType(@Param("from") LocalDateTime from,
                                          @Param("to") LocalDateTime to);
 
-    // ── DASHBOARD: thống kê lý do hủy/hoàn đơn ──────────────────────────
     @Query("""
         SELECT o.cancelReason, COUNT(o)
         FROM AppOrder o
@@ -81,10 +78,6 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
         """)
     List<Object[]> countByCancelReason();
 
-    // ── DASHBOARD: khách hàng hủy/hoàn nhiều lần (ứng viên theo dõi) ────
-    // Đếm theo o.customer (chủ đơn), KHÔNG phải cancelledBy — vì cancelledBy
-    // có thể là admin hủy hộ, còn cái cần theo dõi là khách nào hay bị hủy/
-    // hoàn đơn. Loại đơn COUNTER không có customer (khách vãng lai).
     @Query("""
         SELECT o.customer,
                SUM(CASE WHEN o.status = com.datn.TheCasualWear.enums.OrderStatus.CANCELLED THEN 1L ELSE 0L END),
@@ -99,12 +92,6 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
         ORDER BY COUNT(o) DESC
         """)
     List<Object[]> findFrequentCancellers(@Param("minCount") long minCount);
-
-    // ── DASHBOARD: doanh thu theo khoảng thời gian tùy chọn (2.4/2.5) ──────
-    // Công thức doanh thu = POS (COUNTER, COMPLETED) + Online VNPay đã thanh
-    // toán (isPaid=true, chưa bị hủy/hoàn) + Online COD đã hoàn tất giao hàng
-    // (COMPLETED). from/to có thể null — null nghĩa là không giới hạn theo
-    // hướng đó (xem OrderService.resolveDateRange).
 
     @Query("""
         SELECT COALESCE(SUM(o.totalPrice), 0), COUNT(o)
@@ -140,9 +127,6 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
         """)
     List<Object[]> sumOnlineCodRevenue(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
-    // Giá vốn (costPrice) của các order_detail thuộc đúng tập đơn được tính
-    // doanh thu ở trên (3 nhánh POS / VNPay / COD giống hệt 3 query trên) —
-    // dùng để tính lợi nhuận = doanh thu - giá vốn.
     @Query("""
         SELECT COALESCE(SUM(od.variant.costPrice * od.quantity), 0)
         FROM OrderDetail od
@@ -167,11 +151,6 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
     boolean existsByOrderCode(String orderCode);
     Optional<AppOrder> findByOrderCode(String orderCode);
 
-    // MỚI: kiểm tra Address (theo id) có đang được đơn hàng nào tham chiếu
-    // (shippingAddress hoặc billingAddress) không — dùng để chặn xóa/sửa
-    // đè địa chỉ ở AddressService.deleteAddress()/updateAddress(), tránh vi
-    // phạm FK constraint ở DB gây lỗi 500 khi khách tự xóa/sửa 1 địa chỉ đã
-    // lưu nhưng từng dùng để đặt hàng trước đó.
     @Query("SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END FROM AppOrder o " +
             "WHERE o.shippingAddress.id = :addressId OR o.billingAddress.id = :addressId")
     boolean existsByAddressId(@Param("addressId") Integer addressId);
@@ -191,4 +170,10 @@ public interface AppOrderRepository extends JpaRepository<AppOrder, Integer> {
             "LEFT JOIN FETCH v.color " +
             "WHERE o.id = :id")
     Optional<AppOrder> findByIdWithDetailsForEmail(@Param("id") Integer id);
+
+    // ── MỚI: dùng cho AccountCleanupScheduler — kiểm tra 1 AppUser (tài
+    // khoản cashier tạo, chưa kích hoạt, đã hết hạn) có đơn hàng nào tham
+    // chiếu tới không, để quyết định chỉ giải phóng email (còn đơn) hay
+    // xóa hẳn record (chưa từng có đơn) — tránh vi phạm FK constraint.
+    boolean existsByCustomerId(Integer customerId);
 }

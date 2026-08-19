@@ -54,7 +54,18 @@ public class AuthController {
             redirectAttributes.addFlashAttribute("errorMessage", "Mật khẩu nhập lại không khớp!");
             return "redirect:/auth/register";
         }
-        appUserService.register(user);
+        // MỚI: bọc try/catch — appUserService.register() ném IllegalArgumentException
+        // khi validate thất bại (email/username trùng, sai định dạng mật khẩu...),
+        // kể cả trường hợp mới: email trùng tài khoản do cashier tạo sẵn nhưng
+        // đăng ký lấp đầy bị lỗi (VD: username bị người khác chiếm). Trước đây
+        // không bắt lỗi này -> Spring văng thẳng ra trang lỗi 500 thay vì quay
+        // lại form đăng ký kèm thông báo.
+        try {
+            appUserService.register(user);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/auth/register";
+        }
         redirectAttributes.addFlashAttribute("successMessage", "Đăng ký thành công! Vui lòng đăng nhập.");
         return "redirect:/auth/login";
     }

@@ -127,6 +127,14 @@ public class SecurityConfig {
                                 "/order/apply-voucher-guest",
                                 "/order/lookup-guest",
 
+                                // MỚI: trang khách bấm link trong email để đặt mật khẩu
+                                // kích hoạt tài khoản do cashier tạo sẵn tại quầy — khách
+                                // chưa đăng nhập lúc bấm link nên bắt buộc permitAll, nếu
+                                // không sẽ rơi vào .anyRequest().authenticated() và bị
+                                // redirect sang /auth/login trước khi kịp đặt mật khẩu.
+                                "/activate-account",
+                                "/activate-account/**",
+
                                 // MỚI: callback VNPay cho khách vãng lai — VNPay redirect thẳng
                                 // về đây sau khi thanh toán, không mang theo Authentication nào
                                 // cả (guest vốn chưa đăng nhập), nên bắt buộc phải permitAll

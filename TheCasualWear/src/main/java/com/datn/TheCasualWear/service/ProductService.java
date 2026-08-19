@@ -21,6 +21,8 @@ public class ProductService {
     private final ProductImageRepository   productImageRepository;
     private final OrderDetailRepository    orderDetailRepository;
     private final CloudinaryService        cloudinaryService;
+    private final StockMovementLogRepository   stockMovementLogRepository;
+    private final GoodsReceiptItemRepository   goodsReceiptItemRepository;
 
     private static final int SHOP_PAGE_SIZE  = 12;
     private static final int ADMIN_PAGE_SIZE = 15;
@@ -84,9 +86,18 @@ public class ProductService {
         }
     }
 
+    // MỚI (4.5): validate cân nặng — bắt buộc > 0 để GHN Calculate Fee
+    // không bị từ chối request (GHN reject weight = 0).
+    private void validateWeight(Product product) {
+        if (product.getWeight() == null || product.getWeight() <= 0) {
+            throw new IllegalArgumentException("Cân nặng sản phẩm phải lớn hơn 0!");
+        }
+    }
+
     @Transactional
     public Product createProduct(Product product) {
         validateCategory(product);
+        validateWeight(product);
         product.setIsDeleted(false);
         return productRepository.save(product);
     }
@@ -95,6 +106,7 @@ public class ProductService {
     public Product createProductWithVariants(Product product,
                                              List<ProductVariant> variants) {
         validateCategory(product);
+        validateWeight(product);
         product.setIsDeleted(false);
         Product saved = productRepository.save(product);
 
@@ -111,11 +123,13 @@ public class ProductService {
     @Transactional
     public Product updateProduct(Integer id, Product details) {
         validateCategory(details);
+        validateWeight(details);
         Product product = getProductById(id);
         product.setName(details.getName());
         product.setPrice(details.getPrice());
         product.setDescription(details.getDescription());
         product.setCategory(details.getCategory());
+        product.setWeight(details.getWeight());
         return productRepository.save(product);
     }
 
@@ -155,8 +169,8 @@ public class ProductService {
             throw new IllegalStateException(
                     "Không thể xóa! Sản phẩm đang có trong đơn hàng chưa hủy.");
         }
-        variantRepository.findByProductId(id)
-                .forEach(v -> cartItemRepository.deleteByVariantId(v.getId()));
+        List<ProductVariant> variants = variantRepository.findByProductId(id);
+        variants.forEach(v -> cartItemRepository.deleteByVariantId(v.getId()));
 
         // Xóa sản phẩm khỏi tất cả collection đang chứa nó (nếu có)
         for (Collection collection : product.getCollections()) {
@@ -177,6 +191,31 @@ public class ProductService {
         }
 
         productImageRepository.deleteByProduct(product);
+
+        // BUG FIX: bản cũ không xóa ProductVariant trước khi xóa Product —
+        // product_variant.product_id gần như chắc chắn có FK NOT NULL tới
+        // product, nên productRepository.delete(product) bên dưới sẽ ném
+        // FK violation ngay khi sản phẩm có biến thể (tức luôn luôn, vì
+        // sản phẩm nào cũng phải có variant mới bán được). Phải xóa hết
+        // variant trước.
+        //
+        // MỚI: trước khi xóa variant, phải dọn 2 bảng con tham chiếu tới
+        // variant_id mà KHÔNG có ON DELETE CASCADE ở DB:
+        //   - stock_movement_log (audit trail nhập/xuất kho)
+        //   - goods_receipt_item (dòng chi tiết trong phiếu nhập kho)
+        // Không dọn trước thì variantRepository.deleteAll() bên dưới vẫn
+        // vỡ FK y hệt lỗi ban đầu, chỉ là dời từ "xóa product" sang
+        // "xóa variant". Bản thân goods_receipt (phiếu nhập) được GIỮ LẠI
+        // — chỉ xóa dòng item liên quan tới variant của sản phẩm này, vì
+        // phiếu nhập có thể còn item của sản phẩm khác, không được xóa cả
+        // phiếu.
+        for (ProductVariant v : variants) {
+            stockMovementLogRepository.deleteByVariantId(v.getId());
+            goodsReceiptItemRepository.deleteByVariantId(v.getId());
+        }
+
+        variantRepository.deleteAll(variants);
+
         productRepository.delete(product);
     }
 }
