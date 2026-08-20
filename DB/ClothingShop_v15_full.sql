@@ -12,11 +12,16 @@
 --  employee đã có sẵn trong baseline v10 (seed sẵn owner/admin/cashier1).
 --
 --  v15 – Gộp migration_cho_v14.sql:
---       + app_user: + activation_token (mã kích hoạt, UNIQUE, NULL nếu tài
---         khoản đã kích hoạt/không dùng luồng này) + activation_expires_at
---         (hạn dùng của token) — phục vụ tính năng "Cashier tạo tài khoản
---         trước cho khách": cashier tạo app_user tại quầy, khách nhận link
---         kèm token để tự đặt mật khẩu và kích hoạt tài khoản sau
+--       + app_user: + activation_token (mã kích hoạt, UNIQUE khi có giá trị,
+--         NULL nếu tài khoản đã kích hoạt/không dùng luồng này) +
+--         activation_expires_at (hạn dùng của token) — phục vụ tính năng
+--         "Cashier tạo tài khoản trước cho khách": cashier tạo app_user tại
+--         quầy, khách nhận link kèm token để tự đặt mật khẩu và kích hoạt
+--         tài khoản sau
+--       + FIX: unique constraint dùng filtered unique index (WHERE
+--         activation_token IS NOT NULL) thay vì UNIQUE constraint thường,
+--         vì SQL Server chỉ cho phép 1 dòng NULL/bảng với UNIQUE constraint
+--         chuẩn — sẽ vỡ ngay khi có >1 user không dùng flow cashier
 --
 --  v14 – Gộp migration_ghn_shipping.sql + migration_add_address_active_v13.sql:
 --       + address: + ghn_province_id, ghn_district_id, ghn_ward_code (mã định
@@ -114,9 +119,18 @@ CREATE TABLE app_user (
     enabled               BIT           NOT NULL DEFAULT 1,
     created_at            DATETIME      NOT NULL DEFAULT GETDATE(),
     activation_token      VARCHAR(100)  NULL,
-    activation_expires_at DATETIME2     NULL,
-    CONSTRAINT UQ_app_user_activation_token UNIQUE (activation_token)
+    activation_expires_at DATETIME2     NULL
 );
+
+-- FIX (v15): activation_token là NULL-able nhưng cần unique khi có giá trị
+-- thật. SQL Server coi nhiều NULL là "trùng nhau" trong UNIQUE constraint
+-- thường (chỉ cho phép đúng 1 dòng NULL toàn bảng) — khác Postgres/MySQL —
+-- nên phải dùng filtered unique index thay vì CONSTRAINT ... UNIQUE inline,
+-- để nhiều user (activation_token = NULL, tức không dùng flow cashier) vẫn
+-- insert được bình thường, chỉ ép unique với các dòng có token thật.
+CREATE UNIQUE INDEX UQ_app_user_activation_token
+    ON app_user(activation_token)
+    WHERE activation_token IS NOT NULL;
 
 CREATE TABLE user_role (
     user_id INT NOT NULL,
