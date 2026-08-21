@@ -12,18 +12,6 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
-/**
- * Gửi email xác nhận đơn hàng (4.3) — ĐÃ ĐỔI (theo yêu cầu mới): trigger ngay
- * trong OrderService.placeOrder()/placeOrderGuest() lúc khách vừa đặt hàng
- * (status PENDING), KHÔNG còn chờ admin xác nhận (CONFIRMED) nữa. Chạy bất
- * đồng bộ qua "mailTaskExecutor" (xem MailAsyncConfig) để không làm chậm
- * response, và KHÔNG được để lỗi gửi mail làm fail luồng đặt hàng — đơn đã
- * lưu DB xong trước khi hàm này được gọi, ở đây chỉ log lại nếu gửi thất bại.
- *
- * ⚠️ GIẢ ĐỊNH: application.properties đã có spring.mail.username (theo xác
- * nhận SMTP đã cấu hình sẵn) — dùng làm địa chỉ "From". Nếu key tên khác,
- * đổi lại @Value bên dưới.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -88,7 +76,6 @@ public class OrderEmailService {
                 order.getShippingAddress() != null ? order.getShippingAddress().getFullName()
                         : (order.getCustomer() != null ? order.getCustomer().getUsername() : "Quý khách"));
         context.setVariable("isGuest", order.getCustomer() == null);
-        // MỚI: hiển thị email liên hệ trong bảng thông tin đơn hàng.
         context.setVariable("recipientEmail", recipient);
         // MỚI: link tra cứu đơn tuyệt đối, chỉ hiển thị cho khách vãng lai
         // (template chỉ render khối này khi isGuest=true, nhưng vẫn set biến

@@ -96,7 +96,28 @@ public class AdminEmployeeController {
     }
 
     @GetMapping("/{id}/toggle")
-    public String toggle(@PathVariable Integer id, RedirectAttributes ra) {
+    public String toggle(@PathVariable Integer id, Authentication auth, RedirectAttributes ra) {
+        // Trước đây endpoint này không check quyền gì cả — 1 ADMIN thường có
+        // thể gọi thẳng URL này để cho ADMIN khác hoặc OWNER "nghỉ việc"
+        // (kéo theo khóa luôn tài khoản đăng nhập của họ, xem
+        // EmployeeService.setActive). Chỉ OWNER mới được đổi trạng thái của
+        // nhân viên đang có role ADMIN/OWNER — cùng quy tắc với addRole/removeRole.
+        Employee employee = employeeService.getEmployeeById(id);
+        boolean targetIsAdminOrOwner = employee.getUser().getRoles().stream()
+                .anyMatch(r -> r.getName().equals("ROLE_ADMIN") || r.getName().equals("ROLE_OWNER"));
+        if (!isOwner(auth) && targetIsAdminOrOwner) {
+            ra.addFlashAttribute("errorMessage", "Bạn không có quyền đổi trạng thái nhân viên này!");
+            return "redirect:/admin/employees";
+        }
+
+        // Không cho tự "cho mình nghỉ việc" — hành động này kéo theo khóa
+        // luôn tài khoản đăng nhập (xem EmployeeService.setActive), nên phải
+        // do người khác chủ động thực hiện, không tự thao tác lên chính mình.
+        if (employee.getIsActive() && employee.getUser().getUsername().equals(auth.getName())) {
+            ra.addFlashAttribute("errorMessage", "Bạn không thể tự đổi trạng thái làm việc của chính mình!");
+            return "redirect:/admin/employees";
+        }
+
         employeeService.toggleActive(id);
         ra.addFlashAttribute("successMessage", "Đã đổi trạng thái làm việc!");
         return "redirect:/admin/employees";
@@ -145,6 +166,17 @@ public class AdminEmployeeController {
 
         try {
             Employee employee = employeeService.getEmployeeById(id);
+
+            // Không cho Owner tự xóa role OWNER của chính mình — kể cả khi hệ
+            // thống vẫn còn Owner khác. Việc tước quyền quản trị cao nhất của
+            // 1 tài khoản nên luôn do MỘT Owner KHÁC chủ động thực hiện, tránh
+            // trường hợp tự thao tác nhầm hoặc bị lừa (social engineering) tự
+            // hạ quyền chính mình.
+            if (roleName.equals("ROLE_OWNER") && employee.getUser().getUsername().equals(auth.getName())) {
+                ra.addFlashAttribute("errorMessage", "Bạn không thể tự xóa role Owner của chính mình!");
+                return "redirect:/admin/employees/edit/" + id;
+            }
+
             // Chặn thêm ở đây trong AppUserService.removeRole() nếu đang có
             // ca OPEN — bắt IllegalStateException cùng nhánh với các lỗi khác.
             appUserService.removeRole(employee.getUser().getId(), roleName);

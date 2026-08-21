@@ -163,6 +163,12 @@ public class AppUserService {
         if (user.getRoles().size() == 1) {
             throw new IllegalStateException("User phải có ít nhất 1 role!");
         }
+        // Không cho xóa ROLE_OWNER nếu đây là Owner cuối cùng của hệ thống —
+        // tránh trường hợp hệ thống mất sạch owner (kể cả khi chính owner đó
+        // tự thao tác lên chính mình và vẫn còn role khác như ROLE_ADMIN).
+        if (roleName.equals("ROLE_OWNER") && appUserRepository.countByRoles_Name("ROLE_OWNER") <= 1) {
+            throw new IllegalStateException("Hệ thống phải có ít nhất 1 Owner!");
+        }
 
         user.getRoles().remove(role);
         appUserRepository.save(user);
