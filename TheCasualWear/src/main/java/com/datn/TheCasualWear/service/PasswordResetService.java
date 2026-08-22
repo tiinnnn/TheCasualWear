@@ -35,6 +35,7 @@ public class PasswordResetService {
 
         // Xóa token cũ nếu có
         tokenRepository.deleteByUser(user);
+        tokenRepository.flush();
 
         // Tạo token mới, hết hạn sau 15 phút
         String token = UUID.randomUUID().toString();
