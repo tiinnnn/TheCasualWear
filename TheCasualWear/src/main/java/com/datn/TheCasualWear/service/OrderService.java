@@ -284,12 +284,6 @@ public class OrderService {
         BigDecimal shippingFee = calculateShippingFee(shippingAddress, totalPrice, totalWeightGrams);
         BigDecimal grandTotal = totalPrice.add(shippingFee);
 
-        // MỚI: bắt buộc VNPay nếu tổng đơn thực trả (đã gồm voucher + ship)
-        // vượt 1 triệu. ⚠️ THAY THẾ pre-check cũ ở OrderController (dòng
-        // ~123-130 trước sửa) — check đó dùng totalPrice thô, CHƯA trừ
-        // voucher, CHƯA cộng ship nên bị lọt qua các đơn kiểu "hàng đúng 1tr
-        // + 30k ship vẫn COD được". Đây là nơi duy nhất biết đúng grandTotal
-        // cuối cùng, nên chuyển check vào đây.
         if ("COD".equals(paymentMethod)
                 && grandTotal.compareTo(BigDecimal.valueOf(1_000_000)) > 0) {
             throw new IllegalStateException(

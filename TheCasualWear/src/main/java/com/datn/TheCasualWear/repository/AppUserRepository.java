@@ -19,6 +19,9 @@ public interface AppUserRepository extends JpaRepository<AppUser, Integer> {
     boolean existsByUsername(String username);
     boolean existsByEmail(String email);
 
+    // Dùng để chặn xóa role OWNER cuối cùng trong hệ thống (AppUserService.removeRole).
+    long countByRoles_Name(String roleName);
+
     @Query("SELECT DISTINCT u FROM AppUser u LEFT JOIN u.roles r WHERE " +
             "(:keyword IS NULL OR " +
             " LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
