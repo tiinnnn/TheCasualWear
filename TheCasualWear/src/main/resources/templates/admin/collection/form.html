@@ -27,7 +27,8 @@
                               ? @{'/admin/collections/' + ${collection.id} + '/edit'}
                               : @{/admin/collections/new}"
                   method="post"
-                  enctype="multipart/form-data">
+                  enctype="multipart/form-data"
+                  id="collectionForm">
 
                 <div class="dm-form-group">
                     <label class="dm-label">Tên Collection <span class="dm-required">*</span></label>
@@ -59,13 +60,15 @@
                 <div class="dm-form-row dm-form-row--2">
                     <div class="dm-form-group">
                         <label class="dm-label">Ngày bắt đầu</label>
-                        <input type="date" name="startDate" class="dm-input"
+                        <input type="date" name="startDate" id="collStartDate" class="dm-input"
                                th:value="${collection.startDate}"/>
+                        <small class="dm-text-faint" id="collStartErr" style="display:none;color:var(--bad)"></small>
                     </div>
                     <div class="dm-form-group">
                         <label class="dm-label">Ngày kết thúc</label>
-                        <input type="date" name="endDate" class="dm-input"
+                        <input type="date" name="endDate" id="collEndDate" class="dm-input"
                                th:value="${collection.endDate}"/>
+                        <small class="dm-text-faint" id="collEndErr" style="display:none;color:var(--bad)"></small>
                     </div>
                 </div>
 
@@ -161,6 +164,7 @@
     }
     .dm-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
     .dm-input::placeholder { color: var(--text-faint); }
+    .dm-input--invalid { border-color: var(--bad) !important; box-shadow: 0 0 0 3px var(--bad-soft) !important; }
     .dm-textarea { resize: vertical; min-height: 84px; font-family: inherit; }
     .dm-file { padding: 8px 13px; cursor: pointer; color: var(--text-dim); }
     .dm-file::file-selector-button {
@@ -207,6 +211,63 @@
             preview.classList.remove('dm-hidden');
         }
     }
+</script>
+
+<script>
+    (function () {
+        // ══ Validate ngày Collection ══
+        // Áp dụng như nhau cho cả TẠO MỚI lẫn SỬA:
+        // - Ngày bắt đầu không được sớm hơn hôm nay.
+        // - Ngày kết thúc không được sớm hơn ngày bắt đầu.
+        const form       = document.getElementById('collectionForm');
+        const startInput = document.getElementById('collStartDate');
+        const endInput   = document.getElementById('collEndDate');
+        const startErr   = document.getElementById('collStartErr');
+        const endErr     = document.getElementById('collEndErr');
+
+        function pad(n) { return String(n).padStart(2, '0'); }
+        function todayValue() {
+            const d = new Date();
+            return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+        }
+        const today = todayValue();
+
+        startInput.min = today;
+
+        function syncEndMin() {
+            endInput.min = startInput.value || today;
+        }
+        startInput.addEventListener('change', syncEndMin);
+        syncEndMin();
+
+        function showError(input, errEl, message) {
+            input.classList.add('dm-input--invalid');
+            errEl.textContent = message;
+            errEl.style.display = 'block';
+        }
+        function clearError(input, errEl) {
+            input.classList.remove('dm-input--invalid');
+            errEl.style.display = 'none';
+        }
+
+        form.addEventListener('submit', function (e) {
+            clearError(startInput, startErr);
+            clearError(endInput, endErr);
+
+            let hasError = false;
+
+            if (startInput.value && startInput.value < today) {
+                showError(startInput, startErr, 'Ngày bắt đầu không được sớm hơn hôm nay!');
+                hasError = true;
+            }
+            if (startInput.value && endInput.value && endInput.value < startInput.value) {
+                showError(endInput, endErr, 'Ngày kết thúc không được sớm hơn ngày bắt đầu!');
+                hasError = true;
+            }
+
+            if (hasError) e.preventDefault();
+        });
+    })();
 </script>
 
 </body>

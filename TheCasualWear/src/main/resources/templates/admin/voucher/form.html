@@ -22,7 +22,7 @@
 
         <!-- ==================== FORM ==================== -->
         <div class="dm-card dm-card--form">
-            <form th:action="@{/admin/vouchers/save}" method="post">
+            <form th:action="@{/admin/vouchers/save}" method="post" id="voucherForm">
 
                 <div class="dm-form-group">
                     <label class="dm-label">Mã voucher <span class="dm-required">*</span></label>
@@ -61,11 +61,13 @@
                 <div class="dm-form-row dm-form-row--2">
                     <div class="dm-form-group">
                         <label class="dm-label">Ngày bắt đầu</label>
-                        <input type="datetime-local" name="startDate" class="dm-input"/>
+                        <input type="datetime-local" name="startDate" id="voucherStartDate" class="dm-input"/>
+                        <small class="dm-text-faint" id="voucherStartErr" style="display:none;color:var(--bad)"></small>
                     </div>
                     <div class="dm-form-group">
                         <label class="dm-label">Ngày kết thúc</label>
-                        <input type="datetime-local" name="endDate" class="dm-input"/>
+                        <input type="datetime-local" name="endDate" id="voucherEndDate" class="dm-input"/>
+                        <small class="dm-text-faint" id="voucherEndErr" style="display:none;color:var(--bad)"></small>
                     </div>
                 </div>
 
@@ -157,6 +159,7 @@
     .dm-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
     .dm-input--upper { text-transform: uppercase; }
     .dm-input::placeholder { color: var(--text-faint); }
+    .dm-input--invalid { border-color: var(--bad) !important; box-shadow: 0 0 0 3px var(--bad-soft) !important; }
 
     .dm-form-row { display: grid; gap: 16px; margin-bottom: 0; }
     .dm-form-row--2 { grid-template-columns: repeat(2, 1fr); }
@@ -179,6 +182,73 @@
     .dm-btn--solid { background: var(--accent); border-color: var(--accent); color: #fff; }
     .dm-btn--solid:hover { background: #7a6af0; border-color: #7a6af0; color: #fff; }
 </style>
+
+<script>
+    (function () {
+        // ══ Validate ngày voucher ══
+        // - Ngày bắt đầu không được sớm hơn thời điểm hiện tại (voucher form
+        //   này chỉ dùng để TẠO MỚI — không có chế độ sửa — nên luôn ép mốc
+        //   "hiện tại" làm min).
+        // - Ngày kết thúc không được sớm hơn ngày bắt đầu.
+        const form       = document.getElementById('voucherForm');
+        const startInput = document.getElementById('voucherStartDate');
+        const endInput   = document.getElementById('voucherEndDate');
+        const startErr   = document.getElementById('voucherStartErr');
+        const endErr     = document.getElementById('voucherEndErr');
+
+        function pad(n) { return String(n).padStart(2, '0'); }
+
+        // Định dạng datetime-local cần "YYYY-MM-DDTHH:mm" theo giờ LOCAL
+        // (không dùng toISOString() vì nó trả về UTC, sẽ lệch múi giờ).
+        function toLocalInputValue(date) {
+            return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate())
+                + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+        }
+
+        function nowValue() { return toLocalInputValue(new Date()); }
+
+        // min HTML5 chỉ chặn được thao tác chọn qua lịch/picker — vẫn cần
+        // check lại lúc submit vì "hiện tại" trôi theo thời gian, và người
+        // dùng có thể gõ tay giá trị cũ hơn min ban đầu.
+        startInput.min = nowValue();
+
+        function syncEndMin() {
+            endInput.min = startInput.value || nowValue();
+        }
+        startInput.addEventListener('change', syncEndMin);
+        syncEndMin();
+
+        function showError(input, errEl, message) {
+            input.classList.add('dm-input--invalid');
+            errEl.textContent = message;
+            errEl.style.display = 'block';
+        }
+        function clearError(input, errEl) {
+            input.classList.remove('dm-input--invalid');
+            errEl.style.display = 'none';
+        }
+
+        form.addEventListener('submit', function (e) {
+            clearError(startInput, startErr);
+            clearError(endInput, endErr);
+
+            let hasError = false;
+            const now = new Date();
+
+            if (startInput.value && new Date(startInput.value) < now) {
+                showError(startInput, startErr, 'Ngày bắt đầu không được sớm hơn thời điểm hiện tại!');
+                hasError = true;
+            }
+            if (startInput.value && endInput.value
+                && new Date(endInput.value) < new Date(startInput.value)) {
+                showError(endInput, endErr, 'Ngày kết thúc không được sớm hơn ngày bắt đầu!');
+                hasError = true;
+            }
+
+            if (hasError) e.preventDefault();
+        });
+    })();
+</script>
 
 </body>
 </html>
