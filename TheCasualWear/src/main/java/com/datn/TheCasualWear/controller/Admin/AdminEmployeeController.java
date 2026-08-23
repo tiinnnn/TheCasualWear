@@ -4,6 +4,7 @@ import com.datn.TheCasualWear.entity.AppUser;
 import com.datn.TheCasualWear.entity.Employee;
 import com.datn.TheCasualWear.service.AppUserService;
 import com.datn.TheCasualWear.service.EmployeeService;
+import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -31,8 +32,15 @@ public class AdminEmployeeController {
     }
 
     @GetMapping
-    public String list(Model model) {
-        model.addAttribute("employees", employeeService.getAllEmployees());
+    public String list(@RequestParam(required = false) String keyword,
+                       @RequestParam(defaultValue = "0") int page,
+                       Model model) {
+        Page<Employee> employeePage = employeeService.getAllEmployees(keyword, page);
+        model.addAttribute("employees",   employeePage.getContent());
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages",  employeePage.getTotalPages());
+        model.addAttribute("totalItems",  employeePage.getTotalElements());
+        model.addAttribute("keyword",     keyword);
         model.addAttribute("view", "admin/employee/list");
         return "layouts/admin-layout";
     }

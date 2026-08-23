@@ -124,8 +124,9 @@
     </div>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
-
+        /* Font Manrope đã được load 1 lần ở admin-layout.html (head chính),
+           không @import lại ở đây nữa để tránh fetch lại font mỗi lần
+           filter submit gây full reload (giật/nháy chữ). */
         .dm-dash {
             --bg: #0b0d12; --surface: #12151d; --surface-2: #1a1e29;
             --border: rgba(255,255,255,.07); --border-strong: rgba(255,255,255,.14);

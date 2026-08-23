@@ -15,10 +15,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProductVariantService {
 
-    private final ProductVariantRepository variantRepository;
-    private final CartItemRepository       cartItemRepository;
-    private final OrderDetailRepository    orderDetailRepository;
-    private final VariantImageService      variantImageService;
+    private final ProductVariantRepository   variantRepository;
+    private final CartItemRepository         cartItemRepository;
+    private final OrderDetailRepository      orderDetailRepository;
+    private final VariantImageService        variantImageService;
+    private final StockMovementLogRepository stockMovementLogRepository;
+    private final GoodsReceiptItemRepository goodsReceiptItemRepository;
     private static final OrderStatus CANCELLED = OrderStatus.CANCELLED;
 
     public ProductVariant getVariantById(Integer id) {
@@ -103,6 +105,21 @@ public class ProductVariantService {
         } catch (Exception e) {
             // Không để lỗi Cloudinary chặn việc xóa variant
         }
+
+        // BUG FIX: thiếu dọn các bảng con còn tham chiếu variant_id nhưng
+        // không có ON DELETE CASCADE ở DB — cùng logic đã áp dụng ở
+        // ProductService.hardDeleteProduct(), chỉ khác là ở đây chỉ có 1
+        // variant nên xóa trực tiếp theo variantId, không cần loop.
+        //   - order_detail: variant đã pass check hasActiveOrder ở trên,
+        //     nghĩa là nếu còn order_detail nào trỏ tới nó thì chắc chắn
+        //     thuộc đơn CANCELLED, nên xóa thẳng không sợ mất dữ liệu
+        //     đơn đang hoạt động.
+        //   - stock_movement_log: audit trail nhập/xuất kho.
+        //   - goods_receipt_item: dòng chi tiết trong phiếu nhập kho
+        //     (nguyên nhân gây lỗi FK__goods_rec__varia__690797E6 trước đó).
+        orderDetailRepository.deleteByVariantId(id);
+        stockMovementLogRepository.deleteByVariantId(id);
+        goodsReceiptItemRepository.deleteByVariantId(id);
 
         variantRepository.delete(variant);
     }

@@ -15,12 +15,27 @@
                 <p class="dm-eyebrow">Nhân sự</p>
                 <h1 class="dm-title">
                     Nhân viên
-                    <span class="dm-title-count" th:text="'(' + ${#lists.size(employees)} + ' người)'"></span>
+                    <span class="dm-title-count" th:text="'(' + ${totalItems} + ' người)'"></span>
                 </h1>
             </div>
             <a th:href="@{/admin/employees/add}" class="dm-btn dm-btn--solid">
                 <i class="bi bi-person-plus"></i>Thêm nhân viên
             </a>
+        </div>
+
+        <!-- ==================== SEARCH ==================== -->
+        <div class="dm-card dm-search-card">
+            <form th:action="@{/admin/employees}" method="get" class="dm-search-form">
+                <div class="dm-search-input-wrap">
+                    <i class="bi bi-search"></i>
+                    <input type="text" name="keyword" th:value="${keyword}"
+                           placeholder="Tìm theo mã NV, tên đăng nhập, email, SĐT..."
+                           class="dm-input">
+                </div>
+                <button type="submit" class="dm-btn dm-btn--solid">Tìm</button>
+                <a th:if="${keyword != null and !#strings.isEmpty(keyword)}"
+                   th:href="@{/admin/employees}" class="dm-btn">Xóa lọc</a>
+            </form>
         </div>
 
         <!-- ==================== TABLE ==================== -->
@@ -47,7 +62,14 @@
                     </thead>
                     <tbody>
                     <tr th:if="${#lists.isEmpty(employees)}">
-                        <td colspan="6" class="dm-empty">Chưa có nhân viên nào</td>
+                        <td colspan="6" class="dm-empty">
+                            <span th:if="${keyword != null and !#strings.isEmpty(keyword)}">
+                                Không tìm thấy nhân viên phù hợp với "<span th:text="${keyword}"></span>"
+                            </span>
+                            <span th:unless="${keyword != null and !#strings.isEmpty(keyword)}">
+                                Chưa có nhân viên nào
+                            </span>
+                        </td>
                     </tr>
                     <tr th:each="e : ${employees}">
                         <td class="dm-cell-strong" th:text="${e.employeeCode}"></td>
@@ -77,6 +99,14 @@
                     </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- ==================== PAGINATION ==================== -->
+            <div class="dm-pagination" th:if="${totalPages > 1}">
+                <a th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                   th:href="@{/admin/employees(page=${i}, keyword=${keyword})}"
+                   th:text="${i + 1}"
+                   th:class="${i == currentPage} ? 'dm-page dm-page--active' : 'dm-page'"></a>
             </div>
         </div>
 
@@ -124,12 +154,31 @@
 
     .dm-content { position: relative; z-index: 1; }
 
-    .dm-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 28px; gap: 12px; flex-wrap: wrap; }
+    .dm-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 20px; gap: 12px; flex-wrap: wrap; }
     .dm-eyebrow { text-transform: uppercase; letter-spacing: .12em; font-size: .7rem; font-weight: 700; color: var(--accent); margin: 0 0 4px; }
     .dm-title { font-size: 1.7rem; font-weight: 800; margin: 0; letter-spacing: -.02em; }
     .dm-title-count { font-size: 1rem; font-weight: 600; color: var(--text-faint); margin-left: 6px; }
 
     .dm-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
+
+    /* ===== Search bar ===== */
+    .dm-search-card { padding: 14px 16px; margin-bottom: 20px; }
+    .dm-search-form { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .dm-search-input-wrap {
+        position: relative; flex: 1; min-width: 220px;
+        display: flex; align-items: center;
+    }
+    .dm-search-input-wrap i {
+        position: absolute; left: 12px; font-size: .85rem; color: var(--text-faint); pointer-events: none;
+    }
+    .dm-input {
+        width: 100%; background: var(--surface-2); border: 1px solid var(--border);
+        color: var(--text); border-radius: 10px; font-size: .85rem;
+        padding: 9px 12px 9px 32px; font-family: inherit;
+        transition: border-color .2s ease;
+    }
+    .dm-input::placeholder { color: var(--text-faint); }
+    .dm-input:focus { outline: none; border-color: var(--accent); }
 
     .dm-text-dim { color: var(--text-dim); }
     .dm-text-center { text-align: center; }
@@ -187,6 +236,19 @@
     .dm-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
     .dm-btn--solid { background: var(--accent); border-color: var(--accent); color: #fff; }
     .dm-btn--solid:hover { background: #7a6af0; border-color: #7a6af0; color: #fff; }
+
+    /* ===== Pagination ===== */
+    .dm-pagination { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 18px; flex-wrap: wrap; }
+    .dm-page {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-width: 32px; height: 32px; padding: 0 8px;
+        border-radius: 8px; border: 1px solid var(--border);
+        color: var(--text-dim); background: transparent; font-size: .82rem; font-weight: 600;
+        text-decoration: none; transition: all .2s ease;
+    }
+    .dm-page:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+    .dm-page--active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .dm-page--active:hover { background: var(--accent); color: #fff; }
 
     @media (max-width: 680px) {
         .dm-table-wrap { overflow-x: auto; }

@@ -5,6 +5,10 @@ import com.datn.TheCasualWear.entity.AppUser;
 import com.datn.TheCasualWear.entity.Employee;
 import com.datn.TheCasualWear.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,9 +24,16 @@ public class EmployeeService {
 
     private static final int    MAX_EMPLOYEE_NUMBER = 9999;
     private static final String CODE_PREFIX         = "NV";
+    private static final int    ADMIN_PAGE_SIZE      = 10;
 
     public List<Employee> getAllEmployees() {
         return employeeRepository.findAll();
+    }
+
+    public Page<Employee> getAllEmployees(String keyword, int page) {
+        String kw = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+        Pageable pageable = PageRequest.of(page, ADMIN_PAGE_SIZE, Sort.by("id").ascending());
+        return employeeRepository.searchEmployees(kw, pageable);
     }
 
     public Employee getEmployeeById(Integer id) {

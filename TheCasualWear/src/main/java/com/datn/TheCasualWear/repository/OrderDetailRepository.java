@@ -32,6 +32,19 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, Intege
             "AND od.order.status = com.datn.TheCasualWear.enums.OrderStatus.CANCELLED")
     void deleteByProductId(@Param("productId") Integer productId);
 
+    // MỚI: dùng bởi ProductVariantService.deleteVariant() — xóa order_detail
+    // của variant này nhưng CHỈ thuộc đơn CANCELLED, cùng pattern với
+    // deleteByProductId() ở trên. Không dùng derived delete (deleteByVariantId
+    // mặc định sẽ xóa TẤT CẢ order_detail bất kể trạng thái đơn) vì có thể
+    // vô tình xóa order_detail của đơn đang hoạt động nếu method này lỡ được
+    // gọi mà không qua check hasActiveOrder trước đó — lọc CANCELLED tường
+    // minh ở đây giúp an toàn ngay cả khi thứ tự gọi ở service bị thay đổi
+    // sau này.
+    @Modifying @Transactional
+    @Query("DELETE FROM OrderDetail od WHERE od.variant.id = :variantId " +
+            "AND od.order.status = com.datn.TheCasualWear.enums.OrderStatus.CANCELLED")
+    void deleteByVariantId(@Param("variantId") Integer variantId);
+
     // ── DASHBOARD: hiệu quả sale — tổng SL bán, doanh thu, tổng tiền giảm
     // cho 1 sản phẩm trong 1 khoảng thời gian (dùng cho ProductSaleService
     // .getSaleEffectiveness(), truyền vào [sale.startDate, sale.endDate]).
