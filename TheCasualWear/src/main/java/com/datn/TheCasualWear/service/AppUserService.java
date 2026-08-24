@@ -87,6 +87,13 @@ public class AppUserService {
     // (role CASHIER/ADMIN/OWNER) từ trang Admin — cùng 1 bộ validate, tránh
     // trùng lặp logic email/phone/password ở 2 nơi.
     public AppUser createUserWithRole(AppUser user, String roleName) {
+        if (user.getEmail() != null && user.getEmail().isBlank()) {
+            user.setEmail(null);
+        }
+        if (user.getPhone() != null && user.getPhone().isBlank()) {
+            user.setPhone(null);
+        }
+
         if (appUserRepository.existsByUsername(user.getUsername())) {
             throw new IllegalArgumentException("Tên đăng nhập đã tồn tại!");
         }

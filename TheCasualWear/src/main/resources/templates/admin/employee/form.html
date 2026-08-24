@@ -79,7 +79,8 @@
                             </div>
                             <div class="dm-form-group">
                                 <label class="dm-label">Ngày vào làm</label>
-                                <input type="date" name="hireDate" class="dm-input"/>
+                                <input type="date" name="hireDate" class="dm-input"
+                                       th:value="${#temporals.format(T(java.time.LocalDate).now(), 'yyyy-MM-dd')}"/>
                             </div>
                             <div class="dm-form-group dm-form-group--last">
                                 <label class="dm-label">Ghi chú</label>
