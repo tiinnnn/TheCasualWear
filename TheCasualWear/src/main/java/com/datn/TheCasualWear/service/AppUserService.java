@@ -10,8 +10,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class AppUserService {
@@ -79,8 +81,75 @@ public class AppUserService {
     // ĐĂNG KÝ
     // ─────────────────────────────────────────────────────────────
 
+    // Khách tự đăng ký ở /auth/register. Có 2 tình huống:
+    //   1) Email chưa tồn tại (hoặc đăng ký không kèm email, chỉ SĐT) -> tạo
+    //      user mới hoàn toàn như trước giờ.
+    //   2) Email TRÙNG với 1 tài khoản do cashier tạo sẵn (xem
+    //      CashierAccountService.getOrCreateAccountForCustomer) mà khách CHƯA
+    //      kích hoạt qua link email -> đây KHÔNG phải trùng thật, khách đang
+    //      tự bổ sung username/password cho chính tài khoản của họ. Nhận biết
+    //      qua activationToken != null (dấu hiệu "đang chờ kích hoạt", xem
+    //      comment trên field này ở AppUser).
+    // Nếu email trùng nhưng tài khoản ĐÃ kích hoạt rồi (activationToken ==
+    // null) thì vẫn là trùng thật -> rơi xuống createUserWithRole() và bị
+    // chặn bằng lỗi "Email đã được sử dụng!" như bình thường.
+    @Transactional
     public void register(AppUser user) {
+        String email = (user.getEmail() == null || user.getEmail().isBlank())
+                ? null : user.getEmail().trim();
+
+        if (email != null) {
+            Optional<AppUser> existing = appUserRepository.findByEmail(email);
+            if (existing.isPresent() && existing.get().getActivationToken() != null) {
+                fillPendingCashierAccount(existing.get(), user);
+                return;
+            }
+        }
+
         createUserWithRole(user, "ROLE_CUSTOMER");
+    }
+
+    // Bổ sung username/password (+ phone nếu có) vào tài khoản pending do
+    // cashier tạo sẵn, rồi kích hoạt luôn (enabled=true) — cùng mức tin cậy
+    // với đăng ký tự thân bình thường (register() vốn cũng không bắt xác
+    // thực email), chỉ khác là user đã sở hữu email này từ trước nên không
+    // cần link kích hoạt riêng nữa.
+    private void fillPendingCashierAccount(AppUser pending, AppUser formInput) {
+        if (formInput.getUsername() == null || formInput.getUsername().isBlank()) {
+            throw new IllegalArgumentException("Vui lòng nhập tên đăng nhập!");
+        }
+        // existsByUsername không đủ vì cần LOẠI TRỪ chính bản ghi pending
+        // (trường hợp form gửi lại đúng username cũ do resubmit).
+        Optional<AppUser> usernameOwner = appUserRepository.findByUsername(formInput.getUsername());
+        if (usernameOwner.isPresent() && !usernameOwner.get().getId().equals(pending.getId())) {
+            throw new IllegalArgumentException("Tên đăng nhập đã tồn tại!");
+        }
+        if (!isValidPassword(formInput.getPassword())) {
+            throw new IllegalArgumentException(
+                    "Mật khẩu phải có 6 ký tự và có ít nhất 1 chữ số!");
+        }
+
+        String phone = (formInput.getPhone() == null || formInput.getPhone().isBlank())
+                ? null : formInput.getPhone().trim();
+        if (phone != null) {
+            if (!isValidPhone(phone)) {
+                throw new IllegalArgumentException("Số điện thoại phải đúng 10 chữ số!");
+            }
+            if (!phone.equals(pending.getPhone()) && appUserRepository.existsByPhone(phone)) {
+                throw new IllegalArgumentException("Số điện thoại đã được sử dụng!");
+            }
+            pending.setPhone(phone);
+        }
+
+        pending.setUsername(formInput.getUsername());
+        pending.setPassword("{noop}" + formInput.getPassword());
+        pending.setEnabled(true);
+        pending.setActivationToken(null);
+        pending.setActivationExpiresAt(null);
+        // Role ROLE_CUSTOMER đã được gán sẵn lúc CashierAccountService tạo
+        // tài khoản này -> không cần add lại.
+
+        appUserRepository.save(pending);
     }
 
     // Dùng chung cho cả đăng ký khách hàng (role CUSTOMER) lẫn tạo nhân viên
@@ -109,6 +178,10 @@ public class AppUserService {
         if (user.getEmail() != null && !user.getEmail().isBlank()
                 && appUserRepository.existsByEmail(user.getEmail())) {
             throw new IllegalArgumentException("Email đã được sử dụng!");
+        }
+        if (user.getPhone() != null && !user.getPhone().isBlank()
+                && appUserRepository.existsByPhone(user.getPhone())) {
+            throw new IllegalArgumentException("Số điện thoại đã được sử dụng!");
         }
         if (user.getEmail() != null && !user.getEmail().isBlank()
                 && !isValidEmail(user.getEmail())) {
@@ -202,6 +275,10 @@ public class AppUserService {
         if (newEmail != null && !newEmail.equals(user.getEmail())
                 && appUserRepository.existsByEmail(newEmail)) {
             throw new IllegalArgumentException("Email đã được sử dụng!");
+        }
+        if (newPhone != null && !newPhone.equals(user.getPhone())
+                && appUserRepository.existsByPhone(newPhone)) {
+            throw new IllegalArgumentException("Số điện thoại đã được sử dụng!");
         }
         if (details.getEmail() != null && !details.getEmail().isBlank()
                 && !isValidEmail(details.getEmail())) {

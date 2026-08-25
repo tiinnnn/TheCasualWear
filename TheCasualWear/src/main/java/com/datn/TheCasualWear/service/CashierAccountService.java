@@ -66,6 +66,14 @@ public class CashierAccountService {
             return new CashierAccountResult(existing.get(), false);
         }
 
+        // Email chưa ai dùng, nhưng SĐT vẫn có thể đã thuộc về 1 tài khoản
+        // khác (email khác) — phải chặn ở đây, nếu không sẽ rớt xuống DB và
+        // bị UNIQUE constraint chặn -> DataIntegrityViolationException.
+        if (phone != null && appUserRepository.existsByPhone(phone)) {
+            throw new IllegalArgumentException(
+                    "Số điện thoại này đã được dùng cho một tài khoản khác, vui lòng kiểm tra lại.");
+        }
+
         Role customerRole = roleRepository.findByName(CUSTOMER_ROLE_NAME)
                 .orElseThrow(() -> new IllegalStateException(
                         "Thiếu role " + CUSTOMER_ROLE_NAME + " trong bảng role."));

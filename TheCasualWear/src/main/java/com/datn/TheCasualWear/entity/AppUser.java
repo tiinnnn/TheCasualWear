@@ -31,7 +31,7 @@ public class AppUser {
     @Column(name = "email", unique = true, length = 100)
     private String email;
 
-    @Column(name = "phone", length = 20)
+    @Column(name = "phone", unique = true, length = 20)
     private String phone;
 
     @Column(name = "enabled")
