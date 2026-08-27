@@ -198,9 +198,11 @@
                                 Cân nặng <span class="text-danger">*</span>
                             </label>
                             <div class="input-group" style="max-width:200px">
-                                <input type="number" name="weight" class="form-control"
+                                <input type="text" name="weight" class="form-control"
                                        th:value="${product.weight != null ? product.weight : 300}"
-                                       min="1" step="1" required placeholder="300"/>
+                                       required placeholder="300"
+                                       inputmode="numeric" pattern="[0-9]*" autocomplete="off"
+                                       oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/^0+(?=\d)/, '');"/>
                                 <span class="input-group-text">g</span>
                             </div>
                             <small class="text-muted">Dùng để tính phí ship GHN. VD: áo thun ~250-300g.</small>

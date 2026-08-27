@@ -77,6 +77,22 @@ public class AdminProductController {
         return "layouts/admin-layout";
     }
 
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public String handleBindError(
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException e,
+            RedirectAttributes ra) {
+        String field = e.getName();
+        String message = "cân nặng".equals(fieldLabel(field))
+                ? "Cân nặng sản phẩm không hợp lệ — vui lòng chỉ nhập số!"
+                : "Dữ liệu trường \"" + field + "\" không hợp lệ!";
+        ra.addFlashAttribute("errorMessage", message);
+        return "redirect:/admin/products";
+    }
+
+    private String fieldLabel(String field) {
+        return "weight".equals(field) ? "cân nặng" : field;
+    }
+
     @PostMapping("/save")
     public String saveProduct(
             @ModelAttribute Product product,
