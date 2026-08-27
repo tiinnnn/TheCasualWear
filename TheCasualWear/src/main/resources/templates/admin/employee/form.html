@@ -21,7 +21,7 @@
                 </a>
             </div>
 
-            <form th:action="@{/admin/employees/save}" th:object="${newUser}" method="post">
+            <form th:action="@{/admin/employees/save}" th:object="${newUser}" method="post" id="employeeForm">
                 <div class="dm-form-row dm-form-row--2">
 
                     <!-- ==================== TÀI KHOẢN ĐĂNG NHẬP ==================== -->
@@ -79,8 +79,9 @@
                             </div>
                             <div class="dm-form-group">
                                 <label class="dm-label">Ngày vào làm</label>
-                                <input type="date" name="hireDate" class="dm-input"
+                                <input type="date" name="hireDate" id="hireDateInput" class="dm-input"
                                        th:value="${#temporals.format(T(java.time.LocalDate).now(), 'yyyy-MM-dd')}"/>
+                                <small class="dm-text-faint" id="hireDateErr" style="display:none;color:var(--bad)"></small>
                             </div>
                             <div class="dm-form-group dm-form-group--last">
                                 <label class="dm-label">Ghi chú</label>
@@ -166,6 +167,7 @@
         }
         .dm-input:focus, .dm-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
         .dm-input::placeholder { color: var(--text-faint); }
+        .dm-input--invalid { border-color: var(--bad) !important; box-shadow: 0 0 0 3px var(--bad-soft) !important; }
         .dm-textarea { resize: vertical; min-height: 64px; font-family: inherit; }
 
         .dm-form-actions { display: flex; gap: 10px; }
@@ -181,6 +183,48 @@
         .dm-btn--solid { background: var(--accent); border-color: var(--accent); color: #fff; }
         .dm-btn--solid:hover { background: #7a6af0; border-color: #7a6af0; color: #fff; }
     </style>
+
+    <script>
+        (function () {
+            // ══ Validate ngày vào làm ══
+            // Nhân viên không thể "vào làm" ở một ngày chưa tới, nên chặn
+            // hireDate ở tương lai. Vẫn cho phép chọn ngày quá khứ (backdate
+            // ngày vào làm thật của nhân viên cũ được nhập bổ sung vào hệ
+            // thống), nên KHÔNG set min — chỉ set max = hôm nay.
+            const form  = document.getElementById('employeeForm');
+            const input = document.getElementById('hireDateInput');
+            const err   = document.getElementById('hireDateErr');
+
+            function pad(n) { return String(n).padStart(2, '0'); }
+            function todayValue() {
+                const d = new Date();
+                return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+            }
+
+            input.max = todayValue();
+
+            function showError(message) {
+                input.classList.add('dm-input--invalid');
+                err.textContent = message;
+                err.style.display = 'block';
+            }
+            function clearError() {
+                input.classList.remove('dm-input--invalid');
+                err.style.display = 'none';
+            }
+
+            form.addEventListener('submit', function (e) {
+                clearError();
+                // Tính lại "today" ngay lúc submit, không dùng giá trị cache
+                // từ lúc load trang.
+                const today = todayValue();
+                if (input.value && input.value > today) {
+                    showError('Ngày vào làm không được ở tương lai!');
+                    e.preventDefault();
+                }
+            });
+        })();
+    </script>
 
 </div>
 </body>

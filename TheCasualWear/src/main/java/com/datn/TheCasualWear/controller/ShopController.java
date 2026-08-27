@@ -28,7 +28,7 @@ public class ShopController {
     private final WishlistService       wishlistService;
     private final CollectionService     collectionService;
     private final CategoryRepository    categoryRepository;
-    private final ProductSaleService    productSaleService; // MỚI: giá/badge sale cho trang shop
+    private final ProductSaleService    productSaleService;
 
     @GetMapping("/")
     public String homePage(Model model) {
@@ -58,10 +58,6 @@ public class ShopController {
                 .limit(8).toList();
         model.addAttribute("saleProducts", saleProducts);
 
-        // MỚI: gom id của TẤT CẢ sản phẩm đang hiển thị trên trang (mới nhất +
-        // theo từng danh mục + đang sale) để lấy sale đang chạy trong 1 lần
-        // query, tránh N+1. Template dùng activeSales.get(product.id) để hiện
-        // badge/giá sale.
         List<Integer> allProductIds = new ArrayList<>();
         newestProducts.forEach(p -> allProductIds.add(p.getId()));
         productsByCategory.values().forEach(list ->
@@ -74,10 +70,6 @@ public class ShopController {
         return "layouts/shop-layout";
     }
 
-    // MỚI: trang "Clearance Sale" — liệt kê toàn bộ sản phẩm đang có sale
-    // chạy. Không phân trang (số lượng sale đồng thời thường không lớn đối
-    // với 1 shop quy mô đồ án); nếu sau này danh sách dài ra có thể chuyển
-    // sang Page<Product> giống /shop.
     @GetMapping("/clearance")
     public String clearancePage(Model model) {
         List<Product> products = productSaleService.getProductsOnSale();
@@ -165,8 +157,6 @@ public class ShopController {
         model.addAttribute("variantData", variantData); // dùng trong JS
         model.addAttribute("variants",    variants);    // dùng trong Thymeleaf
 
-        // MỚI: giá đã áp sale (nếu đang có sale chạy) + chính đợt sale đó,
-        // để template hiển thị giá gạch ngang / badge "-X%" / đếm ngược.
         Optional<ProductSale> activeSale = productSaleService.getActiveSale(product);
         model.addAttribute("activeSale", activeSale.orElse(null));
         model.addAttribute("effectivePrice", productSaleService.getEffectivePrice(product));

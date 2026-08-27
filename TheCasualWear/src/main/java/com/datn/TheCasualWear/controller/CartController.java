@@ -37,9 +37,6 @@ public class CartController {
         AppUser user = getCurrentUser(auth);
         List<CartItem> cartItems = cartService.getCartItems(user);
 
-        // Giá đã áp sale cho từng dòng, khóa theo cartItemId — để tổng các
-        // dòng luôn khớp với totalPrice (CartService.getTotalPrice cũng
-        // tính theo giá đã áp sale).
         Map<Integer, BigDecimal> itemPrices = new LinkedHashMap<>();
         for (CartItem item : cartItems) {
             itemPrices.put(item.getId(), cartService.getEffectiveUnitPrice(item));

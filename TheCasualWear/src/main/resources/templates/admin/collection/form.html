@@ -9,7 +9,6 @@
 
     <div class="dm-content">
 
-        <!-- ==================== HEADER ==================== -->
         <div class="dm-header">
             <div>
                 <p class="dm-eyebrow">Bộ sưu tập</p>
@@ -21,14 +20,14 @@
             </a>
         </div>
 
-        <!-- ==================== FORM ==================== -->
         <div class="dm-card dm-card--form">
             <form th:action="${collection.id != null}
                               ? @{'/admin/collections/' + ${collection.id} + '/edit'}
                               : @{/admin/collections/new}"
                   method="post"
                   enctype="multipart/form-data"
-                  id="collectionForm">
+                  id="collectionForm"
+                  th:attr="data-is-edit=${collection.id != null}">
 
                 <div class="dm-form-group">
                     <label class="dm-label">Tên Collection <span class="dm-required">*</span></label>
@@ -216,26 +215,43 @@
 <script>
     (function () {
         // ══ Validate ngày Collection ══
-        // Áp dụng như nhau cho cả TẠO MỚI lẫn SỬA:
-        // - Ngày bắt đầu không được sớm hơn hôm nay.
-        // - Ngày kết thúc không được sớm hơn ngày bắt đầu.
+        // Form này dùng chung cho cả TẠO MỚI lẫn SỬA, nên logic min phải
+        // khác nhau giữa 2 chế độ:
+        // - TẠO MỚI: ngày bắt đầu không được sớm hơn hôm nay (min = today).
+        // - SỬA: KHÔNG ép min = today, vì collection đang sửa có thể đã có
+        //   startDate/endDate ở quá khứ (đang chạy hoặc đã kết thúc) — nếu
+        //   ép min=today thì HTML5 native validation sẽ coi input đó là
+        //   invalid (value < min) và chặn submit ngay cả khi người dùng chỉ
+        //   sửa tên/mô tả, không đụng đến ngày.
         const form       = document.getElementById('collectionForm');
         const startInput = document.getElementById('collStartDate');
         const endInput   = document.getElementById('collEndDate');
         const startErr   = document.getElementById('collStartErr');
         const endErr     = document.getElementById('collEndErr');
+        const isEdit     = form.dataset.isEdit === 'true';
 
         function pad(n) { return String(n).padStart(2, '0'); }
         function todayValue() {
             const d = new Date();
             return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
         }
-        const today = todayValue();
 
-        startInput.min = today;
+        // Chỉ set min=today lúc TẠO MỚI. Lúc SỬA, không set min cứng để
+        // không chặn nhầm ngày quá khứ đã lưu từ trước.
+        if (!isEdit) {
+            startInput.min = todayValue();
+        }
 
         function syncEndMin() {
-            endInput.min = startInput.value || today;
+            // min cho ngày kết thúc luôn là ngày bắt đầu hiện tại trên form
+            // (kể cả khi sửa) — end vẫn phải sau start bất kể tạo mới hay sửa.
+            if (startInput.value) {
+                endInput.min = startInput.value;
+            } else if (!isEdit) {
+                endInput.min = todayValue();
+            } else {
+                endInput.removeAttribute('min');
+            }
         }
         startInput.addEventListener('change', syncEndMin);
         syncEndMin();
@@ -255,8 +271,13 @@
             clearError(endInput, endErr);
 
             let hasError = false;
+            // Tính lại "today" ngay tại thời điểm submit, không dùng giá trị
+            // cache từ lúc load trang.
+            const today = todayValue();
 
-            if (startInput.value && startInput.value < today) {
+            // Chỉ chặn ngày bắt đầu ở quá khứ khi TẠO MỚI. Khi sửa, cho phép
+            // giữ nguyên/chỉnh ngày quá khứ đã có.
+            if (!isEdit && startInput.value && startInput.value < today) {
                 showError(startInput, startErr, 'Ngày bắt đầu không được sớm hơn hôm nay!');
                 hasError = true;
             }

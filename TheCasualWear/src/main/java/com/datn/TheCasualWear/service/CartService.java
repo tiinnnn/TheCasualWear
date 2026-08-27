@@ -17,7 +17,7 @@ public class CartService {
     private final CartRepository           cartRepository;
     private final CartItemRepository       cartItemRepository;
     private final ProductVariantRepository variantRepository;
-    private final ProductSaleService       productSaleService; // MỚI: tính giá theo sale
+    private final ProductSaleService       productSaleService;
 
     // Lấy hoặc tạo mới cart cho user
     public Cart getOrCreateCart(AppUser user) {

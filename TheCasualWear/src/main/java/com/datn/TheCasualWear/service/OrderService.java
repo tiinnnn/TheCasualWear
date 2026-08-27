@@ -404,15 +404,6 @@ public class OrderService {
     // CUSTOMER — KHÁCH VÃNG LAI (4.1)
     // ─────────────────────────────────────────────────────────────
 
-    /**
-     * Đặt hàng cho khách vãng lai (chưa đăng nhập). Song song với placeOrder()
-     * ở trên — không tái sử dụng chung vì luồng guest không có AppUser, không
-     * có giỏ hàng DB (CartItem), và địa chỉ luôn là mới (không chọn từ danh
-     * sách có sẵn). cartItems truyền vào lấy từ GuestCartService (session),
-     * đã có sẵn unitPrice/originalPrice/discountPercent snapshot lúc add-to-cart.
-     *
-     * Hiện chỉ hỗ trợ COD (VNPAY cho guest chưa làm — xem TODO ở OrderController).
-     */
     @Transactional
     public AppOrder placeOrderGuest(GuestCheckoutFormDTO form, List<GuestCartItem> cartItems) {
         if (cartItems.isEmpty()) {
@@ -456,15 +447,9 @@ public class OrderService {
                 })
                 .sum();
 
-        // MỚI: guest KHÔNG được dùng voucher nữa — chỉ mua giá gốc hoặc giá
-        // đã sale (snapshot sẵn trong GuestCartItem.getLineTotal()). Bỏ hẳn
-        // voucher/discountAmount khỏi luồng này, kể cả khi form còn field
-        // voucherCode (nếu FE chưa gỡ input đó, giá trị gửi lên sẽ bị lờ đi).
         BigDecimal shippingFee = calculateShippingFee(shippingAddress, totalPrice, totalWeightGrams);
         BigDecimal grandTotal = totalPrice.add(shippingFee);
 
-        // Rule ">1 triệu bắt buộc VNPay" vẫn giữ nguyên, tính trên grandTotal
-        // (giờ đơn giản hơn vì không còn phải trừ voucher trước).
         if ("COD".equals(form.getPaymentMethod())
                 && grandTotal.compareTo(BigDecimal.valueOf(1_000_000)) > 0) {
             throw new IllegalStateException(
@@ -505,7 +490,6 @@ public class OrderService {
                     ? item.getOriginalPrice() : item.getUnitPrice());
             orderDetailRepository.save(detail);
 
-            // Giống placeOrder(): KHÔNG trừ kho ở đây, chỉ trừ khi admin confirmOrder().
         }
 
         // Không còn lưu OrderVoucher cho guest — guest không dùng voucher nữa.
@@ -516,8 +500,6 @@ public class OrderService {
                 "/admin/orders/" + order.getId()
         );
 
-        // MỚI (đổi 4.3): giống placeOrder() ở trên — gửi email ngay lúc đặt
-        // hàng (PENDING), không chờ admin confirm nữa.
         orderEmailService.sendOrderConfirmationAsync(getOrderForEmail(order.getId()));
 
         return order;
@@ -603,8 +585,6 @@ public class OrderService {
         order.setStatus(OrderStatus.CONFIRMED);
         orderRepository.save(order);
 
-        // Notification trong app chỉ áp dụng cho user đã login — guest
-        // không có tài khoản để nhận, nên guard null ở đây.
         if (order.getCustomer() != null) {
             notificationService.createNotification(
                     order.getCustomer(),
@@ -620,10 +600,6 @@ public class OrderService {
         orderEmailService.sendOrderConfirmationAsync(getOrderForEmail(orderId));
     }
 
-    /**
-     * Admin nhập mã vận đơn GHN → chuyển sang SHIPPING.
-     * Nhân viên tự tạo đơn trên app GHN rồi copy mã vào đây.
-     */
     @Transactional
     public void shipOrder(Integer orderId, String trackingCode) {
         AppOrder order = getOrderById(orderId);
@@ -741,12 +717,6 @@ public class OrderService {
     // SCHEDULED JOBS
     // ─────────────────────────────────────────────────────────────
 
-    /**
-     * Dọn đơn CANCELLED và RETURNED sau 1 tháng.
-     * Trước đây chỉ query CANCELLED — vì returnOrder() từng gộp chung
-     * status CANCELLED cho cả hoàn hàng. Từ khi tách RETURNED riêng,
-     * job này phải quét cả 2 status để giữ nguyên hành vi dọn dẹp cũ.
-     */
     @Transactional
     public void deleteCancelledOrderAfterMonth() {
         LocalDateTime oneMonthAgo = LocalDateTime.now().minusMonths(1);
@@ -762,17 +732,6 @@ public class OrderService {
     // DASHBOARD
     // ─────────────────────────────────────────────────────────────
 
-    /**
-     * Chuẩn hóa khoảng thời gian [from, to] cho các query dashboard (2.4).
-     * Quy tắc:
-     *  - Không điền gì            → [null, null]      (toàn bộ lịch sử)
-     *  - Chỉ điền from            → [from, now()]      (từ from đến hiện tại)
-     *  - Chỉ điền to              → [null, to]         (từ đầu đến to)
-     *  - Điền cả 2                → [from, to]
-     * Dùng chung 1 method này rồi truyền effectiveFrom/effectiveTo vào mọi
-     * query, tránh lặp lại if-else ở nhiều nơi. Các query phía repository
-     * tự xử lý from/to = null (nghĩa là không giới hạn theo hướng đó).
-     */
     public DateRange resolveDateRange(LocalDateTime from, LocalDateTime to) {
         LocalDateTime effectiveTo = (to != null) ? to
                 : (from != null ? LocalDateTime.now() : null);

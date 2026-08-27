@@ -11,6 +11,7 @@ import com.datn.TheCasualWear.service.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -28,6 +29,7 @@ import java.util.Optional;
 
 @Controller
 @RequestMapping("/order")
+@RequiredArgsConstructor
 public class OrderController {
 
     private final OrderService orderService;
@@ -36,29 +38,9 @@ public class OrderController {
     private final CartService cartService;
     private final VoucherService voucherService;
     private final VNPayService vnPayService;
-    private final ProductSaleService productSaleService; // badge/giá sale cho trang checkout
-    private final GuestCartService guestCartService; // MỚI: giỏ hàng khách vãng lai (4.1)
-    private final OrderLookupRateLimiter orderLookupRateLimiter; // MỚI: chống brute-force tra cứu (4.2/6.6)
-
-    public OrderController(OrderService orderService,
-                           AppUserService appUserService,
-                           AddressService addressService,
-                           CartService cartService,
-                           VoucherService voucherService,
-                           VNPayService vnPayService,
-                           ProductSaleService productSaleService,
-                           GuestCartService guestCartService,
-                           OrderLookupRateLimiter orderLookupRateLimiter) {
-        this.orderService = orderService;
-        this.appUserService = appUserService;
-        this.addressService = addressService;
-        this.cartService = cartService;
-        this.voucherService = voucherService;
-        this.vnPayService = vnPayService;
-        this.productSaleService = productSaleService;
-        this.guestCartService = guestCartService;
-        this.orderLookupRateLimiter = orderLookupRateLimiter;
-    }
+    private final ProductSaleService productSaleService;
+    private final GuestCartService guestCartService;
+    private final OrderLookupRateLimiter orderLookupRateLimiter;
 
     private AppUser getCurrentUser(Authentication auth) {
         return appUserService.getUserByUsername(auth.getName());
@@ -91,17 +73,9 @@ public class OrderController {
         long totalPrice = cartService.getTotalPrice(user);
         BigDecimal totalPriceBD = BigDecimal.valueOf(totalPrice);
 
-        // MỚI: form checkout nhận field địa chỉ trực tiếp (giống guest) thay
-        // vì chỉ nhận shippingAddressId — prefill sẵn từ địa chỉ mặc định
-        // (nếu có) để khách không phải gõ lại từ đầu, chỉ sửa khi cần.
         List<Address> savedAddresses = addressService.getAddressesByUser(user);
         Address defaultAddress = addressService.getDefaultAddress(user);
 
-        // MỚI (4.5): phí ship ban đầu tính theo địa chỉ mặc định (nếu có) —
-        // gọi GHN thật nếu địa chỉ đã có mã GHN, fallback region-based nếu
-        // chưa/lỗi. Số này chỉ là ước tính lúc load trang; JS sẽ gọi lại
-        // /order/shipping-fee-preview mỗi khi khách đổi tỉnh/quận-huyện/
-        // phường-xã trong dropdown (xem checkout.html).
         BigDecimal shippingFee = (defaultAddress != null)
                 ? orderService.calculateShippingFee(defaultAddress, totalPriceBD, orderService.getCartWeightGrams(user))
                 : OrderService.DEFAULT_SHIPPING_FEE;
@@ -115,8 +89,6 @@ public class OrderController {
 
         CustomerCheckoutFormDTO checkoutForm = new CustomerCheckoutFormDTO();
         checkoutForm.setPaymentMethod("COD");
-        // Chưa có địa chỉ nào thì tick sẵn "đặt làm mặc định" — xem
-        // CustomerCheckoutFormDTO + AddressService.createAddressForOrder().
         checkoutForm.setSaveAsDefault(savedAddresses.isEmpty());
         if (defaultAddress != null) {
             checkoutForm.setUseExistingAddressId(defaultAddress.getId());
@@ -141,9 +113,6 @@ public class OrderController {
         return "layouts/shop-layout";
     }
 
-    // MỚI: xác định Address dùng để giao hàng từ CustomerCheckoutFormDTO —
-    // xem javadoc ở CustomerCheckoutFormDTO để biết quy tắc
-    // useExistingAddressId vs nhập/sửa mới + saveAsDefault.
     private Address resolveShippingAddress(CustomerCheckoutFormDTO form, AppUser user) {
         if (form.getUseExistingAddressId() != null) {
             return addressService.getAddressById(form.getUseExistingAddressId(), user);
@@ -175,16 +144,6 @@ public class OrderController {
         String voucherCode = form.getVoucherCode();
         String paymentMethod = form.getPaymentMethod();
 
-        // MỚI: tính finalPrice đã trừ voucher (nếu có) TRƯỚC khi tính
-        // grandTotal — dùng chung cho cả check ngưỡng COD lẫn số tiền gửi
-        // sang VNPay. Trước đây 2 chỗ này dùng totalPrice thô (chưa trừ
-        // voucher, chưa cộng ship đúng lúc) nên: (1) đơn "hàng đúng 1tr +
-        // 30k ship" vẫn lọt COD, và (2) khách có voucher chọn VNPay bị tính
-        // tiền cao hơn số thực sẽ lưu vào order.totalPrice.
-        //
-        // MỚI: validate voucher TRƯỚC khi resolveShippingAddress() — nếu
-        // voucher lỗi thì dừng ở đây, tránh lỡ tạo Address mới (trường hợp
-        // khách nhập/sửa địa chỉ) rồi không dùng vào đơn nào cả.
         BigDecimal totalPriceBD = BigDecimal.valueOf(cartService.getTotalPrice(user));
         BigDecimal finalPrice = totalPriceBD;
         if (voucherCode != null && !voucherCode.isBlank()) {
@@ -207,32 +166,17 @@ public class OrderController {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
             return "redirect:/order/checkout";
         }
-        // Không tách billing address riêng nữa — đồng bộ với checkout-guest
-        // (billingAddress = shippingAddress), giảm phức tạp không cần thiết
-        // cho phần đã đủ việc phải làm trước deadline.
         Address billingAddress = shippingAddress;
 
-        // MỚI (4.5): SỬA LỖI — trước đây grandTotal tính TRƯỚC khi có
-        // shippingAddress (dùng flat SHIPPING_FEE), nên số tiền gửi sang
-        // VNPay không khớp phí ship thật OrderService.placeOrder() sẽ tính
-        // lại lúc callback (dùng chính shippingAddress này). Giờ tính SAU
-        // khi đã resolve xong địa chỉ, dùng đúng 1 nguồn logic
-        // (OrderService.calculateShippingFee) cho cả khâu thu tiền lẫn lưu đơn.
         int weightGrams = orderService.getCartWeightGrams(user);
         BigDecimal shippingFee = orderService.calculateShippingFee(shippingAddress, finalPrice, weightGrams);
         long grandTotal = finalPrice.add(shippingFee).longValue();
 
         if ("VNPAY".equals(paymentMethod)) {
-            // Lưu vào session để dùng sau khi VNPay callback — shippingAddress
-            // ở đây đã được resolve/tạo xong ở trên (có id thật), kể cả
-            // trường hợp là địa chỉ "dùng 1 lần" (user = null).
             HttpSession session = request.getSession();
             session.setAttribute("pendingShippingAddressId", shippingAddress.getId());
             session.setAttribute("pendingBillingAddressId", shippingAddress.getId());
             session.setAttribute("pendingVoucherCode", voucherCode);
-
-            // Số tiền thanh toán qua VNPay phải gồm cả phí ship (và giờ đã
-            // trừ đúng voucher — xem finalPrice ở trên)
             String paymentUrl = vnPayService.createPaymentUrl(
                     grandTotal,
                     "Thanh toan don hang",
@@ -241,11 +185,6 @@ public class OrderController {
             return "redirect:" + paymentUrl;
         }
 
-        // COD — tạo order bình thường. Rule ">1 triệu bắt buộc VNPay" giờ
-        // nằm trong OrderService.placeOrder() (check bằng grandTotal thật,
-        // sau voucher + ship) — bắt exception ở đây để hiển thị lỗi cho khách
-        // thay vì để lộ lỗi 500. shippingAddress/billingAddress đã resolve
-        // xong ở trên.
         try {
             AppOrder order = orderService.placeOrder(user, shippingAddress,
                     billingAddress, voucherCode, "COD");
@@ -272,14 +211,8 @@ public class OrderController {
         }
 
         BigDecimal totalPrice = guestCartService.getTotalPrice(session);
-        // MỚI (4.5): chưa có địa chỉ nào lúc load trang lần đầu (form trống)
-        // nên chỉ hiện ước tính mặc định — JS gọi /order/shipping-fee-preview
-        // ngay khi khách chọn xong Tỉnh/Quận-Huyện/Phường-Xã (xem checkout-guest.html).
         BigDecimal shippingFee = OrderService.DEFAULT_SHIPPING_FEE;
         BigDecimal grandTotal = totalPrice.add(shippingFee);
-
-        // MỚI: guest không dùng voucher nữa — bỏ hẳn eligibleVouchers,
-        // không hiển thị danh sách voucher trên trang checkout-guest.
 
         model.addAttribute("cartItems", cartItems);
         model.addAttribute("totalPrice", totalPrice);
@@ -305,13 +238,8 @@ public class OrderController {
 
         BigDecimal totalPrice = guestCartService.getTotalPrice(session);
 
-        // MỚI (4.5): tính phí thật từ mã GHN trong form (khách đã chọn xong
-        // dropdown trước khi bấm đặt hàng) — cùng logic placeOrderGuest() sẽ
-        // dùng lại, tránh lệch số giữa lúc check COD/gửi VNPay và lúc lưu đơn.
         BigDecimal shippingFee = orderService.calculateShippingFeeForGuestForm(form, cartItems, totalPrice);
 
-        // MỚI: guest không dùng voucher nữa — bỏ hẳn finalPrice/voucher,
-        // grandTotal chỉ còn totalPrice (đã tự áp sale, nếu có) + ship.
         BigDecimal grandTotal = totalPrice.add(shippingFee);
 
         // Validate COD > 1 triệu — dùng grandTotal đã cộng ship.
@@ -356,10 +284,6 @@ public class OrderController {
             return "redirect:" + paymentUrl;
         }
 
-        // COD — tạo order bình thường. Rule ">1 triệu" đã check ở trên bằng
-        // bindingResult, nhưng OrderService.placeOrderGuest cũng tự check lại
-        // (phòng hờ nơi khác gọi thẳng service không qua controller này) —
-        // nên vẫn bọc try/catch để không lộ lỗi 500 nếu rơi vào edge case.
         try {
             AppOrder order = orderService.placeOrderGuest(form, cartItems);
             guestCartService.clearCart(session);
@@ -378,11 +302,6 @@ public class OrderController {
         }
     }
 
-    // Trang thành công riêng cho guest — tra theo orderCode (không phải id),
-    // vì guest không có quyền truy vấn theo id nội bộ (xem 6.6). Dùng template
-    // riêng order-success-guest.html (không phải order-success.html của user
-    // đã login) vì trang đó có nút "Xem chi tiết đơn hàng" trỏ /order/detail/{id}
-    // — route yêu cầu login và dùng id nội bộ, cả 2 điều guest đều không có.
     @GetMapping("/success-guest/{orderCode}")
     public String orderSuccessGuest(@PathVariable String orderCode, Model model) {
         AppOrder order = orderService.getOrderByCode(orderCode);
@@ -393,11 +312,6 @@ public class OrderController {
         return "layouts/shop-layout";
     }
 
-    // MỚI: VNPAY CALLBACK CHO KHÁCH VÃNG LAI — song song với vnpayReturn()
-    // (luồng user) bên dưới. Guest không có Authentication nên không thể tái
-    // sử dụng chung 1 endpoint; route này bắt buộc phải permitAll trong
-    // SecurityConfig (xem ghi chú ở đó), vì VNPay redirect thẳng về đây mà
-    // không mang theo session đăng nhập nào cả.
     @GetMapping("/vnpay-return-guest")
     public String vnpayReturnGuest(HttpServletRequest request,
                                    RedirectAttributes redirectAttributes) {
@@ -459,10 +373,6 @@ public class OrderController {
                 return "redirect:/cart";
             }
 
-            // MỚI: dùng getAddressByIdForOrder() thay vì getAddressById(id, user)
-            // — address ở đây đã được xác thực quyền sở hữu (nếu có) lúc resolve
-            // ở POST /checkout, và có thể là loại "dùng 1 lần" (user = null) nên
-            // getAddressById() thường sẽ NullPointerException khi check ownership.
             Address shippingAddress = addressService.getAddressByIdForOrder(shippingAddressId);
             Address billingAddress  = addressService.getAddressByIdForOrder(billingAddressId);
 
@@ -533,12 +443,6 @@ public class OrderController {
         }
     }
 
-    // MỚI (4.5): AJAX tính phí ship real-time khi khách đổi Tỉnh/Quận-Huyện/
-    // Phường-Xã ở dropdown checkout (cả user lẫn guest, phân biệt qua auth).
-    // currentTotal do FE tự truyền lên (đã trừ voucher nếu có, xem
-    // checkout.html) — chỉ dùng để check ngưỡng freeship, KHÔNG phải nguồn
-    // sự thật cuối cùng (đơn hàng thật luôn tính lại totalPrice từ server ở
-    // OrderService.placeOrder/placeOrderGuest).
     @GetMapping("/shipping-fee-preview")
     @ResponseBody
     public Map<String, Object> shippingFeePreview(@RequestParam(required = false) Integer ghnDistrictId,
@@ -549,10 +453,6 @@ public class OrderController {
         Map<String, Object> result = new HashMap<>();
         try {
             int weightGrams;
-            // ⚠️ GIẢ ĐỊNH: theo cấu hình Spring Security mặc định (AnonymousAuthenticationFilter
-            // bật), khách chưa đăng nhập vẫn có Authentication khác null nhưng
-            // isAuthenticated() = false hoặc principal = "anonymousUser" — kiểm tra
-            // lại nếu SecurityConfig có tùy biến khác cách này.
             boolean isLoggedIn = auth != null && auth.isAuthenticated()
                     && !"anonymousUser".equals(auth.getPrincipal());
             if (isLoggedIn) {
@@ -571,8 +471,6 @@ public class OrderController {
             result.put("success", true);
             result.put("fee", fee.longValue());
         } catch (Exception e) {
-            // Không để lỗi preview chặn checkout — trả về fallback mặc định,
-            // phí thật vẫn sẽ được tính đúng lúc submit (placeOrder/placeOrderGuest).
             result.put("success", true);
             result.put("fee", OrderService.DEFAULT_SHIPPING_FEE.longValue());
             result.put("fallback", true);
@@ -590,8 +488,7 @@ public class OrderController {
             AppUser user = getCurrentUser(auth);
             BigDecimal totalPrice = BigDecimal.valueOf(total);
 
-            // MỚI (4.4): không cộng dồn sale + voucher — chặn nếu bất kỳ item
-            // nào trong giỏ đang có sale active.
+            // MỚI (4.4): không cộng dồn sale + voucher — chặn nếu bất kỳ item nào trong giỏ đang có sale active.
             boolean hasSaleItem = cartService.getCartItems(user).stream()
                     .anyMatch(item -> productSaleService
                             .getActiveSale(item.getVariant().getProduct())
@@ -615,7 +512,7 @@ public class OrderController {
     }
 
     // ══════════════════════════════════════════════════════════════════
-    // TRA CỨU ĐƠN HÀNG KHÁCH VÃNG LAI (4.2 + 6.6)
+    // TRA CỨU ĐƠN HÀNG KHÁCH VÃNG LAI
     // ══════════════════════════════════════════════════════════════════
 
     @GetMapping("/lookup-guest")
@@ -647,8 +544,6 @@ public class OrderController {
 
         if (orderOpt.isEmpty()) {
             orderLookupRateLimiter.recordFailure(rateLimitKey);
-            // Thông báo lỗi chung chung khi không tìm thấy mã đơn — xem ghi
-            // chú ở OrderService.lookupGuestOrder().
             model.addAttribute("errorMessage", "Không tìm thấy đơn hàng với mã đã nhập.");
             model.addAttribute("view", "shop/order-lookup-guest");
             return "layouts/shop-layout";
@@ -657,9 +552,6 @@ public class OrderController {
         orderLookupRateLimiter.recordSuccess(rateLimitKey);
         AppOrder order = orderOpt.get();
 
-        // MỚI (6.6): mask SĐT/email khi hiển thị lại — trang kết quả chỉ dùng
-        // maskedPhone/maskedEmail, KHÔNG in trực tiếp order.shippingAddress.phone
-        // hay order.guestEmail ra view.
         model.addAttribute("order", order);
         model.addAttribute("maskedPhone", maskPhone(order.getShippingAddress().getPhone()));
         model.addAttribute("maskedEmail", maskEmail(order.getGuestEmail()));
@@ -667,13 +559,11 @@ public class OrderController {
         return "layouts/shop-layout";
     }
 
-    // "090***4567" — giữ 3 số đầu + 4 số cuối, che phần giữa
     private String maskPhone(String phone) {
         if (phone == null || phone.length() < 7) return phone;
         return phone.substring(0, 3) + "***" + phone.substring(phone.length() - 4);
     }
 
-    // "a***@example.com" — chỉ giữ ký tự đầu của phần local
     private String maskEmail(String email) {
         if (email == null || !email.contains("@")) return email;
         String[] parts = email.split("@", 2);

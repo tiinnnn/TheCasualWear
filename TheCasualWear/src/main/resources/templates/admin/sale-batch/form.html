@@ -34,11 +34,11 @@
                         </div>
                         <div class="dm-form-group">
                             <label class="dm-label">Bắt đầu <span class="dm-required">*</span></label>
-                            <input type="datetime-local" name="startDate" class="dm-input" required>
+                            <input type="datetime-local" name="startDate" id="batchStartDate" class="dm-input" required>
                         </div>
                         <div class="dm-form-group">
                             <label class="dm-label">Kết thúc <span class="dm-required">*</span></label>
-                            <input type="datetime-local" name="endDate" class="dm-input" required>
+                            <input type="datetime-local" name="endDate" id="batchEndDate" class="dm-input" required>
                         </div>
                     </div>
                 </div>
@@ -238,6 +238,38 @@
             const selectAll     = document.getElementById('selectAll');
             const checkboxes    = () => Array.from(document.querySelectorAll('.product-checkbox'));
             const selectedCount = document.getElementById('selectedCount');
+            const form          = document.getElementById('saleBatchForm');
+            const startInput    = document.getElementById('batchStartDate');
+            const endInput      = document.getElementById('batchEndDate');
+
+            // Buffer cộng thêm khi tự động nâng ngày bắt đầu lên hiện tại —
+            // tránh vừa tạo xong đợt sale đã coi như "bắt đầu ở quá khứ" do
+            // thời gian điền form (chọn ngày, tick sản phẩm...) rồi mới bấm tạo.
+            const START_BUFFER_MINUTES = 2;
+
+            function pad(n) { return String(n).padStart(2, '0'); }
+            function toLocalDateTimeString(date) {
+                return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate())
+                    + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+            }
+            function nowPlusBuffer() {
+                const d = new Date();
+                d.setMinutes(d.getMinutes() + START_BUFFER_MINUTES);
+                return toLocalDateTimeString(d);
+            }
+
+            // Không cho chọn ngày bắt đầu bé hơn thời điểm hiện tại
+            startInput.min = toLocalDateTimeString(new Date());
+
+            // Khi đổi ngày bắt đầu -> cập nhật min cho ngày kết thúc
+            startInput.addEventListener('change', function () {
+                if (startInput.value) {
+                    endInput.min = startInput.value;
+                    if (endInput.value && endInput.value <= startInput.value) {
+                        endInput.value = '';
+                    }
+                }
+            });
 
             function updateCount() {
                 const n = checkboxes().filter(cb => cb.checked).length;
@@ -275,10 +307,28 @@
                 });
             });
 
-            document.getElementById('saleBatchForm').addEventListener('submit', function (e) {
+            form.addEventListener('submit', function (e) {
                 if (checkboxes().filter(cb => cb.checked).length === 0) {
                     e.preventDefault();
                     alert('Vui lòng chọn ít nhất 1 sản phẩm.');
+                    return;
+                }
+
+                const now = toLocalDateTimeString(new Date());
+
+                // Nếu ngày bắt đầu đã lọt về quá khứ (điền form xong để lâu
+                // mới bấm tạo) -> tự động nâng lên hiện tại + buffer thay vì chặn.
+                if (!startInput.value || startInput.value < now) {
+                    startInput.value = nowPlusBuffer();
+                    endInput.min = startInput.value;
+                }
+
+                // Kết thúc vẫn bắt buộc phải sau bắt đầu (đã tự nâng ở trên)
+                if (!endInput.value || endInput.value <= startInput.value) {
+                    e.preventDefault();
+                    alert('Thời gian kết thúc phải lớn hơn thời gian bắt đầu.');
+                    endInput.focus();
+                    return;
                 }
             });
         })();

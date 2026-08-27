@@ -239,7 +239,7 @@
                     <span class="fw-bold"><i class="bi bi-plus-circle me-2"></i>Tạo đợt sale mới</span>
                 </div>
                 <div class="card-body">
-                    <form th:action="@{'/admin/products/' + ${product.id} + '/sales/add'}" method="post">
+                    <form id="saleAddForm" th:action="@{'/admin/products/' + ${product.id} + '/sales/add'}" method="post">
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold">
@@ -253,14 +253,14 @@
                             <label class="form-label fw-semibold">
                                 Bắt đầu <span class="text-danger">*</span>
                             </label>
-                            <input type="datetime-local" name="startDate" class="form-control" required/>
+                            <input type="datetime-local" id="saleStartDate" name="startDate" class="form-control" required/>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold">
                                 Kết thúc <span class="text-danger">*</span>
                             </label>
-                            <input type="datetime-local" name="endDate" class="form-control" required/>
+                            <input type="datetime-local" id="saleEndDate" name="endDate" class="form-control" required/>
                         </div>
 
                         <div class="alert alert-info small mb-3">
@@ -277,6 +277,54 @@
             </div>
         </div>
     </div>
+
+    <script th:inline="javascript">
+        (function () {
+            var startInput = document.getElementById('saleStartDate');
+            var endInput = document.getElementById('saleEndDate');
+            var form = document.getElementById('saleAddForm');
+
+            function toLocalDateTimeString(date) {
+                var pad = function (n) { return String(n).padStart(2, '0'); };
+                return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate())
+                    + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+            }
+
+            // Không cho chọn ngày bắt đầu bé hơn thời điểm hiện tại
+            var nowStr = toLocalDateTimeString(new Date());
+            startInput.min = nowStr;
+
+            // Khi đổi ngày bắt đầu -> cập nhật min cho ngày kết thúc (phải lớn hơn bắt đầu)
+            startInput.addEventListener('change', function () {
+                if (startInput.value) {
+                    endInput.min = startInput.value;
+                    // Nếu ngày kết thúc đang chọn <= ngày bắt đầu mới -> reset để buộc chọn lại
+                    if (endInput.value && endInput.value <= startInput.value) {
+                        endInput.value = '';
+                    }
+                }
+            });
+
+            form.addEventListener('submit', function (e) {
+                var now = toLocalDateTimeString(new Date());
+                var startVal = startInput.value;
+                var endVal = endInput.value;
+
+                if (!startVal || startVal < now) {
+                    e.preventDefault();
+                    alert('Thời gian bắt đầu không được nhỏ hơn thời điểm hiện tại.');
+                    startInput.focus();
+                    return;
+                }
+                if (!endVal || endVal <= startVal) {
+                    e.preventDefault();
+                    alert('Thời gian kết thúc phải lớn hơn thời gian bắt đầu.');
+                    endInput.focus();
+                    return;
+                }
+            });
+        })();
+    </script>
 
 </div>
 </body>
