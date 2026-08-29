@@ -75,8 +75,8 @@
     }
 
     /* ── Hero ── */
-    .col-hero { position: relative; height: 360px; overflow: hidden; margin-bottom: 3rem; }
-    .col-hero-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .col-hero { position: relative; width: 100%; aspect-ratio: 21 / 9; max-height: 460px; overflow: hidden; margin-bottom: 3rem; background: #111; }
+    .col-hero-img { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; display: block; }
     .col-hero-overlay {
         position: absolute; inset: 0;
         background: linear-gradient(to bottom, rgba(0,0,0,.15), rgba(0,0,0,.45));
@@ -136,7 +136,7 @@
     .col-prod-price { font-size: .74rem; color: var(--mute); margin: 0; }
 
     @media (max-width: 576px) {
-        .col-hero { height: 260px; }
+        .col-hero { aspect-ratio: 4 / 3; max-height: 320px; }
         .col-hero-name { font-size: 1.2rem; }
     }
 </style>
