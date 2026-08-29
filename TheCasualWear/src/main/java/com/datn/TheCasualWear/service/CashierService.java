@@ -38,12 +38,12 @@ public class CashierService {
     private final OrderDetailRepository    orderDetailRepository;
     private final OrderVoucherRepository   orderVoucherRepository;
     private final StockMovementLogService  stockMovementLogService;
-    private final ProductSaleService       productSaleService; // MỚI: giá sale áp cho cả bán tại quầy
-    private final PosCartRegistry          cartRegistry; // MỚI: giỏ POS đa-cart, in-memory
+    private final ProductSaleService       productSaleService;
+    private final PosCartRegistry          cartRegistry;
 
     // Cashier tự hủy đơn trong vòng bao nhiêu phút kể từ lúc tạo.
     // Admin/Owner không bị giới hạn bởi mốc thời gian này.
-    public static final int CANCEL_WINDOW_MINUTES = 30;
+    public static final int CANCEL_WINDOW_MINUTES = 10;
 
     // ─────────────────────────────────────────────────────────────
     // INTERNAL HELPERS
@@ -73,12 +73,6 @@ public class CashierService {
         return discount;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // GIÁ BÁN — đã áp sale nếu sản phẩm đang có sale chạy. Dùng chung
-    // cho cả buildCartItem() (thêm vào giỏ) và ô tìm kiếm autocomplete
-    // ở CashierController, để giá hiển thị lúc tìm và giá lúc thêm
-    // vào giỏ luôn khớp nhau.
-    // ─────────────────────────────────────────────────────────────
 
     public BigDecimal getEffectivePrice(ProductVariant variant) {
         return productSaleService.getEffectivePrice(variant.getProduct());

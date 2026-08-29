@@ -290,9 +290,15 @@
                     + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
             }
 
-            // Không cho chọn ngày bắt đầu bé hơn thời điểm hiện tại
-            var nowStr = toLocalDateTimeString(new Date());
-            startInput.min = nowStr;
+            function toLocalDateStartString(date) {
+                var pad = function (n) { return String(n).padStart(2, '0'); };
+                return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + 'T00:00';
+            }
+
+            // Lấy phần "YYYY-MM-DD" để so sánh THEO NGÀY, bỏ qua giờ:phút.
+            function dateOnly(value) { return value ? value.slice(0, 10) : ''; }
+            var todayStartStr = toLocalDateStartString(new Date());
+            startInput.min = todayStartStr;
 
             // Khi đổi ngày bắt đầu -> cập nhật min cho ngày kết thúc (phải lớn hơn bắt đầu)
             startInput.addEventListener('change', function () {
@@ -306,13 +312,14 @@
             });
 
             form.addEventListener('submit', function (e) {
-                var now = toLocalDateTimeString(new Date());
+                var todayDate = dateOnly(toLocalDateStartString(new Date()));
                 var startVal = startInput.value;
                 var endVal = endInput.value;
 
-                if (!startVal || startVal < now) {
+                // Chỉ chặn khi NGÀY bắt đầu sớm hơn hôm nay — không quan tâm giờ.
+                if (!startVal || dateOnly(startVal) < todayDate) {
                     e.preventDefault();
-                    alert('Thời gian bắt đầu không được nhỏ hơn thời điểm hiện tại.');
+                    alert('Ngày bắt đầu không được sớm hơn hôm nay.');
                     startInput.focus();
                     return;
                 }

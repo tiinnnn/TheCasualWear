@@ -186,10 +186,12 @@
 <script>
     (function () {
         // ══ Validate ngày voucher ══
-        // - Ngày bắt đầu không được sớm hơn thời điểm hiện tại (voucher form
-        //   này chỉ dùng để TẠO MỚI — không có chế độ sửa — nên luôn ép mốc
-        //   "hiện tại" làm min).
-        // - Ngày kết thúc không được sớm hơn ngày bắt đầu.
+        // - Ngày bắt đầu chỉ cần rơi vào HÔM NAY trở về sau — so sánh theo
+        //   NGÀY, không ép đúng giờ:phút hiện tại. Vì vậy admin vẫn có thể
+        //   chọn giờ bắt đầu sớm hơn giờ hiện tại, miễn là cùng ngày hôm nay
+        //   (VD: bây giờ 15:00 nhưng vẫn chọn được 09:00 hôm nay).
+        // - Ngày kết thúc vẫn phải lớn hơn ngày bắt đầu (so theo datetime
+        //   đầy đủ, không đổi).
         const form       = document.getElementById('voucherForm');
         const startInput = document.getElementById('voucherStartDate');
         const endInput   = document.getElementById('voucherEndDate');
@@ -207,13 +209,24 @@
 
         function nowValue() { return toLocalInputValue(new Date()); }
 
+        // Mốc "đầu ngày hôm nay" (00:00) — dùng làm min cho ngày bắt đầu,
+        // thay vì giờ:phút hiện tại, để cho phép chọn bất kỳ giờ nào trong
+        // hôm nay.
+        function todayStartValue() {
+            const d = new Date();
+            return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T00:00';
+        }
+
+        // Lấy phần "YYYY-MM-DD" để so sánh THEO NGÀY, bỏ qua giờ:phút.
+        function dateOnly(value) { return value ? value.slice(0, 10) : ''; }
+
         // min HTML5 chỉ chặn được thao tác chọn qua lịch/picker — vẫn cần
-        // check lại lúc submit vì "hiện tại" trôi theo thời gian, và người
+        // check lại lúc submit vì "hôm nay" trôi theo thời gian, và người
         // dùng có thể gõ tay giá trị cũ hơn min ban đầu.
-        startInput.min = nowValue();
+        startInput.min = todayStartValue();
 
         function syncEndMin() {
-            endInput.min = startInput.value || nowValue();
+            endInput.min = startInput.value || todayStartValue();
         }
         startInput.addEventListener('change', syncEndMin);
         syncEndMin();
@@ -233,10 +246,11 @@
             clearError(endInput, endErr);
 
             let hasError = false;
-            const now = new Date();
+            const todayDate = dateOnly(todayStartValue());
 
-            if (startInput.value && new Date(startInput.value) < now) {
-                showError(startInput, startErr, 'Ngày bắt đầu không được sớm hơn thời điểm hiện tại!');
+            // Chỉ chặn khi NGÀY bắt đầu sớm hơn hôm nay — không quan tâm giờ.
+            if (startInput.value && dateOnly(startInput.value) < todayDate) {
+                showError(startInput, startErr, 'Ngày bắt đầu không được sớm hơn hôm nay!');
                 hasError = true;
             }
             if (startInput.value && endInput.value
