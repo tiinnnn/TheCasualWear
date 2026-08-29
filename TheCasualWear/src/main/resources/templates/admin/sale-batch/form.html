@@ -35,10 +35,12 @@
                         <div class="dm-form-group">
                             <label class="dm-label">Bắt đầu <span class="dm-required">*</span></label>
                             <input type="datetime-local" name="startDate" id="batchStartDate" class="dm-input" required>
+                            <small class="dm-text-faint" id="batchStartErr" style="display:none;color:var(--bad)"></small>
                         </div>
                         <div class="dm-form-group">
                             <label class="dm-label">Kết thúc <span class="dm-required">*</span></label>
                             <input type="datetime-local" name="endDate" id="batchEndDate" class="dm-input" required>
+                            <small class="dm-text-faint" id="batchEndErr" style="display:none;color:var(--bad)"></small>
                         </div>
                     </div>
                 </div>
@@ -163,6 +165,7 @@
             outline: none; transition: border-color .2s ease, box-shadow .2s ease; width: 100%; box-sizing: border-box;
         }
         .dm-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        .dm-input--invalid { border-color: var(--bad) !important; box-shadow: 0 0 0 3px var(--bad-soft) !important; }
         .dm-input::placeholder { color: var(--text-faint); }
         .dm-input--filter { width: auto; min-width: 220px; padding: 7px 12px; font-size: .82rem; }
 
@@ -241,33 +244,26 @@
             const form          = document.getElementById('saleBatchForm');
             const startInput    = document.getElementById('batchStartDate');
             const endInput      = document.getElementById('batchEndDate');
-
-            // Buffer cộng thêm khi tự động nâng ngày bắt đầu lên hiện tại —
-            // tránh vừa tạo xong đợt sale đã coi như "bắt đầu ở quá khứ" do
-            // thời gian điền form (chọn ngày, tick sản phẩm...) rồi mới bấm tạo.
-            const START_BUFFER_MINUTES = 2;
+            const startErr      = document.getElementById('batchStartErr');
+            const endErr        = document.getElementById('batchEndErr');
 
             function pad(n) { return String(n).padStart(2, '0'); }
             function toLocalDateTimeString(date) {
                 return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate())
                     + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
             }
-            function nowPlusBuffer() {
-                const d = new Date();
-                d.setMinutes(d.getMinutes() + START_BUFFER_MINUTES);
-                return toLocalDateTimeString(d);
-            }
+            function nowValue() { return toLocalDateTimeString(new Date()); }
 
-            // Không cho chọn ngày bắt đầu bé hơn thời điểm hiện tại
-            startInput.min = toLocalDateTimeString(new Date());
+            // Không cho chọn ngày bắt đầu bé hơn thời điểm hiện tại (chặn
+            // ngay từ lịch chọn ngày — nhưng "hiện tại" trôi theo thời gian
+            // nên vẫn cần check lại lúc submit bên dưới).
+            startInput.min = nowValue();
 
             // Khi đổi ngày bắt đầu -> cập nhật min cho ngày kết thúc
             startInput.addEventListener('change', function () {
-                if (startInput.value) {
-                    endInput.min = startInput.value;
-                    if (endInput.value && endInput.value <= startInput.value) {
-                        endInput.value = '';
-                    }
+                endInput.min = startInput.value || nowValue();
+                if (endInput.value && endInput.value <= startInput.value) {
+                    endInput.value = '';
                 }
             });
 
@@ -307,29 +303,41 @@
                 });
             });
 
+            function showError(input, errEl, message) {
+                input.classList.add('dm-input--invalid');
+                errEl.textContent = message;
+                errEl.style.display = 'block';
+            }
+            function clearError(input, errEl) {
+                input.classList.remove('dm-input--invalid');
+                errEl.style.display = 'none';
+            }
+
             form.addEventListener('submit', function (e) {
+                clearError(startInput, startErr);
+                clearError(endInput, endErr);
+
                 if (checkboxes().filter(cb => cb.checked).length === 0) {
                     e.preventDefault();
                     alert('Vui lòng chọn ít nhất 1 sản phẩm.');
                     return;
                 }
 
-                const now = toLocalDateTimeString(new Date());
+                let hasError = false;
+                const now = nowValue();
 
-                // Nếu ngày bắt đầu đã lọt về quá khứ (điền form xong để lâu
-                // mới bấm tạo) -> tự động nâng lên hiện tại + buffer thay vì chặn.
-                if (!startInput.value || startInput.value < now) {
-                    startInput.value = nowPlusBuffer();
-                    endInput.min = startInput.value;
+                // Ngày bắt đầu không được sớm hơn thời điểm hiện tại.
+                if (startInput.value && startInput.value < now) {
+                    showError(startInput, startErr, 'Ngày bắt đầu không được sớm hơn thời điểm hiện tại!');
+                    hasError = true;
+                }
+                // Ngày kết thúc không được sớm hơn (hoặc bằng) ngày bắt đầu.
+                if (startInput.value && endInput.value && endInput.value <= startInput.value) {
+                    showError(endInput, endErr, 'Ngày kết thúc phải lớn hơn ngày bắt đầu!');
+                    hasError = true;
                 }
 
-                // Kết thúc vẫn bắt buộc phải sau bắt đầu (đã tự nâng ở trên)
-                if (!endInput.value || endInput.value <= startInput.value) {
-                    e.preventDefault();
-                    alert('Thời gian kết thúc phải lớn hơn thời gian bắt đầu.');
-                    endInput.focus();
-                    return;
-                }
+                if (hasError) e.preventDefault();
             });
         })();
     </script>
