@@ -418,11 +418,39 @@
                            class="btn btn-outline-primary btn-sm w-100 mb-2">
                             <i class="bi bi-geo-alt me-1"></i>Kiểm tra trên GHN
                         </a>
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-success btn-sm"
+                                    data-bs-toggle="modal" data-bs-target="#completeModal">
+                                <i class="bi bi-check2-all me-1"></i>Đánh dấu hoàn thành
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal danh dau hoan thanh -->
+            <div class="modal fade" id="completeModal" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header border-0 pb-0">
+                            <h6 class="modal-title fw-bold text-success">
+                                <i class="bi bi-check2-all me-2"></i>Đánh dấu hoàn thành
+                            </h6>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
                         <form th:action="@{'/admin/orders/' + ${order.id} + '/complete'}" method="post">
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-success btn-sm"
-                                        onclick="return confirm('Xác nhận đơn hàng đã hoàn thành? Đơn sẽ được tính vào doanh thu.')">
-                                    <i class="bi bi-check2-all me-1"></i>Đánh dấu hoàn thành
+                            <div class="modal-body">
+                                <div class="alert alert-success py-2 mb-0">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    Đơn hàng sẽ được chuyển sang trạng thái
+                                    <strong>Đã hoàn thành</strong> và tính vào doanh thu, bạn có chắc chắn?
+                                </div>
+                            </div>
+                            <div class="modal-footer border-0 pt-0">
+                                <button type="button" class="btn btn-secondary btn-sm"
+                                        data-bs-dismiss="modal">Hủy bỏ</button>
+                                <button type="submit" class="btn btn-success btn-sm">
+                                    <i class="bi bi-check2-all me-1"></i>Xác nhận hoàn thành
                                 </button>
                             </div>
                         </form>
