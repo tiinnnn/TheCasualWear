@@ -344,6 +344,12 @@ public class OrderService {
             orderVoucher.setCustomer(user);
             orderVoucher.setDiscountAmount(discountAmount);
             orderVoucherRepository.save(orderVoucher);
+
+            // FIX: applyVoucher() ở trên chỉ validate, không tự tăng usedCount
+            // (khác với CashierService.checkout() có tăng) — thiếu dòng này khiến
+            // voucher dùng qua online không bao giờ tăng usedCount, dẫn tới có thể
+            // bị dùng vượt usageLimit vô hạn lần.
+            voucherService.incrementUsedCount(voucher);
         }
 
         cartService.clearCart(user);
@@ -836,8 +842,13 @@ public class OrderService {
         }
     }
 
+    // Dùng chung cho cancelOrder (khách), cancelOrderByAdmin, returnOrder.
+    // FIX: trước đây chỉ xóa OrderVoucher, không hoàn usedCount — giờ khớp
+    // với placeOrder() đã tăng usedCount lúc tạo đơn (và khớp với cách
+    // CashierService.cancelOrder() đang hoàn lượt dùng cho đơn quầy).
     private void removeOrderVoucher(AppOrder order, Integer orderId) {
         orderVoucherRepository.findByOrderId(orderId).ifPresent(ov -> {
+            voucherService.decrementUsedCount(ov.getVoucher());
             order.setOrderVoucher(null);
             orderVoucherRepository.delete(ov);
         });

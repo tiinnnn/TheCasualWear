@@ -250,6 +250,12 @@
     .dm-table tbody tr:hover { background: var(--surface-2); }
     .dm-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+    .dm-table tbody td:nth-child(3) {
+        overflow: visible;
+        text-overflow: clip;
+        white-space: nowrap;
+    }
+
     .dm-pill {
         display: inline-flex; align-items: center; padding: 3px 11px;
         border-radius: 999px; font-size: .7rem; font-weight: 700;

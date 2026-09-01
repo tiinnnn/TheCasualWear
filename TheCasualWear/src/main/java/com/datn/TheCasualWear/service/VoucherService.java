@@ -88,6 +88,24 @@ public class VoucherService {
         return voucher;
     }
 
+    // Tăng lượt đã dùng — PHẢI gọi ngay khi 1 đơn hàng áp dụng voucher được
+    // tạo thành công (online lẫn tại quầy). applyVoucher() ở trên chỉ
+    // validate, KHÔNG tự tăng usedCount — nơi gọi (OrderService/CashierService)
+    // phải tự gọi hàm này sau khi chắc chắn đơn đã được tạo.
+    public void incrementUsedCount(Voucher voucher) {
+        voucher.setUsedCount(voucher.getUsedCount() + 1);
+        voucherRepository.save(voucher);
+    }
+
+    // Hoàn lượt dùng khi đơn có áp voucher bị hủy/hoàn — đối xứng với
+    // incrementUsedCount(). Chặn âm phòng trường hợp dữ liệu lệch sẵn có.
+    public void decrementUsedCount(Voucher voucher) {
+        if (voucher.getUsedCount() != null && voucher.getUsedCount() > 0) {
+            voucher.setUsedCount(voucher.getUsedCount() - 1);
+            voucherRepository.save(voucher);
+        }
+    }
+
     // Tính tiền sau khi áp dụng voucher
     public BigDecimal calcDiscountedPrice(BigDecimal totalPrice, Voucher voucher) {
         if (voucher == null) return totalPrice;
