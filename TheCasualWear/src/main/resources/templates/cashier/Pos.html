@@ -37,6 +37,42 @@
             background: var(--adm-accent-soft); border: 1px solid rgba(139,124,246,.35); color: var(--adm-accent);
         }
 
+        /* ── Tab giỏ hàng — mỗi tab luôn giữ nguyên kích thước (không bị
+           bóp nhỏ khi có nhiều tab), nút X đóng tab tách biệt rõ ràng,
+           màu cố định (không phụ thuộc trạng thái active/inactive) nên
+           luôn nhìn thấy và bấm trúng được dù có bao nhiêu tab đi nữa. ── */
+        .pos-page .cart-tabs-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            gap: 6px;
+            padding-bottom: 4px; /* chừa chỗ cho thanh cuộn ngang không đè lên tab */
+        }
+        .pos-page .cart-tab {
+            flex: 0 0 auto; /* KHÔNG co nhỏ dù dòng tab có tràn ngang */
+            display: inline-flex;
+            align-items: stretch;
+        }
+        .pos-page .cart-tab-close {
+            flex: 0 0 auto;
+            width: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,.06);
+            color: #b3261e;
+            border: none;
+            border-left: 1px solid var(--adm-border, rgba(0,0,0,.1));
+            opacity: 0; /* ẩn mặc định — vẫn chiếm chỗ để hover không bị giật layout */
+            transition: opacity .15s ease, background .15s ease, color .15s ease;
+        }
+        .pos-page .cart-tab-close:hover { background: #b3261e; color: #fff; }
+        /* Hiện X khi di chuột vào tab (giống Chrome) */
+        .pos-page .cart-tab:hover .cart-tab-close { opacity: 1; }
+        /* Tab đang active luôn hiện X, không cần hover — cũng giống Chrome */
+        .pos-page .cart-tab.border-primary .cart-tab-close { opacity: 1; }
+
         /* Tab giỏ hàng + khối tìm/giỏ — bo góc mềm, không viền cứng cạnh */
         .pos-page .card { border-radius: 18px; }
         .pos-page .list-group-item:first-child { border-top-left-radius: 14px; border-top-right-radius: 14px; }
@@ -63,12 +99,12 @@
         <!-- ───────────── CỘT PHẢI: GIỎ HÀNG + THANH TOÁN ───────────── -->
         <div class="col-md-5">
             <!-- ── Tabs nhiều giỏ hàng cùng lúc (mỗi tab có nút x đóng riêng) ── -->
-            <div class="d-flex align-items-center mb-2 flex-nowrap" style="overflow-x:auto; gap:6px;">
-                <div th:each="tab : ${cartTabs}" class="d-inline-flex align-items-stretch rounded overflow-hidden border"
+            <div class="cart-tabs-row mb-2">
+                <div th:each="tab : ${cartTabs}" class="cart-tab rounded overflow-hidden border"
                      th:classappend="${tab.cartId == activeCartId} ? 'border-primary' : ''">
                     <form th:action="@{/cashier/cart/switch}" method="post" class="d-inline-block m-0">
                         <input type="hidden" name="cartId" th:value="${tab.cartId}">
-                        <button type="submit" class="btn btn-sm border-0 rounded-0 d-flex align-items-center gap-1"
+                        <button type="submit" class="btn btn-sm border-0 rounded-0 d-flex align-items-center gap-1 text-nowrap"
                                 th:classappend="${tab.cartId == activeCartId} ? 'btn-primary' : 'btn-light'">
                             <span th:text="${tab.label}"></span>
                             <span th:if="${tab.itemCount > 0}" class="badge bg-light text-dark" th:text="${tab.itemCount}"></span>
@@ -78,14 +114,12 @@
                           class="d-inline-block m-0"
                           onsubmit="return confirm('Đóng giỏ này? Sản phẩm còn trong giỏ sẽ được hoàn lại kho.')">
                         <input type="hidden" name="cartId" th:value="${tab.cartId}">
-                        <button type="submit" class="btn btn-sm border-0 rounded-0 px-2"
-                                th:classappend="${tab.cartId == activeCartId} ? 'btn-primary' : 'btn-light'"
-                                title="Đóng giỏ này">
-                            <i class="bi bi-x"></i>
+                        <button type="submit" class="cart-tab-close" title="Đóng giỏ này">
+                            <i class="bi bi-x-lg" style="font-size:.7rem"></i>
                         </button>
                     </form>
                 </div>
-                <form th:action="@{/cashier/cart/new}" method="post" class="d-inline-block">
+                <form th:action="@{/cashier/cart/new}" method="post" class="d-inline-block flex-shrink-0">
                     <button type="submit" class="btn btn-sm btn-outline-primary" title="Giỏ mới">
                         <i class="bi bi-plus-lg"></i>
                     </button>
