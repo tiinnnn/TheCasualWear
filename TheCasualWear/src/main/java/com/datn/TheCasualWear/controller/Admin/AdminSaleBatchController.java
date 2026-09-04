@@ -1,8 +1,10 @@
 package com.datn.TheCasualWear.controller.Admin;
 
 import com.datn.TheCasualWear.entity.Product;
+import com.datn.TheCasualWear.entity.ProductSale;
 import com.datn.TheCasualWear.entity.SaleBatch;
 import com.datn.TheCasualWear.repository.ProductRepository;
+import com.datn.TheCasualWear.service.ProductSaleService;
 import com.datn.TheCasualWear.service.SaleBatchService;
 import com.datn.TheCasualWear.service.SaleBatchService.BulkSaleResult;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +37,7 @@ public class AdminSaleBatchController {
 
     private final SaleBatchService saleBatchService;
     private final ProductRepository productRepository;
+    private final ProductSaleService productSaleService;
 
     @GetMapping
     public String list(Model model) {
@@ -56,6 +59,28 @@ public class AdminSaleBatchController {
         model.addAttribute("activeStatus", activeStatus);
         model.addAttribute("now", LocalDateTime.now());
         model.addAttribute("view", "admin/sale-batch/list");
+        return "layouts/admin-layout";
+    }
+
+    // Xem chi tiết 1 đợt sale: danh sách sản phẩm + giá gốc/giá sau giảm +
+    // trạng thái từng dòng product_sale. Dùng lại getBatchStatus() (đã thêm
+    // ở SaleBatchService) thay vì suy luận start/end/isActive lặp lại như
+    // trang list đang làm thủ công.
+    @GetMapping("/{id}")
+    public String detail(@PathVariable Integer id, Model model) {
+        SaleBatch batch = saleBatchService.getBatchById(id);
+        List<ProductSale> sales = saleBatchService.getSalesInBatch(id);
+
+        Map<Integer, BigDecimal> salePrices = sales.stream()
+                .collect(Collectors.toMap(ProductSale::getId,
+                        s -> productSaleService.applyDiscount(
+                                s.getProduct().getPrice(), s.getDiscountPercent())));
+
+        model.addAttribute("batch", batch);
+        model.addAttribute("sales", sales);
+        model.addAttribute("salePrices", salePrices);
+        model.addAttribute("status", saleBatchService.getBatchStatus(batch).name());
+        model.addAttribute("view", "admin/sale-batch/detail");
         return "layouts/admin-layout";
     }
 

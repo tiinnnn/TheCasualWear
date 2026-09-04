@@ -61,7 +61,9 @@ public class ProductSaleService {
                 .toList();
     }
 
-    private BigDecimal applyDiscount(BigDecimal price, BigDecimal percent) {
+    // Public để các controller/service khác (VD: trang chi tiết đợt sale)
+    // tính giá sau giảm mà không phải chép lại công thức làm tròn ở nơi khác.
+    public BigDecimal applyDiscount(BigDecimal price, BigDecimal percent) {
         BigDecimal discount = price.multiply(percent)
                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
         return price.subtract(discount);

@@ -8,84 +8,90 @@
             <!-- ==================== HEADER ==================== -->
             <div class="dm-header">
                 <div>
-                    <p class="dm-eyebrow">Khuyến mãi</p>
-                    <h1 class="dm-title">Sale theo đợt</h1>
+                    <a th:href="@{/admin/sale-batches}" class="dm-back-link">
+                        <i class="bi bi-arrow-left"></i>Sale theo đợt
+                    </a>
+                    <h1 class="dm-title" th:text="${batch.name}"></h1>
                 </div>
-                <a th:href="@{/admin/sale-batches/new}" class="dm-btn dm-btn--solid">
-                    <i class="bi bi-plus-lg"></i>Tạo đợt sale mới
-                </a>
+                <span th:if="${status == 'RUNNING'}" class="dm-pill dm-pill--good dm-pill--lg">Đang chạy</span>
+                <span th:if="${status == 'UPCOMING'}" class="dm-pill dm-pill--warn dm-pill--lg">Sắp diễn ra</span>
+                <span th:if="${status == 'EXPIRED'}" class="dm-pill dm-pill--muted dm-pill--lg">Đã kết thúc</span>
+                <span th:if="${status == 'CANCELLED_EARLY'}" class="dm-pill dm-pill--bad dm-pill--lg">Đã huỷ sớm</span>
             </div>
 
-            <!-- success/error đã tự hiển thị qua admin-layout (fragments/alerts),
-                 chỉ còn "skipped" là dữ liệu riêng của trang này. -->
-            <div th:if="${skipped}" class="dm-note-box dm-note-box--warn mb-4">
-                <i class="bi bi-exclamation-triangle-fill"></i>
-                <div>
-                    <strong>Một số sản phẩm bị bỏ qua do trùng lịch:</strong>
-                    <ul class="dm-note-list">
-                        <li th:each="s : ${skipped}" th:text="${s}"></li>
-                    </ul>
+            <!-- ==================== INFO CARD ==================== -->
+            <div class="dm-card dm-info-card mb-4">
+                <div class="dm-info-item">
+                    <p class="dm-info-label">Giảm giá</p>
+                    <p class="dm-info-value" th:text="${batch.discountPercent} + '%'"></p>
+                </div>
+                <div class="dm-info-item">
+                    <p class="dm-info-label">Bắt đầu</p>
+                    <p class="dm-info-value" th:text="${#temporals.format(batch.startDate, 'dd/MM/yyyy HH:mm')}"></p>
+                </div>
+                <div class="dm-info-item">
+                    <p class="dm-info-label">Kết thúc</p>
+                    <p class="dm-info-value" th:text="${#temporals.format(batch.endDate, 'dd/MM/yyyy HH:mm')}"></p>
+                </div>
+                <div class="dm-info-item">
+                    <p class="dm-info-label">Số sản phẩm</p>
+                    <p class="dm-info-value" th:text="${sales.size()}"></p>
+                </div>
+                <div class="dm-info-item dm-info-item--action" th:if="${status == 'RUNNING' or status == 'UPCOMING'}">
+                    <form th:action="@{/admin/sale-batches/{id}/deactivate(id=${batch.id})}"
+                          method="post" class="dm-confirm-form"
+                          data-confirm-msg="Huỷ sớm cả đợt sale này? Toàn bộ sản phẩm trong đợt sẽ ngừng giảm giá ngay lập tức.">
+                        <button type="submit" class="dm-btn dm-btn--bad-outline dm-btn--sm">
+                            <i class="bi bi-x-circle"></i>Huỷ sớm cả đợt
+                        </button>
+                    </form>
                 </div>
             </div>
 
-            <!-- ==================== TABLE ==================== -->
+            <!-- ==================== TABLE SẢN PHẨM ==================== -->
             <div class="dm-card">
                 <div class="dm-table-wrap">
                     <table class="dm-table">
                         <colgroup>
-                            <col style="width:22%">
                             <col style="width:9%">
-                            <col style="width:15%">
-                            <col style="width:15%">
-                            <col style="width:11%">
-                            <col style="width:14%">
-                            <col style="width:14%">
+                            <col style="width:33%">
+                            <col style="width:17%">
+                            <col style="width:17%">
+                            <col style="width:24%">
                         </colgroup>
                         <thead>
                         <tr>
-                            <th>Tên đợt sale</th>
-                            <th class="dm-text-center">Giảm giá</th>
-                            <th>Bắt đầu</th>
-                            <th>Kết thúc</th>
-                            <th class="dm-text-center">Số sản phẩm</th>
-                            <th class="dm-text-center">Trạng thái</th>
-                            <th class="dm-text-end">Hành động</th>
+                            <th></th>
+                            <th>Sản phẩm</th>
+                            <th class="dm-text-end">Giá gốc</th>
+                            <th class="dm-text-end">Giá sau giảm</th>
+                            <th class="dm-text-center">Trạng thái dòng sale</th>
                         </tr>
                         </thead>
                         <tbody>
-                        <tr th:each="batch : ${batches}">
-                            <td class="dm-cell-strong dm-truncate">
-                                <a th:href="@{/admin/sale-batches/{id}(id=${batch.id})}"
-                                   class="dm-link" th:text="${batch.name}"></a>
+                        <tr th:each="sale : ${sales}">
+                            <td>
+                                <img th:if="${!sale.product.images.isEmpty()}"
+                                     th:src="${sale.product.images[0].imageUrl}"
+                                     th:alt="${sale.product.name}" class="dm-thumb"/>
+                                <div th:unless="${!sale.product.images.isEmpty()}" class="dm-thumb dm-thumb--empty">
+                                    <i class="bi bi-image"></i>
+                                </div>
                             </td>
+                            <td class="dm-cell-strong dm-truncate" th:text="${sale.product.name}"></td>
+                            <td class="dm-text-end dm-text-dim dm-strike"
+                                th:text="${#numbers.formatDecimal(sale.product.price, 0, 'COMMA', 0, 'POINT')} + 'đ'"></td>
+                            <td class="dm-text-end dm-cell-strong dm-price-sale"
+                                th:text="${#numbers.formatDecimal(salePrices.get(sale.id), 0, 'COMMA', 0, 'POINT')} + 'đ'"></td>
                             <td class="dm-text-center">
-                                <span class="dm-pill dm-pill--accent" th:text="${batch.discountPercent} + '%'"></span>
-                            </td>
-                            <td class="dm-text-dim" th:text="${#temporals.format(batch.startDate, 'dd/MM/yyyy HH:mm')}"></td>
-                            <td class="dm-text-dim" th:text="${#temporals.format(batch.endDate, 'dd/MM/yyyy HH:mm')}"></td>
-                            <td class="dm-text-center" th:text="${productCounts.get(batch.id)}"></td>
-                            <td class="dm-text-center">
-                                <span th:if="${!activeStatus.get(batch.id)}" class="dm-pill dm-pill--bad">Đã huỷ sớm</span>
-                                <span th:if="${activeStatus.get(batch.id) and batch.endDate.isBefore(now)}"
-                                      class="dm-pill dm-pill--muted">Đã kết thúc</span>
-                                <span th:if="${activeStatus.get(batch.id) and batch.startDate.isAfter(now)}"
-                                      class="dm-pill dm-pill--warn">Sắp diễn ra</span>
-                                <span th:if="${activeStatus.get(batch.id) and !batch.startDate.isAfter(now) and !batch.endDate.isBefore(now)}"
-                                      class="dm-pill dm-pill--good">Đang chạy</span>
-                            </td>
-                            <td class="dm-text-end">
-                                <form th:if="${activeStatus.get(batch.id) and batch.endDate.isAfter(now)}"
-                                      th:action="@{/admin/sale-batches/{id}/deactivate(id=${batch.id})}"
-                                      method="post" class="dm-confirm-form"
-                                      data-confirm-msg="Huỷ sớm cả đợt sale này? Toàn bộ sản phẩm trong đợt sẽ ngừng giảm giá ngay lập tức.">
-                                    <button type="submit" class="dm-btn dm-btn--bad-outline dm-btn--sm">
-                                        <i class="bi bi-x-circle"></i>Huỷ sớm
-                                    </button>
-                                </form>
+                                <span th:if="${sale.isActive}" class="dm-pill dm-pill--good">Còn hiệu lực</span>
+                                <span th:unless="${sale.isActive}" class="dm-pill dm-pill--bad">Đã ngừng</span>
                             </td>
                         </tr>
-                        <tr th:if="${batches.isEmpty()}">
-                            <td colspan="7" class="dm-empty">Chưa có đợt sale nào</td>
+                        <tr th:if="${sales.isEmpty()}">
+                            <td colspan="5" class="dm-empty">
+                                Đợt sale này không có sản phẩm nào (có thể toàn bộ đã bị bỏ qua do trùng lịch lúc tạo).
+                            </td>
                         </tr>
                         </tbody>
                     </table>
@@ -95,7 +101,7 @@
         </div>
     </div>
 
-    <!-- ==================== MODAL XÁC NHẬN (thay cho confirm() của trình duyệt) ==================== -->
+    <!-- ==================== MODAL XÁC NHẬN ==================== -->
     <div class="dm-confirm-overlay" id="dmConfirmOverlay">
         <div class="dm-confirm-box">
             <div class="dm-confirm-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
@@ -134,29 +140,40 @@
 
         .dm-content { position: relative; z-index: 1; }
 
-        .dm-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 28px; gap: 12px; flex-wrap: wrap; }
-        .dm-eyebrow { text-transform: uppercase; letter-spacing: .12em; font-size: .7rem; font-weight: 700; color: var(--accent); margin: 0 0 4px; }
+        .dm-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 22px; gap: 12px; flex-wrap: wrap; }
+        .dm-back-link {
+            display: inline-flex; align-items: center; gap: 6px; color: var(--accent);
+            text-decoration: none; font-size: .78rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px;
+        }
+        .dm-back-link:hover { text-decoration: underline; }
         .dm-title { font-size: 1.7rem; font-weight: 800; margin: 0; letter-spacing: -.02em; }
 
         .dm-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
         .mb-4 { margin-bottom: 24px; }
 
-        .dm-note-box {
-            display: flex; align-items: flex-start; gap: 10px; border-radius: 14px;
-            padding: 14px 16px; font-size: .85rem; line-height: 1.5;
-        }
-        .dm-note-box--warn { background: var(--warn-soft); border: 1px solid rgba(245,185,92,.3); color: var(--text); }
-        .dm-note-box--warn i { color: var(--warn); margin-top: 2px; flex-shrink: 0; }
-        .dm-note-list { margin: 6px 0 0; padding-left: 18px; color: var(--text-dim); }
-
-        .dm-link { color: var(--text); text-decoration: none; transition: color .2s ease; }
-        .dm-link:hover { color: var(--accent); text-decoration: underline; }
+        .dm-info-card { display: flex; flex-wrap: wrap; gap: 28px; align-items: center; }
+        .dm-info-item { min-width: 110px; }
+        .dm-info-item--action { margin-left: auto; }
+        .dm-info-label { margin: 0 0 4px; font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-faint); }
+        .dm-info-value { margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--text); }
 
         .dm-text-dim { color: var(--text-dim); }
         .dm-text-center { text-align: center; }
         .dm-text-end { text-align: right; }
         .dm-cell-strong { font-weight: 700; }
         .dm-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dm-strike { text-decoration: line-through; }
+        .dm-price-sale { color: var(--good); }
+
+        .dm-thumb {
+            width: 42px; height: 42px; border-radius: 10px; object-fit: cover;
+            border: 1px solid var(--border); display: block;
+        }
+        .dm-thumb--empty {
+            display: flex; align-items: center; justify-content: center;
+            background: var(--surface-2); color: var(--text-faint); font-size: 1rem;
+        }
 
         .dm-table-wrap { overflow-x: hidden; }
         .dm-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: .86rem; }
@@ -180,6 +197,7 @@
             border-radius: 999px; font-size: .68rem; font-weight: 700;
             text-transform: uppercase; letter-spacing: .03em; white-space: nowrap;
         }
+        .dm-pill--lg { padding: 6px 16px; font-size: .74rem; }
         .dm-pill--muted  { background: var(--surface-2); color: var(--text-dim); }
         .dm-pill--accent { background: var(--accent-soft); color: var(--accent); }
         .dm-pill--good   { background: var(--good-soft); color: var(--good); }
@@ -197,22 +215,20 @@
         }
         .dm-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
         .dm-btn--sm { padding: 5px 12px; font-size: .76rem; }
-        .dm-btn--solid { background: var(--accent); border-color: var(--accent); color: #fff; }
-        .dm-btn--solid:hover { background: #7a6af0; border-color: #7a6af0; color: #fff; }
         .dm-btn--bad-outline { border-color: var(--bad); color: var(--bad); }
         .dm-btn--bad-outline:hover { background: var(--bad-soft); }
         .dm-btn--bad-solid { background: var(--bad); border-color: var(--bad); color: #fff; }
         .dm-btn--bad-solid:hover { background: #e04d66; border-color: #e04d66; color: #fff; }
 
         @media (max-width: 680px) {
+            .dm-info-card { gap: 18px; }
+            .dm-info-item--action { margin-left: 0; width: 100%; }
             .dm-table-wrap { overflow-x: auto; }
-            .dm-table { table-layout: auto; min-width: 800px; }
+            .dm-table { table-layout: auto; min-width: 600px; }
             .dm-table td, .dm-table th { white-space: nowrap; overflow: visible; text-overflow: clip; }
         }
 
-        /* ===== Modal xác nhận =====
-           Đặt biến màu ngay trên .dm-confirm-overlay vì modal nằm NGOÀI .dm-dash
-           (anh em, không phải con) nên không kế thừa được các biến khai báo trong đó. */
+        /* ===== Modal xác nhận ===== */
         .dm-confirm-overlay {
             display: none; position: fixed; inset: 0; z-index: 1090;
             background: rgba(5,6,10,.62); backdrop-filter: blur(2px);

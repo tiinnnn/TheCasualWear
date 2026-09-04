@@ -111,6 +111,47 @@ public class SaleBatchService {
         return saleRepository.existsBySaleBatchIdAndIsActiveTrue(batchId);
     }
 
+    public enum BatchStatus { UPCOMING, RUNNING, EXPIRED, CANCELLED_EARLY }
+
+    // Trạng thái hiển thị cho trang admin/product/sales.html — gộp luôn cả
+    // 2 nguồn: cờ isActive (do SaleScheduler dọn mỗi 5 phút, hoặc do
+    // deactivateBatch() set thủ công) và mốc thời gian start/end của batch.
+    //
+    // Lý do không dùng thẳng isBatchStillActive(): nó chỉ trả true/false,
+    // không tự phân biệt được "hết hạn tự nhiên" và "huỷ sớm" — phải so
+    // thêm với endDate ở tầng gọi, dễ lặp/lệch logic giữa các view. Đưa hết
+    // vào 1 chỗ duy nhất ở đây.
+    //
+    // Lưu ý: vì SaleScheduler chạy mỗi 5 phút (không realtime), có khoảng
+    // hở tối đa 5 phút giữa lúc sale thực sự hết hạn (theo endDate) và lúc
+    // isActive được set false. Case now.isAfter(endDate) bù cho khoảng hở
+    // đó để trạng thái EXPIRED hiện đúng ngay cả khi job dọn chưa kịp chạy.
+    public BatchStatus getBatchStatus(SaleBatch batch) {
+        LocalDateTime now = LocalDateTime.now();
+        boolean stillActive = isBatchStillActive(batch.getId());
+
+        if (!stillActive) {
+            // Không còn ProductSale nào active: nếu endDate vẫn ở tương lai
+            // thì chắc chắn là bị huỷ sớm thủ công, chưa thể do scheduler.
+            return now.isBefore(batch.getEndDate())
+                    ? BatchStatus.CANCELLED_EARLY
+                    : BatchStatus.EXPIRED;
+        }
+        if (now.isAfter(batch.getEndDate())) {
+            return BatchStatus.EXPIRED; // hết hạn nhưng scheduler chưa kịp dọn isActive
+        }
+        if (now.isBefore(batch.getStartDate())) {
+            return BatchStatus.UPCOMING;
+        }
+        return BatchStatus.RUNNING;
+    }
+
+    // Danh sách product_sale thuộc batch, kèm Product (fetch qua @ManyToOne
+    // mặc định) — dùng cho trang xem chi tiết đợt sale.
+    public List<ProductSale> getSalesInBatch(Integer batchId) {
+        return saleRepository.findBySaleBatchId(batchId);
+    }
+
     @Transactional
     public void deactivateBatch(Integer batchId) {
         List<ProductSale> sales = saleRepository.findBySaleBatchId(batchId);
